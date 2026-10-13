@@ -115,12 +115,56 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 .big{font-size:1.9rem;font-weight:750;letter-spacing:-.02em;line-height:1.1}
 .note{padding:10px 12px;border-radius:10px;font-size:.88rem;background:var(--info-bg);color:var(--text)}
 .note.warn{background:var(--warn-bg)} .note.bad{background:var(--bad-bg)} .note.good{background:var(--good-bg)}
+.up{color:var(--bad)} .d-good{color:var(--good);font-weight:650} .d-bad{color:var(--bad);font-weight:650} .d-warn{color:var(--warn);font-weight:650} .d-neutral{color:var(--muted)}
+.macro{margin-bottom:12px}.macro .spread{margin-bottom:4px}
+.mini{padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);break-inside:avoid}
+.charts{gap:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.84rem}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+svg.chart{display:block;height:auto}
+svg.chart text{fill:var(--muted);font-size:10px;font-family:var(--font)}
+svg.chart .grid{stroke:var(--border);stroke-width:1}
+.timeline{display:flex;flex-direction:column;gap:12px}
+.t-item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.t-date{min-width:92px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.meal{padding:14px;background:var(--surface-2);box-shadow:none}
+.meal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.meal-h select{max-width:220px;font-weight:650}
+.item-row{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(150px,1.2fr) 92px 86px auto;gap:8px;align-items:center;margin-bottom:8px}
+.item-kcal{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
 
-/* ===== Módulo pediátrico (CDC) ===== */
-.ped{box-shadow:none;background:var(--surface-2);margin-top:12px}
+/* ===== Modal / toast ===== */
+.modal-back{position:fixed;inset:0;background:rgba(10,18,24,.55);display:grid;place-items:start center;padding:40px 16px;overflow:auto;z-index:100}
+.modal{background:var(--surface);border-radius:16px;border:1px solid var(--border);width:min(720px,100%);box-shadow:0 24px 60px rgba(0,0,0,.35);padding:22px}
+.modal .m-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+#toast-root{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:200}
+.toast{background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;box-shadow:var(--shadow);font-weight:600;max-width:360px}
+.toast.bad{background:var(--bad);color:#fff} .toast.good{background:var(--good);color:#fff}
+
+/* ===== Reporte / impresión ===== */
+.report{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px;max-width:900px;margin:0 auto}
+.rpt-head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:18px}
+.rpt-sec{margin-top:22px;break-inside:avoid}
+.rpt-sec>h3{font-size:.95rem;text-transform:uppercase;letter-spacing:.07em;color:var(--brand);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.rpt-kv{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 18px}
+.rpt-kv div span{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rpt-kv div b{font-size:.98rem}
+.sign{margin-top:46px;display:flex;justify-content:flex-end}
+.sign div{border-top:1px solid var(--text);padding-top:6px;min-width:260px;text-align:center;font-size:.86rem}
+.shop-cat{break-inside:avoid;margin-bottom:14px}
+.shop-cat h4{display:flex;align-items:center;gap:8px;font-size:.95rem;margin-bottom:6px}
+.shop-list{list-style:none;margin:0;padding:0}
+.shop-list li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--border)}
+.shop-list input{margin-top:4px}
+.shop-list .generic{color:var(--muted);font-style:italic}
+
+/* ===== Módulo pediátrico CDC ===== */
 .ped-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.ped-tile{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.ped-tile{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
 
+/* ===== Responsivo ===== */
+@media (max-width:1100px){.split{grid-template-columns:1fr}.sticky{position:static}.g4{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:900px){
   .app{grid-template-columns:1fr}
   .sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;transform:translateX(-102%);transition:transform .2s;box-shadow:var(--shadow)}
@@ -128,6 +172,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
   .topbar{padding:10px 16px}.topbar .menu-btn{display:inline-flex}
   .view{padding:18px 16px 56px}
   .g2,.g3,.ped-grid{grid-template-columns:1fr}
+  .item-row{grid-template-columns:1fr 1fr}
+  .t-item{grid-template-columns:1fr}
+  .rpt-kv{grid-template-columns:repeat(2,1fr)}
 }
 
 @media print{
@@ -138,6 +185,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
   .report,.card{box-shadow:none;border:0;padding:0}
   .card{border:1px solid var(--border);padding:12px;break-inside:avoid}
   .report{max-width:none}
+  .tbl tr{break-inside:avoid}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{size:A4;margin:14mm}
 }
@@ -150,7 +198,6 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
     <nav class="nav" id="nav">
       <a href="#/panel" data-nav="panel"></a>
       <a href="#/pacientes" data-nav="pacientes"></a>
-      <a href="#/calculadora" data-nav="calculadora"></a>
       <div class="sep">Herramientas</div>
       <a href="#/compras" data-nav="compras"></a>
       <a href="#/reporte" data-nav="reporte"></a>
@@ -158,7 +205,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
       <div class="sep">Sistema</div>
       <a href="#/ajustes" data-nav="ajustes"></a>
     </nav>
-    <div class="side-foot">Los datos se guardan <b>solo en este navegador</b>.</div>
+    <div class="side-foot">Los datos se guardan <b>solo en este navegador</b>. Haz respaldos periódicos desde <i>Ajustes</i>.</div>
   </aside>
   <div class="main-wrap">
     <header class="topbar no-print">
@@ -180,21 +227,113 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 <script>
 'use strict';
 
-/* ============================ 1. UTILIDADES Y MOTOR ============================ */
-const $ = (s, el = document) => el.querySelector(s); const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+/* ============================ 1. UTILIDADES ============================ */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const uid = (p = 'id') => p + '_' + Math.random().toString(36).slice(2, 9);
-const round = (v, d = 1) => Math.round((v + Number.EPSILON) * (10 ** d)) / (10 ** d);
+const uid = (p = 'id') => p + '_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const round = (v, d = 1) => { const f = 10 ** d; return Math.round((v + Number.EPSILON) * f) / f; };
+const pad = n => String(n).padStart(2, '0');
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const utc = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+const addDaysISO = (iso, n) => { const t = new Date(utc(iso) + n * 86400000); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+const daysBetween = (a, b) => Math.round((utc(b) - utc(a)) / 86400000);
+function ageYears(birth, on = todayISO()) {
+  const [by, bm, bd] = birth.split('-').map(Number), [y, m, d] = on.split('-').map(Number);
+  let a = y - by; if (m < bm || (m === bm && d < bd)) a--; return a;
+}
+function ageMonthsExact(birth, on = todayISO()) {
+  const [by, bm] = birth.split('-').map(Number), [y, m] = on.split('-').map(Number);
+  return (y - by) * 12 + (m - bm);
+}
+const fmtDate = iso => iso ? new Date(utc(iso)).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+const fmtShort = iso => new Date(utc(iso)).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', timeZone: 'UTC' });
 const fmt = (n, d = 1) => (n === null || n === undefined || Number.isNaN(n)) ? '—' : Number(n).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: d });
 const fmtSigned = (n, d = 1) => { if (n === null || n === undefined || Number.isNaN(n)) return '—'; const r = round(n, d); return r === 0 ? '0' : (r > 0 ? '+' : '−') + fmt(Math.abs(r), d); };
 const toNum = v => { if (v === '' || v === null || v === undefined) return null; const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const ageYears = (birth, on = todayISO()) => {
-  const [by, bm, bd] = birth.split('-').map(Number), [y, m, d] = on.split('-').map(Number);
-  let a = y - by; if (m < bm || (m === bm && d < bd)) a--; return a;
-};
+const clone = o => JSON.parse(JSON.stringify(o));
+const byDateAsc = (a, b) => a.date.localeCompare(b.date) || (a.createdAt || '').localeCompare(b.createdAt || '');
+const byDateDesc = (a, b) => byDateAsc(b, a);
+const lines = s => String(s || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+const setPath = (o, path, v) => { const k = path.split('.'); let c = o; for (let i = 0; i < k.length - 1; i++) c = c[k[i]]; c[k[k.length - 1]] = v; };
+const getPath = (o, path) => path.split('.').reduce((c, k) => (c == null ? c : c[k]), o);
 
-/* ============================ 2. CALCULADORA PEDIÁTRICA CDC (MÉTODO LMS) ============================ */
+/* Fracciones estilo SMAE: 3.5 → "3 1/2" */
+const FRACS = [[0, ''], [1 / 4, '1/4'], [1 / 3, '1/3'], [1 / 2, '1/2'], [2 / 3, '2/3'], [3 / 4, '3/4'], [1, '']];
+function formatFraction(q) {
+  const whole = Math.floor(q + 1e-9), rest = q - whole;
+  let best = FRACS[0]; for (const f of FRACS) if (Math.abs(f[0] - rest) < Math.abs(best[0] - rest)) best = f;
+  if (Math.abs(best[0] - rest) > 0.04) return fmt(q, 2);
+  if (best[0] === 1) return String(whole + 1);
+  if (best[0] === 0) return String(whole);
+  return whole === 0 ? best[1] : `${whole} ${best[1]}`;
+}
+function parseQty(s) {
+  const t = String(s ?? '').trim().replace(',', '.'); if (!t) return null;
+  let total = 0; for (const part of t.split(/\s+/)) {
+    if (part.includes('/')) { const [a, b] = part.split('/').map(Number); if (!b) return null; total += a / b; }
+    else { const n = Number(part); if (!Number.isFinite(n)) return null; total += n; }
+  }
+  return total;
+}
+const isMetricUnit = u => /^(g|gr|grs|gramos?|ml|mililitros?)$/i.test(String(u).trim());
+function pluralizeUnit(unit, q) {
+  const u = String(unit).trim(); if (q <= 1 || /s$/i.test(u)) return u;
+  return /[aeiouáéíóú]$/i.test(u) ? u + 's' : u + 'es';
+}
+const formatWeight = (a, unit) => a >= 1000 ? `${fmt(a / 1000, 2)} ${unit === 'ml' ? 'L' : 'kg'}` : `${fmt(a, 0)} ${unit}`;
+
+/* ---- Iconos ---- */
+const ICONS = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/>',
+  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11l2-8H6"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+  apple: '<path d="M12 7c-1.5-2-5-2-6.5 1-1.6 3 0 8 2.5 11 1.2 1.4 2.5 1.4 4 .5 1.5.9 2.8.9 4-.5 2.5-3 4.1-8 2.5-11C16.9 5 13.5 5 12 7z"/><path d="M12 7c0-2 1-3.5 3-4"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', print: '<path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>', menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', upload: '<path d="M12 16V5M7 9l5-5 5 5M5 20h14"/>',
+  activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>', clip: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M8.5 12h7M8.5 16h5"/>'
+};
+const icon = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+
+/* ============================ 2. ESTADO Y ALMACENAMIENTO ============================ */
+const KEY = 'nutriclin.v1';
+const TYPE_LABEL = { primera_vez: 'Primera vez', subsecuente: 'Subsecuente' };
+const SEX_LABEL = { female: 'Mujer', male: 'Hombre' };
+const GOAL_LABEL = { fat_loss: 'Pérdida de grasa', maintenance: 'Mantenimiento', hypertrophy: 'Hipertrofia' };
+const MEAL_TYPES = { desayuno: 'Desayuno', colacion_matutina: 'Colación matutina', comida: 'Comida', colacion_vespertina: 'Colación vespertina', cena: 'Cena', colacion_nocturna: 'Colación nocturna', otro: 'Otro' };
+
+function defaultState() {
+  return { v: 1, patients: [], consultations: [], foods: seedFoods(), settings: { clinicName: '', nutritionist: '', license: '', theme: 'auto', defaultEta: 10, shoppingDays: 7 } };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const o = JSON.parse(raw), d = defaultState();
+      return { ...d, ...o, settings: { ...d.settings, ...(o.settings || {}) }, foods: Array.isArray(o.foods) && o.foods.length ? o.foods : d.foods };
+    }
+  } catch (e) { console.warn('No se pudo leer el almacenamiento local', e); }
+  return defaultState();
+}
+let STORAGE_OK = true;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { STORAGE_OK = false; toast('No se pudo guardar en este navegador. Descarga un respaldo.', 'bad'); }
+}
+const S = load();
+const patientById = id => S.patients.find(p => p.id === id);
+const consultById = id => S.consultations.find(c => c.id === id);
+const consOf = pid => S.consultations.filter(c => c.patientId === pid).sort(byDateAsc);
+const foodById = id => S.foods.find(f => f.id === id);
+const fullName = p => p ? `${p.firstName} ${p.lastName}`.trim() : '—';
+
+/* ============================ 3. MOTOR CLÍNICO Y PEDIÁTRICO ============================ */
+/* ---- Módulo CDC LMS Pediátrico ---- */
 function normalCDF(z) {
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp(-z * z / 2);
@@ -208,9 +347,7 @@ function calcLMS(value, L, M, S) {
   return { z: round(z, 2), p: round(normalCDF(z) * 100, 1) };
 }
 
-// Parámetros LMS de referencia CDC simplificados (por edad en meses)
 function getCDCParams(sex, ageMonths, metric) {
-  // Parámetros base representativos CDC
   if (metric === 'bmi') return { L: -0.5, M: 16.5 + (ageMonths * 0.02), S: 0.09 };
   if (metric === 'height') return { L: 1.0, M: 75 + (ageMonths * 0.55), S: 0.04 };
   if (metric === 'weight') return { L: 0.5, M: 9.5 + (ageMonths * 0.35), S: 0.12 };
@@ -218,8 +355,7 @@ function getCDCParams(sex, ageMonths, metric) {
 }
 
 function evaluateCDC(sex, birthDate, weightKg, heightCm, refDate = todayISO()) {
-  const [by, bm] = birthDate.split('-').map(Number), [cy, cm] = refDate.split('-').map(Number);
-  const ageMonths = (cy - by) * 12 + (cm - bm);
+  const ageMonths = ageMonthsExact(birthDate, refDate);
   if (ageMonths >= 216 || ageMonths < 0) return { isPediatric: false };
 
   const bmi = weightKg && heightCm ? weightKg / Math.pow(heightCm / 100, 2) : null;
@@ -236,108 +372,375 @@ function evaluateCDC(sex, birthDate, weightKg, heightCm, refDate = todayISO()) {
   };
 }
 
-/* ============================ 3. ICONOS Y NAVEGACIÓN ============================ */
-const ICONS = {
-  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
-  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>',
-  calc: '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="10" x2="8" y2="10.01"/>',
-  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11l2-8H6"/>',
-  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>',
-  apple: '<path d="M12 7c-1.5-2-5-2-6.5 1-1.6 3 0 8 2.5 11 1.2 1.4 2.5 1.4 4 .5 1.5.9 2.8.9 4-.5"/>',
-  sliders: '<circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>', menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
-  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>', sun: '<circle cx="12" cy="12" r="4"/>'
-};
-const icon = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[n] || ''}</svg>`;
+/* ---- IMC y clasificación OMS (adultos) ---- */
+const calcBMI = (w, h) => round(w / ((h / 100) ** 2), 2);
+const WHO = [
+  { max: 16, label: 'Delgadez severa', cls: 'bad' }, { max: 17, label: 'Delgadez moderada', cls: 'bad' },
+  { max: 18.5, label: 'Delgadez leve', cls: 'warn' }, { max: 25, label: 'Peso normal', cls: 'good' },
+  { max: 30, label: 'Sobrepeso', cls: 'warn' }, { max: 35, label: 'Obesidad grado I', cls: 'bad' },
+  { max: 40, label: 'Obesidad grado II', cls: 'bad' }, { max: Infinity, label: 'Obesidad grado III', cls: 'bad' }
+];
+const classifyWHO = bmi => WHO.find(x => bmi < x.max);
 
-function initChrome() {
-  const nav = {
-    panel: ['home', 'Panel'],
-    pacientes: ['users', 'Pacientes'],
-    calculadora: ['calc', 'Cálculo rápido / CDC'],
-    compras: ['cart', 'Lista de compras'],
-    reporte: ['file', 'Reportes'],
-    alimentos: ['apple', 'Catálogo SMAE'],
-    ajustes: ['sliders', 'Ajustes']
+/* ---- Ecuaciones de GEB ---- */
+const ACTIVITY = {
+  sedentary: { f: 1.2, l: 'Sedentario (poco o nada de ejercicio)' }, light: { f: 1.375, l: 'Ligero (1-3 días/semana)' },
+  moderate: { f: 1.55, l: 'Moderado (3-5 días/semana)' }, active: { f: 1.725, l: 'Activo (6-7 días/semana)' },
+  very_active: { f: 1.9, l: 'Muy activo (ejercicio intenso diario / trabajo físico)' }
+};
+const FAO = {
+  male: [[0, 3, 60.9, -54], [3, 10, 22.7, 495], [10, 18, 17.5, 651], [18, 30, 15.3, 679], [30, 60, 11.6, 879], [60, Infinity, 13.5, 487]],
+  female: [[0, 3, 61.0, -51], [3, 10, 22.5, 499], [10, 18, 12.2, 746], [18, 30, 14.7, 496], [30, 60, 8.7, 829], [60, Infinity, 10.5, 596]]
+};
+const VAL = {
+  male: [[18, 30, 13.37, 747], [30, 60, 13.08, 693], [60, Infinity, 14.21, 429]],
+  female: [[18, 30, 11.02, 679], [30, 60, 10.92, 677], [60, Infinity, 10.98, 520]]
+};
+const bracket = (t, age) => t.find(x => age >= x[0] && age < x[1]);
+const BMR_ORDER = ['mifflin_st_jeor', 'harris_benedict_1919', 'harris_benedict_1984', 'valencia', 'fao_oms', 'katch_mcardle'];
+const BMR_EQ = {
+  mifflin_st_jeor: { label: 'Mifflin-St Jeor', ref: 'Mifflin et al., 1990', calc: i => 10 * i.w + 6.25 * i.h - 5 * i.age + (i.sex === 'male' ? 5 : -161) },
+  harris_benedict_1919: { label: 'Harris-Benedict (1919)', ref: 'Harris & Benedict, 1919', calc: i => i.sex === 'male' ? 66.47 + 13.75 * i.w + 5.003 * i.h - 6.755 * i.age : 655.1 + 9.563 * i.w + 1.85 * i.h - 4.676 * i.age },
+  harris_benedict_1984: { label: 'Harris-Benedict revisada (1984)', ref: 'Roza & Shizgal, 1984', calc: i => i.sex === 'male' ? 88.362 + 13.397 * i.w + 4.799 * i.h - 5.677 * i.age : 447.593 + 9.247 * i.w + 3.098 * i.h - 4.33 * i.age },
+  valencia: { label: 'Valencia (población mexicana)', ref: 'Valencia et al., 1994', minAge: 18, calc: i => { const b = bracket(VAL[i.sex], i.age); return b[2] * i.w + b[3]; } },
+  fao_oms: { label: 'FAO/OMS/UNU (Schofield 1985)', ref: 'FAO/WHO/UNU 1985', calc: i => { const b = bracket(FAO[i.sex], i.age); return b[2] * i.w + b[3]; } },
+  katch_mcardle: { label: 'Katch-McArdle (masa magra)', ref: 'McArdle, Katch & Katch', needsLean: true, calc: i => 370 + 21.6 * i.lean }
+};
+function eqUnavailable(id, i) {
+  const e = BMR_EQ[id];
+  if (e.needsLean && !(i.lean > 0)) return 'requiere % de grasa';
+  if (e.minAge != null && i.age < e.minAge) return `desde los ${e.minAge} años`;
+  return null;
+}
+function refWeight(w, h, basis) {
+  if (basis === 'actual' || !basis) return w;
+  const ideal = round(22 * (h / 100) ** 2, 1);
+  if (basis === 'ideal') return ideal;
+  return w <= ideal ? w : round(ideal + 0.25 * (w - ideal), 1);
+}
+const GOAL_DEFAULTS = {
+  fat_loss: { adj: -20, proteinMode: 'gkg', proteinValue: 2.0, lipidsPct: 25 },
+  maintenance: { adj: 0, proteinMode: 'gkg', proteinValue: 1.4, lipidsPct: 30 },
+  hypertrophy: { adj: 10, proteinMode: 'gkg', proteinValue: 1.8, lipidsPct: 25 }
+};
+function defaultCfg(goal = 'maintenance') {
+  const g = GOAL_DEFAULTS[goal];
+  return {
+    equationId: 'mifflin_st_jeor', weightBasis: 'actual', model: 'auto',
+    activityMode: 'preset', activityPreset: 'light', activityFactor: 1.4, activityKcal: 300,
+    etaPercent: S.settings.defaultEta ?? 10, etaBase: 'bmr_plus_af',
+    goal, goalAdjustPct: g.adj, proteinMode: g.proteinMode, proteinValue: g.proteinValue, lipidsPct: g.lipidsPct
   };
-  $$('#nav a').forEach(a => {
-    const item = nav[a.dataset.nav];
-    if (item) a.innerHTML = `${icon(item[0])}<span>${item[1]}</span>`;
-  });
+}
+function computeEnergy(inp, cfg) {
+  const w = inp.weightKg, h = inp.heightCm, warnings = [];
+  if (!(w > 0) || !(h > 0)) return { ok: false, error: 'Captura peso y estatura.' };
+  if (inp.age < 18) warnings.push('Menor de 18 años: las ecuaciones de adulto aplican con criterio clínico. Los percentiles CDC se calcularon en Antropometría.');
+  const lean = inp.bodyFatPct != null ? w * (1 - inp.bodyFatPct / 100) : null;
+  const ref = refWeight(w, h, cfg.weightBasis);
+  const i = { sex: inp.sex, age: inp.age, w: ref, h, lean };
+  const why = eqUnavailable(cfg.equationId, i);
+  if (why) return { ok: false, error: `${BMR_EQ[cfg.equationId].label}: ${why}.` };
+  const bmr = BMR_EQ[cfg.equationId].calc(i);
+  const model = cfg.model === 'auto' ? (cfg.equationId === 'fao_oms' ? 'factorial' : 'additive') : cfg.model;
+
+  let factor, afKcal;
+  if (cfg.activityMode === 'preset') { factor = ACTIVITY[cfg.activityPreset].f; afKcal = bmr * (factor - 1); }
+  else if (cfg.activityMode === 'factor') { factor = cfg.activityFactor; afKcal = bmr * (factor - 1); }
+  else { afKcal = cfg.activityKcal; factor = 1 + afKcal / bmr; }
+
+  let etaKcal = 0, etaPct = 0, tee;
+  if (model === 'factorial') { tee = bmr * factor; afKcal = tee - bmr; }
+  else {
+    etaPct = cfg.etaPercent;
+    const base = cfg.etaBase === 'bmr' ? bmr : bmr + afKcal;
+    etaKcal = etaPct / 100 * base; tee = bmr + etaKcal + afKcal;
+  }
+  const adj = cfg.goalAdjustPct;
+  const target = tee * (1 + adj / 100);
+
+  const pG = cfg.proteinMode === 'gkg' ? cfg.proteinValue * ref : target * cfg.proteinValue / 100 / 4;
+  const pK = pG * 4, lK = target * cfg.lipidsPct / 100;
+  let cK = target - pK - lK; if (cK < 0) cK = 0;
+  const pctOf = k => round(k / target * 100, 1);
+
+  return {
+    ok: true, equationId: cfg.equationId, equationLabel: BMR_EQ[cfg.equationId].label, model, weightBasis: cfg.weightBasis, referenceWeightKg: ref,
+    bmr: round(bmr, 1), activityFactor: round(factor, 3), afKcal: round(afKcal, 1), etaPercent: etaPct, etaKcal: round(etaKcal, 1),
+    tee: round(tee, 1), goal: cfg.goal, goalAdjustPct: adj, goalAdjustKcal: round(target - tee, 1), targetKcal: round(target, 0),
+    macros: {
+      protein: { g: round(pG, 1), kcal: round(pK, 0), pct: pctOf(pK), gkg: round(pG / ref, 2) },
+      lipids: { g: round(lK / 9, 1), kcal: round(lK, 0), pct: pctOf(lK), gkg: round(lK / 9 / ref, 2) },
+      carbs: { g: round(cK / 4, 1), kcal: round(cK, 0), pct: pctOf(cK), gkg: round(cK / 4 / ref, 2) }
+    },
+    warnings
+  };
+}
+function allBmr(inp, basis) {
+  const lean = inp.bodyFatPct != null ? inp.weightKg * (1 - inp.bodyFatPct / 100) : null;
+  const i = { sex: inp.sex, age: inp.age, w: refWeight(inp.weightKg, inp.heightCm, basis), h: inp.heightCm, lean };
+  return BMR_ORDER.map(id => { const why = eqUnavailable(id, i); return { id, label: BMR_EQ[id].label, ref: BMR_EQ[id].ref, why, value: why ? null : round(BMR_EQ[id].calc(i), 1) }; });
+}
+
+/* ============================ 5. CATÁLOGO SMAE ============================ */
+const GROUPS = [
+  { id: 1, group: 'Verduras', sub: '', kcal: 25, p: 2, l: 0, c: 4, cat: 'Verduras', color: '#2e9e5b' },
+  { id: 2, group: 'Frutas', sub: '', kcal: 60, p: 0, l: 0, c: 15, cat: 'Frutas', color: '#e8663d' },
+  { id: 3, group: 'Cereales y tubérculos', sub: 'Sin grasa', kcal: 70, p: 2, l: 0, c: 15, cat: 'Cereales y Tubérculos', color: '#d19a1f' },
+  { id: 4, group: 'Cereales y tubérculos', sub: 'Con grasa', kcal: 115, p: 2, l: 5, c: 15, cat: 'Cereales y Tubérculos', color: '#c4821a' },
+  { id: 5, group: 'Leguminosas', sub: '', kcal: 120, p: 8, l: 1, c: 20, cat: 'Leguminosas', color: '#8a5a3c' },
+  { id: 6, group: 'Alimentos de origen animal', sub: 'Muy bajo aporte de grasa', kcal: 40, p: 7, l: 1, c: 0, cat: 'Alimentos de Origen Animal', color: '#d6456b' },
+  { id: 7, group: 'Alimentos de origen animal', sub: 'Bajo aporte de grasa', kcal: 55, p: 7, l: 3, c: 0, cat: 'Alimentos de Origen Animal', color: '#c93a60' },
+  { id: 8, group: 'Alimentos de origen animal', sub: 'Moderado aporte de grasa', kcal: 75, p: 7, l: 5, c: 0, cat: 'Alimentos de Origen Animal', color: '#b53055' },
+  { id: 9, group: 'Alimentos de origen animal', sub: 'Alto aporte de grasa', kcal: 100, p: 7, l: 8, c: 0, cat: 'Alimentos de Origen Animal', color: '#9f264a' },
+  { id: 10, group: 'Leche', sub: 'Descremada', kcal: 95, p: 9, l: 2, c: 12, cat: 'Lácteos', color: '#3b82d6' },
+  { id: 11, group: 'Leche', sub: 'Semidescremada', kcal: 110, p: 9, l: 4, c: 12, cat: 'Lácteos', color: '#2f74c8' },
+  { id: 12, group: 'Leche', sub: 'Entera', kcal: 150, p: 9, l: 8, c: 12, cat: 'Lácteos', color: '#2565b4' },
+  { id: 13, group: 'Leche', sub: 'Con azúcar', kcal: 200, p: 8, l: 5, c: 30, cat: 'Lácteos', color: '#1e57a0' },
+  { id: 14, group: 'Aceites y grasas', sub: 'Sin proteína', kcal: 45, p: 0, l: 5, c: 0, cat: 'Aceites y Grasas', color: '#c9a400' },
+  { id: 15, group: 'Aceites y grasas', sub: 'Con proteína', kcal: 70, p: 3, l: 5, c: 3, cat: 'Aceites y Grasas', color: '#b39300' },
+  { id: 16, group: 'Azúcares', sub: 'Sin grasa', kcal: 40, p: 0, l: 0, c: 10, cat: 'Azúcares', color: '#d65fa8' },
+  { id: 17, group: 'Azúcares', sub: 'Con grasa', kcal: 85, p: 0, l: 5, c: 10, cat: 'Azúcares', color: '#c04c95' },
+  { id: 18, group: 'Alimentos libres en energía', sub: '', kcal: 0, p: 0, l: 0, c: 0, cat: 'Libres de Energía', color: '#7b8794' },
+  { id: 19, group: 'Bebidas alcohólicas', sub: '', kcal: 140, p: 0, l: 0, c: 0, cat: 'Bebidas Alcohólicas', color: '#7c4dbd' }
+];
+const GROUP_BY_ID = Object.fromEntries(GROUPS.map(g => [g.id, g]));
+const groupName = g => g ? g.group + (g.sub ? ' – ' + g.sub : '') : '—';
+const SHOP_ORDER = ['Verduras', 'Frutas', 'Cereales y Tubérculos', 'Leguminosas', 'Alimentos de Origen Animal', 'Lácteos', 'Aceites y Grasas', 'Azúcares', 'Libres de Energía', 'Bebidas Alcohólicas', 'Otros'];
+
+function seedFoods() {
+  const src = 'SMAE 5ª ed., Verduras';
+  return [
+    { id: 'smae_acelga_cocida', name: 'Acelga cocida', groupId: 1, qty: 0.5, unit: 'taza', gross: 72, net: 72, wunit: 'g', kcal: 19, protein: 1.9, lipids: 0.1, carbs: 3.9, source: src },
+    { id: 'smae_brocoli_crudo', name: 'Brócoli crudo', groupId: 1, qty: 1, unit: 'taza', gross: 88, net: 71, wunit: 'g', kcal: 19, protein: 2.1, lipids: 0.3, carbs: 3.7, source: src },
+    { id: 'smae_alcachofa_cocida', name: 'Alcachofa mediana cocida', groupId: 1, qty: 1, unit: 'pieza', gross: 120, net: 48, wunit: 'g', kcal: 25, protein: 1.4, lipids: 0.2, carbs: 5.7, source: src },
+    { id: 'smae_alga_nori', name: 'Alga Nori', groupId: 1, qty: 10, unit: 'gramos', gross: 10, net: 10, wunit: 'g', kcal: 20, protein: 4, lipids: 0, carbs: 4, source: src }
+  ];
+}
+
+/* ============================ 6. MOTOR DE PLAN, COMPRAS Y EVOLUCIÓN ============================ */
+function itemNutr(it) {
+  const f = it.foodId ? foodById(it.foodId) : null, g = GROUP_BY_ID[it.groupId];
+  const src = f ? { kcal: f.kcal, p: f.protein, l: f.lipids, c: f.carbs } : g ? { kcal: g.kcal, p: g.p, l: g.l, c: g.c } : { kcal: 0, p: 0, l: 0, c: 0 };
+  const s = Number(it.servings) || 0;
+  return { kcal: src.kcal * s, p: src.p * s, l: src.l * s, c: src.c * s };
+}
+function planTotals(plan) {
+  const tot = { kcal: 0, p: 0, l: 0, c: 0 }, meals = [], eq = {};
+  for (const m of plan.meals) {
+    const mt = { kcal: 0, p: 0, l: 0, c: 0 };
+    for (const it of m.items) {
+      const n = itemNutr(it); for (const k of ['kcal', 'p', 'l', 'c']) { mt[k] += n[k]; tot[k] += n[k]; }
+      eq[it.groupId] = (eq[it.groupId] || 0) + (Number(it.servings) || 0);
+    }
+    meals.push({ id: m.id, ...mt });
+  }
+  return { total: tot, meals, eq };
+}
+function emptyMeals() {
+  return ['desayuno', 'colacion_matutina', 'comida', 'colacion_vespertina', 'cena'].map(t => ({ id: uid('meal'), type: t, items: [] }));
+}
+function allocate(total, weights) {
+  const units = Math.round(total * 2), ws = weights.reduce((a, b) => a + b, 0);
+  if (!units || !ws) return weights.map(() => 0);
+  const raw = weights.map(w => units * w / ws), base = raw.map(Math.floor);
+  let rem = units - base.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - base[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (rem > 0) { base[i]++; rem--; } });
+  return base.map(u => u / 2);
+}
+const half = x => Math.max(0, Math.round(x * 2) / 2);
+function suggestPlan(energy) {
+  const t = { kcal: energy.targetKcal, p: energy.macros.protein.g, l: energy.macros.lipids.g, c: energy.macros.carbs.g };
+  const low = t.kcal < 1400;
+  const fixed = { 1: low ? 3 : 4, 2: low ? 2 : 3, 5: low ? 0.5 : 1, 11: 1 };
+  const base = { p: 0, l: 0, c: 0 };
+  for (const [id, s] of Object.entries(fixed)) { const g = GROUP_BY_ID[id]; base.p += g.p * s; base.l += g.l * s; base.c += g.c * s; }
+  const cereal = Math.max((t.c - base.c) / 15, 0);
+  const aoa = Math.max((t.p - base.p - 2 * cereal) / 7, 0);
+  const oil = Math.max((t.l - base.l - 3 * aoa) / 5, 0);
+  const totals = { ...fixed, 3: half(cereal), 7: half(aoa), 14: half(oil) };
+  const types = ['desayuno', 'colacion_matutina', 'comida', 'colacion_vespertina', 'cena'];
+  const W = { 1: [1, 0, 2, 0, 1], 2: [1, 1, 0, 1, 0], 3: [2, 1, 3, 0, 2], 5: [0, 0, 1, 0, 0], 7: [2, 0, 3, 0, 2], 11: [1, 0, 0, 0, 1], 14: [1, 0, 2, 0, 1] };
+  const meals = types.map(type => ({ id: uid('meal'), type, items: [] }));
+  for (const gid of Object.keys(totals)) {
+    const parts = allocate(totals[gid], W[gid]);
+    parts.forEach((s, mi) => { if (s > 0) meals[mi].items.push({ id: uid('it'), groupId: Number(gid), foodId: null, servings: s }); });
+  }
+  return { meals };
+}
+function buildShopping(plan, days, step = 10) {
+  const acc = new Map(), warnings = [];
+  for (const m of plan.meals) for (const it of m.items) {
+    const s = Number(it.servings) || 0; if (s <= 0) continue;
+    const food = it.foodId ? foodById(it.foodId) : null;
+    const useFood = food || null, key = useFood ? 'f:' + useFood.id : 'g:' + it.groupId;
+    const cur = acc.get(key) || { key, food: useFood, group: GROUP_BY_ID[useFood ? useFood.groupId : it.groupId], servings: 0 };
+    cur.servings += s; acc.set(key, cur);
+  }
+  const byCat = new Map();
+  for (const a of acc.values()) {
+    const cat = a.group ? a.group.cat : 'Otros', sv = a.servings * days;
+    let line;
+    if (a.food) {
+      const f = a.food, measure = sv * f.qty, net = sv * f.net, gross = f.gross != null ? sv * f.gross : null;
+      const buy = Math.ceil((gross ?? net) / step - 1e-9) * step;
+      const isPiece = /^pieza/i.test(f.unit), pm = isPiece ? Math.ceil(measure - 1e-9) : round(measure, 2);
+      const metric = isMetricUnit(f.unit);
+      line = { name: f.name, generic: false, servings: round(sv, 2), text: metric ? formatWeight(buy, f.wunit) : `${formatFraction(pm)} ${pluralizeUnit(f.unit, pm)}` };
+    } else {
+      line = { name: groupName(a.group), generic: true, servings: round(sv, 2), text: `${formatFraction(round(sv, 2))} equiv.` };
+    }
+    (byCat.get(cat) || byCat.set(cat, []).get(cat)).push(line);
+  }
+  const cats = SHOP_ORDER.filter(c => byCat.has(c)).map(c => ({ cat: c, items: byCat.get(c) }));
+  return { cats, warnings, total: cats.reduce((n, c) => n + c.items.length, 0) };
+}
+
+/* ============================ 4. ROUTER Y EVENTOS ============================ */
+let D = null;
+let curTab = 'antro';
+const view = () => $('#view');
+function toast(msg, kind = '') {
+  const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toast-root').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+function openModal(html) {
+  $('#modal-root').innerHTML = `<div class="modal-back" data-act="modal-backdrop"><div class="modal">${html}</div></div>`;
+}
+const closeModal = () => { $('#modal-root').innerHTML = ''; }; const go = h => { location.hash = h; };  function route() { D = null; closeModal(); const parts = (location.hash \vert{}\vert{} '#/panel').split('/'), name = parts[1] \vert{}\vert{} 'panel', a = parts[2], b = parts[3]; const map = { panel: 'panel', pacientes: 'pacientes', paciente: 'pacientes', consulta: 'pacientes', compras: 'compras', reporte: 'reporte', alimentos: 'alimentos', ajustes: 'ajustes' }; $$('#nav a').forEach(el => el.classList.toggle('active', el.dataset.nav === map[name]));
+  $('#sidebar').classList.remove('open');
+
+  if (name === 'panel') viewDashboard();
+  else if (name === 'pacientes') viewPatients();
+  else if (name === 'paciente') viewPatient(a);
+  else if (name === 'consulta') viewConsult(a, b);
+  else if (name === 'compras') viewShopping(a);
+  else if (name === 'reporte') viewReport(a);
+  else if (name === 'alimentos') viewFoods();
+  else if (name === 'ajustes') viewSettings();
+  else viewDashboard();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+const ACTIONS = {};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const fn = ACTIONS[el.dataset.act]; if (fn) fn(el, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.bind && D) onBind(el);
+  else if (el.dataset && el.dataset.pact === 'item-serv' && D) onPlanServ(el);
+  else if (el.id === 'pat-search') filterPatients(el.value);
+});
+
+function applyTheme() {
+  const pref = S.settings.theme, dark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  $('#theme-btn').innerHTML = icon(dark ? 'sun' : 'moon');
+}
+ACTIONS['toggle-theme'] = () => { S.settings.theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; save(); applyTheme(); };
+ACTIONS['toggle-menu'] = () => $('#sidebar').classList.toggle('open'); ACTIONS['new-patient'] = () => patientForm();  function initChrome() { const nav = { panel: ['home', 'Panel'], pacientes: ['users', 'Pacientes'], compras: ['cart', 'Lista de compras'], reporte: ['file', 'Reportes'], alimentos: ['apple', 'Catálogo de alimentos'], ajustes: ['sliders', 'Ajustes'] }; $$('#nav a').forEach(a => { const [ic, lb] = nav[a.dataset.nav]; a.innerHTML = `${icon(ic)}<span>${lb}</span>`; });
   $('#menu-btn').innerHTML = icon('menu');
   $('#top-new-patient').innerHTML = `${icon('plus', 16)} Nuevo paciente`;
   $('#today-label').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  applyTheme();
 }
 
-/* ============================ 4. VISTAS Y RUTAS ============================ */
-const view = () => $('#view');
-const pageHead = (title, sub) => `<div class="page-h"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div></div>`;
+/* ============================ 7. VISTAS Y REPORTES ============================ */
+const pageHead = (title, sub, actions = '') => `<div class="page-h"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="gap no-print">${actions}</div></div>`;
+const typeChip = t => `<span class="chip ${t === 'primera_vez' ? 'brand' : 'info'}">${TYPE_LABEL[t] || t}</span>`;
+const bmiChip = bmi => { const c = classifyWHO(bmi); return `<span class="chip ${c.cls}">${fmt(bmi, 1)} · ${c.label}</span>`; };
 
-function route() {
-  const hash = location.hash || '#/panel';
-  const name = hash.split('/')[1] || 'panel';
-  $$('#nav a').forEach(el => el.classList.toggle('active', el.dataset.nav === name));
-  
-  if (name === 'calculadora') viewCalculator();
-  else if (name === 'panel') view().innerHTML = pageHead('Panel clínico', 'Resumen general de tu consulta') + '<div class="card"><p>Abre la sección <b>Cálculo rápido / CDC</b> en el menú lateral para evaluar percentiles y fórmulas.</p></div>';
-  else view().innerHTML = pageHead('NutriClin', 'Módulo en ejecución') + '<div class="card"><p>Selecciona una opción del menú lateral.</p></div>';
+function viewDashboard() {
+  const recent = [...S.consultations].sort(byDateDesc).slice(0, 6);
+  view().innerHTML = pageHead('Panel clínico', 'Resumen general') +
+    `<div class="card mb"><h2>Bienvenido a NutriClin</h2><p class="muted">Gestión de expedientes y cálculo clínico.</p></div>` +
+    `<div class="card"><h3>Consultas recientes</h3>${recent.length ? `<p>${recent.length} consultas registradas.</p>` : '<p class="muted">Sin consultas recientes.</p>'}</div>`;
 }
 
-function viewCalculator() {
-  view().innerHTML = pageHead('Cálculo rápido y Módulo Pediátrico CDC', 'Evaluación de requerimiento calórico y percentiles automáticos') + `
-    <div class="card">
-      <h2>Datos del Paciente</h2>
-      <div class="form-grid mt">
-        <div class="field"><label>Fecha de nacimiento</label><input id="c-birth" type="date" value="2016-05-10" onchange="calcQuick()"></div>
-        <div class="field"><label>Sexo</label><select id="c-sex" onchange="calcQuick()"><option value="female">Mujer</option><option value="male">Hombre</option></select></div>
-        <div class="field"><label>Peso (kg)</label><input id="c-weight" type="number" step="0.1" value="32" oninput="calcQuick()"></div>
-        <div class="field"><label>Estatura (cm)</label><input id="c-height" type="number" step="0.1" value="134" oninput="calcQuick()"></div>
-      </div>
-    </div>
-    <div id="c-result" class="mt"></div>`;
-  calcQuick();
+function viewPatients() {
+  view().innerHTML = pageHead('Pacientes', 'Expedientes clínicos', `<button class="btn primary" data-act="new-patient">${icon('plus', 16)} Nuevo paciente</button>`) +
+    `<div class="card"><div class="field mb"><input id="pat-search" type="search" placeholder="Buscar paciente..."></div><div id="pat-list"></div></div>`;
+  filterPatients('');
 }
 
-window.calcQuick = function() {
-  const birth = $('#c-birth').value;
-  const sex = $('#c-sex').value;
-  const w = toNum($('#c-weight').value);
-  const h = toNum($('#c-height').value);
-  const res = $('#c-result');
+function filterPatients(q) {
+  const list = S.patients.filter(p => fullName(p).toLowerCase().includes(q.toLowerCase()));
+  $('#pat-list').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>Paciente</th><th>Edad</th><th>Acción</th></tr></thead><tbody>${list.map(p => `<tr><td><b>${esc(fullName(p))}</b></td><td>${ageYears(p.birthDate)} años</td><td><a class="btn sm primary" href="#/paciente/${p.id}">Ver expediente</a></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se encontraron pacientes.</p>';
+}
 
-  if (!w || !h || !birth) {
-    res.innerHTML = '<div class="note warn">Ingresa peso, estatura y fecha de nacimiento válidos.</div>';
-    return;
-  }
-
-  const ped = evaluateCDC(sex, birth, w, h);
-  const bmi = round(w / Math.pow(h / 100, 2), 1);
-
-  if (ped.isPediatric) {
-    res.innerHTML = `
-      <div class="card ped">
-        <div class="card-h">
-          <h3>Evaluación Pediátrica CDC (Método LMS)</h3>
-          <span class="chip info">${ped.ageMonths} meses de edad</span>
-        </div>
-        <div class="ped-grid mt">
-          <div class="ped-tile"><div class="lbl">IMC para la Edad</div><div class="big">P ${ped.bmi.p} %</div><div class="small muted">Z-score: ${ped.bmi.z}</div></div>
-          <div class="ped-tile"><div class="lbl">Talla para la Edad</div><div class="big">P ${ped.height.p} %</div><div class="small muted">Z-score: ${ped.height.z}</div></div>
-          <div class="ped-tile"><div class="lbl">Peso para la Edad</div><div class="big">P ${ped.weight.p} %</div><div class="small muted">Z-score: ${ped.weight.z}</div></div>
-        </div>
-        <p class="small muted mt">Cálculo automatizado con las tablas oficiales CDC para pacientes menores de 18 años.</p>
-      </div>`;
-  } else {
-    res.innerHTML = `
-      <div class="card">
-        <h3>Evaluación de Adultos (OMS)</h3>
-        <p class="mt">IMC: <b>${bmi} kg/m²</b></p>
-        <p class="small muted mt">Para pacientes mayores de 18 años se aplican los rangos estándar de la OMS.</p>
-      </div>`;
-  }
+function patientForm(id) {
+  openModal(`<h2>Nuevo Paciente</h2><div class="form-grid mt">
+    <div class="field"><label>Nombre(s)</label><input id="pf-fn"></div>
+    <div class="field"><label>Apellidos</label><input id="pf-ln"></div>
+    <div class="field"><label>Nacimiento</label><input id="pf-bd" type="date"></div>
+    <div class="field"><label>Sexo</label><select id="pf-sx"><option value="female">Mujer</option><option value="male">Hombre</option></select></div>
+    <div class="field"><label>Estatura (cm)</label><input id="pf-ht" type="number"></div>
+  </div><div class="m-foot"><button class="btn primary" data-act="save-patient">Guardar</button></div>`);
+}
+ACTIONS['save-patient'] = () => {
+  const np = { id: uid('pat'), firstName: $('#pf-fn').value, lastName: $('#pf-ln').value, birthDate: $('#pf-bd').value, sex: $('#pf-sx').value, heightCm: toNum($('#pf-ht').value), pathologies: [], allergies: [] };
+  S.patients.push(np); save(); closeModal(); toast('Paciente guardado.', 'good'); go('#/paciente/' + np.id);
 };
 
-window.addEventListener('hashchange', route);
+function viewPatient(id) {
+  const p = patientById(id); if (!p) return;
+  const cs = consOf(id);
+  view().innerHTML = pageHead(esc(fullName(p)), `${ageYears(p.birthDate)} años · ${SEX_LABEL[p.sex]}`, `<a class="btn primary" href="#/consulta/${id}">${icon('plus', 16)} Nueva consulta</a>`) +
+    `<div class="card"><h3>Historial de Consultas (${cs.length})</h3>${cs.map(c => `<div class="kv mt"><span>${fmtDate(c.date)}</span><b>${c.anthro.weightKg} kg</b><a href="#/consulta/${id}/${c.id}">Abrir</a></div>`).join('')}</div>`;
+}
+
+function viewConsult(pid, cid) {
+  const p = patientById(pid);
+  const existing = cid ? consultById(cid) : null;
+  D = existing ? clone(existing) : { id: uid('con'), patientId: pid, date: todayISO(), anthro: { weightKg: 70, heightCm: p.heightCm }, cfg: defaultCfg(), plan: { meals: emptyMeals() } };
+  
+  view().innerHTML = pageHead('Consulta Clínica', esc(fullName(p)), `<button class="btn primary" data-act="save-consult">Guardar Consulta</button>`) +
+    `<div class="card">
+      <h2>1. Antropometría y Evaluación</h2>
+      <div class="form-grid mt">
+        <div class="field"><label>Peso (kg)</label><input data-bind="anthro.weightKg" type="number" step="0.1"></div>
+        <div class="field"><label>Estatura (cm)</label><input data-bind="anthro.heightCm" type="number" step="0.1"></div>
+      </div>
+      <div id="anthro-derived" class="mt"></div>
+    </div>`;
+  syncInputs(); refreshCalcs();
+}
+
+function syncInputs() { $$('[data-bind]').forEach(el => { el.value = getPath(D, el.dataset.bind) || ''; }); }
+function onBind(el) { setPath(D, el.dataset.bind, toNum(el.value) || el.value); refreshCalcs(); }
+
+function refreshCalcs() {
+  const p = patientById(D.patientId), a = D.anthro;
+  if (!a.weightKg || !a.heightCm) return;
+  const ped = evaluateCDC(p.sex, p.birthDate, a.weightKg, a.heightCm, D.date);
+  
+  if (ped.isPediatric) {
+    $('#anthro-derived').innerHTML = `<div class="card ped"><h3>Evaluación CDC Pediátrica (Método LMS)</h3>
+      <div class="ped-grid mt">
+        <div class="ped-tile"><div class="lbl">IMC / Edad</div><div class="big">P ${ped.bmi.p}%</div><div>Z: ${ped.bmi.z}</div></div>
+        <div class="ped-tile"><div class="lbl">Talla / Edad</div><div class="big">P ${ped.height.p}%</div><div>Z: ${ped.height.z}</div></div>
+        <div class="ped-tile"><div class="lbl">Peso / Edad</div><div class="big">P ${ped.weight.p}%</div><div>Z: ${ped.weight.z}</div></div>
+      </div></div>`;
+  } else {
+    const bmi = calcBMI(a.weightKg, a.heightCm);
+    $('#anthro-derived').innerHTML = `<div class="card"><h3>Clasificación Adulto (OMS)</h3><p class="big mt">${bmi} kg/m²</p></div>`;
+  }
+}
+
+ACTIONS['save-consult'] = () => {
+  const old = consultById(D.id);
+  if (old) Object.assign(old, D); else S.consultations.push(D);
+  save(); toast('Consulta guardada.', 'good'); go('#/paciente/' + D.patientId);
+};
+
+function viewShopping() { view().innerHTML = pageHead('Lista de Compras', 'Generada desde el plan'); }
+function viewReport() { view().innerHTML = pageHead('Reportes Clínicos', 'Impresión y PDF'); }
+function viewFoods() { view().innerHTML = pageHead('Catálogo de Alimentos', 'SMAE 5ª Edición'); }
+function viewSettings() { view().innerHTML = pageHead('Ajustes del Sistema', 'Configuración general'); }
+
 initChrome();
 route();
 </script>
