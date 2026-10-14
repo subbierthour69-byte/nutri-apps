@@ -81,6 +81,16 @@ details.dd{margin-top:14px;border-top:1px solid var(--bd);padding-top:10px}detai
 .dsec{border-top:6px solid var(--a);background-image:linear-gradient(180deg,color-mix(in srgb,var(--a) 9%,transparent),transparent 140px)}
 button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .dsec .chip.on{background:var(--a);border-color:var(--a)}
+/* ===== Selector de modo ===== */
+#picker{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(circle at 20% 15%,#134e4a,#0b1f24 60%,#111827);padding:20px;overflow:auto}
+#picker[hidden]{display:none}
+.pk{max-width:780px;text-align:center;color:#e8f5f2}.pk h1{font-size:36px;color:#fff;margin-bottom:6px}
+.pkg{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0}
+.pkc{flex:1 1 290px;max-width:350px;flex-direction:column;justify-content:center;gap:8px;padding:30px 22px;border-radius:24px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;font-size:24px;box-shadow:0 12px 32px #0007;transition:transform .15s;position:relative;text-align:center}
+.pkc:hover,.pkc:focus-visible{transform:translateY(-5px) scale(1.03)}
+.pke{font-size:56px;line-height:1}.pkc small{font-size:13px;font-weight:400;opacity:.95;line-height:1.4}
+.pkc em{position:absolute;top:12px;right:14px;font-size:11px;font-style:normal;background:#0005;padding:2px 9px;border-radius:99px}
+.msub{font-size:12px;color:#9fd9cc;font-weight:500;padding:0 10px}
 /* ===== Responsivo ===== */
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
 @media(max-width:820px){aside{position:fixed;left:-250px}aside.open{left:0}#burger{display:inline-flex}main{padding:14px}}
@@ -93,12 +103,13 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
   <div class="top">
     <button id="burger" class="g" aria-label="Menú"></button>
     <h1 id="title"></h1>
-    <span id="topav"></span><div style="min-width:210px"><select id="psel" aria-label="Paciente activo"></select></div>
+    <span id="mpill"></span><span id="topav"></span><div style="min-width:210px"><select id="psel" aria-label="Paciente activo"></select></div>
     <button id="theme" class="g" aria-label="Cambiar tema"></button>
   </div>
   <div id="view"></div>
 </main>
 <div id="toast"></div>
+<div id="picker" hidden></div>
 
 <script>
 /* =====================================================================
@@ -124,7 +135,11 @@ const adqLegend=()=>`<span class="pill" style="background:var(--warn)">Falta &lt
    DB.sel      id del paciente activo   · DB.csel[idPaciente] consulta activa
    DB.smae     base SMAE importada por el usuario (null = usar base incluida)
    ===================================================================== */
-const KEY='nutriclin_v2';
+/* Modos de trabajo: cada uno guarda sus datos en una clave distinta de localStorage ('priv' conserva la clave original) */
+const MODOS={inst:{n:'Institución',e:'🏥',d:'Hospital, clínica o programa institucional: expediente, servicio, cama y valoración de riesgo nutricional.',a:'#2563eb',b:'#06b6d4'},
+ priv:{n:'Uso privado',e:'🩺',d:'Consultorio y pacientes particulares: historia clínica y seguimiento personalizado.',a:'#0e8f78',b:'#84cc16'}};
+let MODE=localStorage.getItem('nutriclin_modo');if(!MODOS[MODE])MODE='priv';
+const KEY=MODE==='inst'?'nutriclin_v2_inst':'nutriclin_v2';
 let DB=JSON.parse(localStorage.getItem(KEY)||'null')||{p:[],sel:null,csel:{},theme:null,smae:null};
 const save=()=>localStorage.setItem(KEY,JSON.stringify(DB));
 const cur=()=>DB.p.find(x=>x.id===DB.sel);
@@ -157,7 +172,7 @@ $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
 const NAV=[['General',[['panel','Panel','panel']]],['Clínica',[['pac','Pacientes','users'],['cons','Consulta','pulse']]],
- ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
+ ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['hc','Historia clínica','list'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
 $('#burger').innerHTML=ico('menu');
@@ -919,6 +934,118 @@ V.eqdist={t:'Equivalentes y distribución',h(){const p=cur();if(!p)return noP;en
   $('#view').onclick=e=>{if(e.target.closest('[data-x]')){location.hash='cons';setTimeout(()=>{const t=$('#eqplan');t&&t.scrollIntoView({behavior:'smooth'})},120)}}}};
 
 /* =====================================================================
+   8c. MODO DE TRABAJO (Institución / Uso privado) + HISTORIA CLÍNICA PERSONALIZABLE
+   · Cada modo guarda sus propios datos (pacientes, consultas, menús, recetas, plantilla).
+   · La plantilla de historia clínica se importa (.csv / .json) o se arma en pantalla; p.hcd guarda lo capturado por paciente.
+   ===================================================================== */
+function showPicker(){const el=$('#picker');el.hidden=false;
+ el.innerHTML=`<div class="pk"><h1>NutriClin</h1><p style="font-size:17px">¿Cómo vas a trabajar hoy?</p><div class="pkg">${Object.entries(MODOS).map(([k,m])=>`<button class="pkc" data-m="${k}" style="--a:${m.a};--b:${m.b}"><span class="pke">${m.e}</span><b>${m.n}</b><small>${m.d}</small>${k===MODE?'<em>Último uso</em>':''}</button>`).join('')}</div>
+ <p style="font-size:12px;opacity:.8">Cada modo guarda sus propios pacientes, menús y su propia historia clínica. Puedes cambiar de modo cuando quieras desde el menú lateral.</p></div>`;
+ el.onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const m=b.dataset.m;sessionStorage.setItem('nc_ok','1');
+  if(m!==MODE){save();localStorage.setItem('nutriclin_modo',m);location.reload()}else{localStorage.setItem('nutriclin_modo',m);el.hidden=true}}}
+function paintBrand(){const m=MODOS[MODE];
+ $('.brand').innerHTML=`NutriClin<div class="msub">${m.e} ${m.n}${DB.org?' · '+esc(DB.org):''}</div><button class="g s" id="swmode" style="margin:8px 0 0 0;color:#c9e6df;border-color:#ffffff33">⇄ Cambiar modo</button>`;
+ $('#swmode').onclick=()=>{sessionStorage.removeItem('nc_ok');showPicker()};
+ $('#mpill').innerHTML=`<span class="pill" style="background:${m.a}">${m.e} ${m.n}</span>`}
+const modeCard=()=>`<div class="card"><h2>Modo de trabajo</h2><p>Modo actual: <b>${MODOS[MODE].e} ${MODOS[MODE].n}</b>. Cada modo guarda sus propios pacientes, consultas, menús, recetas y plantilla de historia clínica.</p>
+ <div class="grid" style="align-items:end"><div><label for="org">Nombre de la institución o consultorio (opcional)</label><input id="org" value="${esc(DB.org)}"></div><div><button id="bmode">⇄ Cambiar modo</button></div></div></div>`;
+const _ajH=V.aj.h,_ajI=V.aj.i;
+V.aj.h=()=>modeCard()+_ajH();
+V.aj.i=function(){_ajI();$('#org').oninput=e=>{DB.org=e.target.value;save();paintBrand()};$('#bmode').onclick=()=>{sessionStorage.removeItem('nc_ok');showPicker()}};
+
+/* ---------- Plantilla de historia clínica ---------- */
+const HC_TIPOS=[['text','Texto corto'],['area','Texto largo'],['num','Número'],['date','Fecha'],['sel','Lista de opciones']];
+const rid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3);
+const hf=(l,tp='text',o)=>({id:rid(),l,tp,o:o||[]}),hs=(t,f)=>({id:rid(),t,f});
+const SN=['Sí','No'];
+function hcBase(m){
+ if(m==='inst')return{nombre:'Historia clínica nutricional · Institución',ref:null,secs:[
+  hs('Identificación institucional',[hf('No. de expediente'),hf('Servicio / área'),hf('Cama / habitación'),hf('Fecha de ingreso','date'),hf('Médico tratante'),hf('Diagnóstico médico','area'),hf('Derechohabiencia / seguro')]),
+  hs('Antecedentes',[hf('Heredofamiliares','area'),hf('Personales patológicos','area'),hf('Quirúrgicos','area'),hf('Alergias e intolerancias alimentarias'),hf('Medicamentos actuales','area')]),
+  hs('Valoración del estado nutricional',[hf('Herramienta de tamizaje','sel',['NRS-2002','MUST','MNA','Otra']),hf('Puntaje del tamizaje','num'),hf('Riesgo nutricional','sel',['Sin riesgo','Riesgo bajo','Riesgo medio','Riesgo alto']),hf('Pérdida de peso reciente'),hf('Vía de alimentación','sel',['Oral','Enteral','Parenteral','Mixta']),hf('Dieta prescrita'),hf('Tolerancia a la dieta','area'),hf('Disfagia','sel',SN),hf('Edema','sel',['No','Leve','Moderado','Severo'])]),
+  hs('Evolución y plan',[hf('Interconsultas','area'),hf('Observaciones','area'),hf('Plan al egreso','area')])]};
+ return{nombre:'Historia clínica nutricional · Consulta privada',ref:null,secs:[
+  hs('Ficha y motivo',[hf('Ocupación'),hf('Estado civil','sel',['Soltero/a','Casado/a','Unión libre','Divorciado/a','Viudo/a']),hf('Motivo de consulta','area'),hf('Objetivo del paciente','area')]),
+  hs('Antecedentes',[hf('Heredofamiliares','area'),hf('Personales patológicos','area'),hf('Quirúrgicos','area'),hf('Alergias e intolerancias alimentarias'),hf('Medicamentos y suplementos','area')]),
+  hs('Estilo de vida',[hf('Horario de trabajo / estudio'),hf('Quién prepara los alimentos'),hf('Come fuera de casa','sel',['Nunca','Ocasional','Frecuente']),hf('Tabaquismo','sel',['No','Ocasional','Diario']),hf('Alcohol','sel',['No','Ocasional','Frecuente']),hf('Actividad física'),hf('Horas de sueño','num')]),
+  hs('Historia alimentaria',[hf('Alimentos que no le gustan','area'),hf('Alimentos preferidos','area'),hf('Apetito','sel',['Disminuido','Normal','Aumentado']),hf('Consumo de agua (L/día)','num')]),
+  hs('Gastrointestinal',[hf('Evacuaciones','sel',['Estreñimiento','Normal','Diarrea','Alternado']),hf('Síntomas digestivos','area')])]}}
+function getHC(){if(!DB.hc||!DB.hc.secs){DB.hc=hcBase(MODE);save()}return DB.hc}
+const HS={cfg:false};
+function parseCSV(txt){txt=txt.replace(/^\uFEFF/,'');const l1=txt.split(/\r?\n/)[0]||'',d=l1.split(';').length>l1.split(',').length?';':',',rows=[];let row=[],c='',q=false;
+ for(let i=0;i<txt.length;i++){const ch=txt[i];
+  if(q){if(ch==='"'){if(txt[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+  else if(ch==='"')q=true;else if(ch===d){row.push(c);c=''}
+  else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&txt[i+1]==='\n')i++;row.push(c);rows.push(row);row=[];c=''}else c+=ch}
+ if(c!==''||row.length){row.push(c);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+const tipoOf=s=>{const t=nrm2(s);return /larg|area|parraf|abiert/.test(t)?'area':/^num|cant/.test(t)?'num':/fech|date/.test(t)?'date':/list|sel|opci|elegir/.test(t)?'sel':'text'};
+function csvToTemplate(txt){const rows=parseCSV(txt);if(rows.length&&nrm2(rows[0][0]).startsWith('secci'))rows.shift();
+ const map=new Map();rows.forEach(r=>{const s=(r[0]||'').trim()||'General',l=(r[1]||'').trim();if(!l)return;const tp=tipoOf(r[2]),o=(r[3]||'').trim();
+  if(!map.has(s))map.set(s,[]);map.get(s).push(hf(l,tp,tp==='sel'&&o?(o.includes('|')?o.split('|'):o.split(/[;,]/)).map(x=>x.trim()).filter(Boolean):[]))});
+ return{secs:[...map].map(([t,f])=>hs(t,f))}}
+function jsonToTemplate(txt){const j=JSON.parse(txt);if(!j||!Array.isArray(j.secs))throw 0;
+ return{nombre:j.nombre,secs:j.secs.map(s=>hs(String(s.t||'Sección'),(s.f||[]).filter(f=>f&&f.l).map(f=>({id:rid(),l:String(f.l),tp:HC_TIPOS.some(x=>x[0]===f.tp)?f.tp:'text',o:Array.isArray(f.o)?f.o.map(String):[]}))))}}
+/* Aplica una plantilla nueva conservando los datos ya capturados de campos con el mismo nombre */
+function applyTemplate(t){const old=getHC(),mp=new Map();old.secs.forEach(s=>s.f.forEach(f=>mp.set(nrm2(f.l),f.id)));
+ let n=0;t.secs.forEach(s=>s.f.forEach(f=>{const k=nrm2(f.l);if(mp.has(k)){f.id=mp.get(k);mp.delete(k)}n++}));
+ DB.hc={nombre:t.nombre||old.nombre,ref:old.ref,secs:t.secs};save();return n}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+const hcField=(f,v)=>{const id='h-'+f.id,l=`<label for="${id}">${esc(f.l)}</label>`;
+ if(f.tp==='area')return `<div style="grid-column:1/-1">${l}<textarea id="${id}" data-h="${f.id}">${esc(v)}</textarea></div>`;
+ if(f.tp==='sel')return `<div>${l}<select id="${id}" data-h="${f.id}"><option value=""></option>${(f.o||[]).map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}${v&&!(f.o||[]).includes(v)?`<option selected>${esc(v)}</option>`:''}</select></div>`;
+ return `<div>${l}<input id="${id}" data-h="${f.id}" type="${f.tp==='num'?'number':f.tp==='date'?'date':'text'}" ${f.tp==='num'?'step="any"':''} value="${esc(v)}"></div>`};
+function hcFind(id){for(const s of getHC().secs){const i=s.f.findIndex(f=>f.id===id);if(i>=0)return{s,i,f:s.f[i]}}}
+const mv=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]]};
+V.hc={t:'Historia clínica',
+ h(){const H=getHC(),m=MODOS[MODE];
+  if(!HS.cfg){const p=cur();if(!p)return noP+'<p><button class="g" data-x="cfg">⚙ Configurar plantilla</button></p>';
+   return phead(p)+`<div class="gap" style="margin-bottom:12px"><h2 style="margin:0;flex:1">${esc(H.nombre)}</h2>${H.ref?`<a href="${H.ref.data}" download="${esc(H.ref.name)}"><button class="g s" type="button">📎 Formato de referencia</button></a>`:''}<button class="g s" data-x="cfg">⚙ Configurar plantilla</button></div>`+
+    (H.secs.map(s=>`<div class="card" style="border-top:5px solid ${m.a}"><h2>${esc(s.t)}</h2><div class="grid">${s.f.map(f=>hcField(f,(p.hcd||{})[f.id])).join('')}</div></div>`).join('')||'<div class="msg">La plantilla no tiene campos. Usa “Configurar plantilla”.</div>')}
+  return `<div class="card" style="border-top:5px solid ${m.a}"><div class="gap"><h2 style="margin:0;flex:1">Configurar historia clínica · ${m.e} ${m.n}</h2><button class="g" data-x="done">← Volver a la historia</button></div>
+   <p class="note">Cada modo tiene su propia plantilla. Importa la tuya (CSV con columnas <b>Sección, Campo, Tipo, Opciones</b> o JSON) o edítala aquí. Los datos ya capturados se conservan en los campos que mantengan el mismo nombre.</p>
+   <div class="grid" style="margin-top:8px"><div style="grid-column:span 2"><label>Nombre de la plantilla</label><input data-cn="nombre" value="${esc(H.nombre)}"></div></div>
+   <div class="gap" style="margin-top:12px"><button data-x="imp">⬆ Importar plantilla (.csv / .json)</button><input type="file" id="hc-imp" accept=".csv,.json,.txt" hidden>
+   <button class="g" data-x="exp">⬇ Exportar plantilla</button><button class="g" data-x="csvex">Ejemplo de CSV</button>
+   <label class="g btnlike" for="hc-ref">📎 Subir formato de referencia</label><input type="file" id="hc-ref" accept="image/*,.pdf" hidden>${H.ref?`<span class="note" style="margin:0">${esc(H.ref.name)}</span><button class="g s" data-x="refdel">Quitar</button>`:''}
+   <button class="d" data-x="reset" style="margin-left:auto">Restaurar plantilla base</button></div></div>`+
+  H.secs.map(s=>`<div class="card"><div class="gap"><input data-cs="${s.id}" value="${esc(s.t)}" style="flex:1;min-width:200px;font-weight:700" aria-label="Nombre de la sección">
+    <button class="s g" data-x="su" data-s="${s.id}">↑</button><button class="s g" data-x="sd" data-s="${s.id}">↓</button><button class="s d" data-x="sdel" data-s="${s.id}">✕ Sección</button></div>
+   <div class="wrap"><table><tr><th>Campo<th>Tipo<th>Opciones (separadas por coma)<th></tr>
+   ${s.f.map(f=>`<tr><td><input data-cf="${f.id}" data-k="l" value="${esc(f.l)}" style="min-width:220px"><td><select data-cf="${f.id}" data-k="tp">${HC_TIPOS.map(([k,n])=>`<option value="${k}"${f.tp===k?' selected':''}>${n}</option>`).join('')}</select>
+    <td><input data-cf="${f.id}" data-k="o" value="${esc((f.o||[]).join(', '))}" style="min-width:240px"${f.tp==='sel'?'':' disabled'}>
+    <td class="n"><button class="s g" data-x="fu" data-f="${f.id}">↑</button> <button class="s g" data-x="fd" data-f="${f.id}">↓</button> <button class="s d" data-x="fdel" data-f="${f.id}">✕</button>`).join('')||'<tr><td colspan=4>Sin campos.'}</table></div>
+   <p style="margin-bottom:0"><button class="s" data-x="fa" data-s="${s.id}">＋ Campo</button></p></div>`).join('')+
+  '<p><button data-x="sa">＋ Nueva sección</button></p>'},
+ i(){const v=$('#view'),H=getHC();
+  v.oninput=e=>{const t=e.target,d=t.dataset;
+   if(d.h){const p=cur();if(!p)return;p.hcd=p.hcd||{};p.hcd[d.h]=t.value;save()}
+   else if(d.cn){H.nombre=t.value;save()}
+   else if(d.cs){const s=H.secs.find(x=>x.id===d.cs);if(s){s.t=t.value;save()}}
+   else if(d.cf&&d.k!=='tp'){const r=hcFind(d.cf);if(r){r.f[d.k]=d.k==='o'?t.value.split(',').map(x=>x.trim()).filter(Boolean):t.value;save()}}};
+  v.onchange=async e=>{const t=e.target,d=t.dataset;
+   if(d.h){const p=cur();if(p){p.hcd=p.hcd||{};p.hcd[d.h]=t.value;save()}}
+   else if(d.cf&&d.k==='tp'){const r=hcFind(d.cf);if(r){r.f.tp=t.value;save();render()}}
+   else if(t.id==='hc-imp'){const f=t.files[0];if(!f)return;try{const tx=await f.text(),tpl=/\.json$/i.test(f.name)?jsonToTemplate(tx):csvToTemplate(tx);
+     if(!tpl.secs.length)throw 0;if(!confirm('Se reemplazará la plantilla actual por la importada ('+tpl.secs.reduce((a,s)=>a+s.f.length,0)+' campos). ¿Continuar?'))return;
+     const n=applyTemplate(tpl);toast(n+' campos importados');render()}catch{toast('No se pudo leer: revisa el formato (Sección, Campo, Tipo, Opciones)')}}
+   else if(t.id==='hc-ref'){const f=t.files[0];if(!f)return;try{const a=await attach(f,false);if(a){H.ref=a;try{save()}catch{H.ref=null;toast('Almacenamiento lleno')}render()}}catch{toast('No se pudo leer el archivo')}}};
+  v.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,d=b.dataset;
+   const si=()=>H.secs.findIndex(s=>s.id===d.s);
+   if(x==='cfg')HS.cfg=true;else if(x==='done')HS.cfg=false;
+   else if(x==='imp'){$('#hc-imp').click();return}
+   else if(x==='exp'){download('plantilla-historia-clinica.json',JSON.stringify({nombre:H.nombre,secs:H.secs.map(s=>({t:s.t,f:s.f.map(f=>({l:f.l,tp:f.tp,o:f.o}))}))},null,1),'application/json');return}
+   else if(x==='csvex'){download('ejemplo-historia-clinica.csv','\uFEFFSección,Campo,Tipo,Opciones\nAntecedentes,Alergias,texto,\nAntecedentes,Heredofamiliares,texto largo,\nEstilo de vida,Tabaquismo,lista,No|Ocasional|Diario\nEstilo de vida,Horas de sueño,número,\nIngreso,Fecha de ingreso,fecha,\n','text/csv');return}
+   else if(x==='refdel'){H.ref=null;save()}
+   else if(x==='reset'){if(!confirm('Se restaurará la plantilla base de este modo. Los datos capturados de campos que ya no existan dejarán de mostrarse. ¿Continuar?'))return;DB.hc=hcBase(MODE);save()}
+   else if(x==='sa'){H.secs.push(hs('Nueva sección',[hf('Nuevo campo')]));save()}
+   else if(x==='su'){mv(H.secs,si(),-1);save()}else if(x==='sd'){mv(H.secs,si(),1);save()}
+   else if(x==='sdel'){if(!confirm('¿Eliminar esta sección y sus campos?'))return;H.secs.splice(si(),1);save()}
+   else if(x==='fa'){H.secs[si()].f.push(hf('Nuevo campo'));save()}
+   else if(x==='fu'||x==='fd'){const r=hcFind(d.f);if(r){mv(r.s.f,r.i,x==='fu'?-1:1);save()}}
+   else if(x==='fdel'){const r=hcFind(d.f);if(r){r.s.f.splice(r.i,1);save()}}
+   render()}}};
+
+/* =====================================================================
    9. ENRUTADOR Y ARRANQUE
    ===================================================================== */
 function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">— Sin paciente —</option>'+DB.p.map(p=>`<option value="${p.id}"${p.id===DB.sel?' selected':''}>${esc(p.nombre+' '+p.apellidos)}</option>`).join('')}
@@ -927,7 +1054,8 @@ function render(){const id=(location.hash||'#panel').slice(1),v=V[id]||V.panel;
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(V[id]?id:'panel')));
  const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();v.i&&v.i()}
 window.addEventListener('hashchange',()=>{editId=null;render()});
-fillSel();render();
+paintBrand();fillSel();render();
+if(!sessionStorage.getItem('nc_ok'))showPicker();
 </script>
 </body>
 </html>
