@@ -126,7 +126,7 @@ $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
 const NAV=[['General',[['panel','Panel','panel']]],['Clínica',[['pac','Pacientes','users'],['cons','Consulta','pulse']]],
- ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
+ ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
 $('#burger').innerHTML=ico('menu');
@@ -350,7 +350,7 @@ loadFoods();
 const MEALS=['Desayuno','Colación 1','Comida','Colación 2','Cena'];
 /* Totales del plan de equivalentes de una consulta (macros, equivalentes por grupo, micros de la base) */
 function planT(c){const t={kcal:0,p:0,l:0,hc:0,g:{},mic:{}};
- (c.dieta||[]).forEach(d=>{const f=FOODS.find(x=>x.id===d.k);if(!f)return;const n=+d.n||0;
+ (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f)return;const n=+d.n||0;
   t.kcal+=f.kcal*n;t.p+=f.p*n;t.l+=f.l*n;t.hc+=f.hc*n;t.g[f.g]=(t.g[f.g]||0)+n;
   for(const k in f.mic||{})t.mic[k]=(t.mic[k]||0)+f.mic[k]*n});return t}
 
@@ -420,7 +420,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
    if(b.dataset.a==='del'&&confirm('¿Borrar este paciente y todas sus consultas?')){DB.p=DB.p.filter(x=>x.id!==id);if(DB.sel===id)DB.sel=null;save();fillSel();go()}}}};
 
 /* ---------- CONSULTA: historial + energía + pediatría + composición + plan ---------- */
-const dietRow=(d,i)=>{const f=FOODS.find(x=>x.id===d.k);if(!f)return'';const n=+d.n||0;
+const dietRow=(d,i)=>{const f=foodOf(d.k);if(!f)return'';const n=+d.n||0;
  return`<tr data-i="${i}"><td><select data-m="${i}">${MEALS.map(m=>`<option${m===d.t?' selected':''}>${m}</option>`).join('')}</select><td>${esc(f.n)} <small style="color:var(--mut)">(${esc(f.po)})</small>
  <td><input data-q="${i}" type="number" min="0" step="0.5" value="${d.n}" style="width:80px"><td class="n kc">${fx(f.kcal*n,0)}<td class="n pp">${fx(f.p*n)}<td class="n ll">${fx(f.l*n)}<td class="n hh">${fx(f.hc*n)}<td><button class="s d" data-d="${i}">✕</button>`};
 V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC();DB.csel[p.id]=c.id;
@@ -441,13 +441,14 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
  <div class="card"><h2>Plan de equivalentes (se arma desde el <a href="#cat">Catálogo SMAE</a>)</h2>
  <div class="wrap"><table><thead><tr><th>Tiempo<th>Alimento<th>Porciones<th class="n">kcal<th class="n">Prot (g)<th class="n">Lípidos (g)<th class="n">HC (g)<th></tr></thead><tbody id="dtb"></tbody></table></div>
  <div id="dtot" style="margin-top:12px"></div></div>
+ <div class="card"><h2>Equivalentes y distribución</h2><div id="eqt"></div></div>
  <div class="card"><label>Notas de la consulta</label><textarea data-f="notas">${esc(c.notas)}</textarea></div>`},
  i(){const p=cur();if(!p)return;const c=curC();
   const rowsUpd=()=>{const t=planT(c),e=en(c,p),s=(t.p*4+t.l*9+t.hc*4)||1;
    const gl=Object.entries(t.g).map(([g,n])=>`${esc(g)}: <b>${fx(n,1)}</b>`).join(' · ')||'Sin alimentos en el plan';
    $('#dtot').innerHTML=`<div class="grid">${kpi('Energía del plan',fx(t.kcal,0)+' kcal')}${e&&e.tot?kpi('% del GET + ETA',fx(t.kcal/e.tot*100,0)+' %'):''}
    ${kpi('Proteínas',fx(t.p)+' g · '+fx(t.p*4/s*100,0)+' %')}${kpi('Lípidos',fx(t.l)+' g · '+fx(t.l*9/s*100,0)+' %')}${kpi('Hidratos de carbono',fx(t.hc)+' g · '+fx(t.hc*4/s*100,0)+' %')}</div>
-   <p class="note">Equivalentes por grupo — ${gl}</p>`};
+   <p class="note">Equivalentes por grupo — ${gl}</p>`;const q=$('#eqt');if(q)q.innerHTML=eqHTML(c,p,true)};
   const drawDiet=()=>{$('#dtb').innerHTML=(c.dieta||[]).map(dietRow).join('')||'<tr><td colspan=8>Agrega alimentos con el botón + del catálogo.';rowsUpd()};
   const calc=()=>{const ed=edad(p.nac,c.fecha);$('#age').value=edTxt(ed);const e=en(c,p),k=(l,v,u)=>`<div class="card kpi" style="margin:0">${v}<small>${l}${u?' ('+u+')':''}</small></div>`;
    $('#o1').innerHTML=!e?'<div class="msg">Captura peso y estatura para calcular.</div>':e.err?'<div class="msg">La fórmula elegida no aplica a esta edad (Valencia: ≥18 años; Schofield: &lt;18 años). Elige otra.</div>':
@@ -467,9 +468,13 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
   const v=$('#view');
   v.oninput=e=>{const t=e.target,f=t.dataset.f;
    if(f){c[f]=t.value;if(f==='af')$('#afsel').value='';save();calc();if(f==='fecha')$('#csel').options[$('#csel').selectedIndex].text=c.fecha+(c.peso?' · '+c.peso+' kg':'')}
-   if(t.dataset.q!==undefined){const i=+t.dataset.q,d=c.dieta[i],fd=FOODS.find(x=>x.id===d.k);d.n=t.value;save();const r=t.closest('tr'),n=+d.n||0;
+   if(t.dataset.q!==undefined){const i=+t.dataset.q,d=c.dieta[i],fd=foodOf(d.k);d.n=t.value;save();const r=t.closest('tr'),n=+d.n||0;
     r.querySelector('.kc').textContent=fx(fd.kcal*n,0);r.querySelector('.pp').textContent=fx(fd.p*n);r.querySelector('.ll').textContent=fx(fd.l*n);r.querySelector('.hh').textContent=fx(fd.hc*n);rowsUpd()}};
   v.onchange=e=>{const t=e.target;
+   if(t.dataset.eq){const[gi,mi]=t.dataset.eq.split('|').map(Number),g=Object.keys(GR)[gi],m=MEALS[mi],want=Math.max(0,num(t.value)||0),
+    fpart=c.dieta.filter(d=>!d.k.startsWith('G|')&&d.t===m&&(foodOf(d.k)||{}).g===g).reduce((a,d)=>a+(+d.n||0),0),gen=Math.max(0,want-fpart),k='G|'+g,ix=c.dieta.findIndex(d=>d.k===k&&d.t===m);
+    if(gen>0){if(ix>=0)c.dieta[ix].n=gen;else c.dieta.push({k,n:gen,t:m})}else if(ix>=0)c.dieta.splice(ix,1);
+    save();drawDiet();return}
    if(t.id==='afsel'&&t.value){c.af=t.value;$('[data-f=af]').value=t.value;save();calc()}
    if(t.dataset.f==='formula'){c.formula=t.value;save();calc()}
    if(t.id==='csel'){DB.csel[p.id]=t.value;save();render()}
@@ -669,6 +674,39 @@ V.whatsapp={t:'WhatsApp',h(){const p=cur();if(!p)return noP;const log=((p.mod&&p
  i(){const p=cur();if(!p)return;$('#wa-tpl').onchange=e=>{$('#wa-msg').value=waFill(WA_T[e.target.value],p)};
   $('#wa-send').onclick=()=>{const m=$('#wa-msg').value.trim(),ph=waPhone(p.tel);if(!ph)return toast('El paciente no tiene teléfono');if(!m)return toast('Escribe un mensaje');
    window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m),'_blank','noopener');p.mod=p.mod||{};(p.mod.wa=p.mod.wa||[]).push({id:uid(),date:today(),text:m});save()}}};
+
+/* ---------- Cuadro de equivalentes y cuadro de distribución por tiempo de comida ----------
+   Un equivalente genérico se guarda como {k:'G|<grupo>'}; los alimentos del catálogo conservan su id. */
+function foodOf(k){if(k.startsWith('G|')){const g=k.slice(2),m=GR[g];return m?{id:k,n:'Equivalente de '+g,g,po:'1 equivalente',w:0,kcal:m[0],p:m[1],l:m[2],hc:m[3]}:null}return FOODS.find(x=>x.id===k)}
+const qn=n=>n?String(Math.round(n*100)/100):'';
+function eqHTML(c,p,edit){
+ const G=Object.keys(GR),M=MEALS,cell={},fp={},gt={},mt={};
+ G.forEach(g=>{cell[g]={};fp[g]={};gt[g]={n:0,kcal:0,p:0,l:0,hc:0}});
+ M.forEach(m=>mt[m]={kcal:0,p:0,l:0,hc:0});
+ (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f||!cell[f.g])return;const n=+d.n||0,m=M.includes(d.t)?d.t:'Comida';
+  cell[f.g][m]=(cell[f.g][m]||0)+n;if(!d.k.startsWith('G|'))fp[f.g][m]=(fp[f.g][m]||0)+n;
+  const a=gt[f.g];a.n+=n;a.kcal+=f.kcal*n;a.p+=f.p*n;a.l+=f.l*n;a.hc+=f.hc*n;
+  const b=mt[m];b.kcal+=f.kcal*n;b.p+=f.p*n;b.l+=f.l*n;b.hc+=f.hc*n});
+ const used=G.filter(g=>gt[g].n>0),T=used.reduce((a,g)=>({n:a.n+gt[g].n,kcal:a.kcal+gt[g].kcal,p:a.p+gt[g].p,l:a.l+gt[g].l,hc:a.hc+gt[g].hc}),{n:0,kcal:0,p:0,l:0,hc:0});
+ const e=en(c,p);
+ const t1=used.length?`<div class="wrap"><table><tr><th>Grupo de equivalentes<th class="n">Equivalentes/día<th class="n">kcal<th class="n">Prot (g)<th class="n">Lípidos (g)<th class="n">HC (g)<th class="n">% kcal</tr>
+  ${used.map(g=>`<tr><td>${esc(g)}<td class="n"><b>${qn(gt[g].n)}</b><td class="n">${fx(gt[g].kcal,0)}<td class="n">${fx(gt[g].p)}<td class="n">${fx(gt[g].l)}<td class="n">${fx(gt[g].hc)}<td class="n">${T.kcal?fx(gt[g].kcal/T.kcal*100,0)+' %':'—'}`).join('')}
+  <tr class="h"><td>Total del plan<td class="n">${qn(T.n)}<td class="n">${fx(T.kcal,0)}<td class="n">${fx(T.p)}<td class="n">${fx(T.l)}<td class="n">${fx(T.hc)}<td class="n">100 %
+  ${e&&e.tot?`<tr><td>Meta (GET + ETA)<td><td class="n">${fx(e.tot,0)}<td><td><td><td class="n">${fx(T.kcal/e.tot*100,0)} %`:''}</table></div>`
+  :'<div class="msg">Aún no hay equivalentes. Agrega alimentos desde el catálogo (botón +) o captura equivalentes en el cuadro de distribución.</div>';
+ const rows=(edit?G:used),sumRow=(l,k,d)=>`<tr class="h"><td>${l}${M.map(m=>`<td class="n">${fx(mt[m][k],d)}`).join('')}<td class="n">${fx(T[k],d)}`;
+ const t2=`<div class="wrap"><table><tr><th>Grupo${M.map(m=>`<th class="n">${m}`).join('')}<th class="n">Total</tr>
+  ${rows.map(g=>`<tr><td>${esc(g)}${M.map((m,mi)=>{const v=cell[g][m]||0,hint=fp[g][m]?` title="Incluye ${qn(fp[g][m])} de alimentos específicos del catálogo"`:'';
+   return `<td class="n">${edit?`<input type="number" min="0" step="0.5" data-eq="${G.indexOf(g)}|${mi}" value="${v||''}" style="width:64px;text-align:right"${hint}>`:(v?qn(v):'<span style="color:var(--mut)">·</span>')}`}).join('')}<td class="n"><b>${qn(gt[g].n)}</b>`).join('')||'<tr><td colspan="7">Sin equivalentes.'}
+  ${sumRow('Energía (kcal)','kcal',0)}${sumRow('Proteínas (g)','p',1)}${sumRow('Lípidos (g)','l',1)}${sumRow('Hidratos de carbono (g)','hc',1)}
+  <tr><td>% de la energía del día${M.map(m=>`<td class="n">${T.kcal?fx(mt[m].kcal/T.kcal*100,0)+' %':'—'}`).join('')}<td class="n">${T.kcal?'100 %':'—'}</table></div>`;
+ return `<h3 style="margin:0 0 8px">Cuadro de equivalentes</h3>${t1}<h3 style="margin:16px 0 8px">Cuadro de distribución por tiempo de comida</h3>${t2}${edit?'<p class="note">Escribe el número de equivalentes en cada celda (acepta medios) y presiona Enter o sal de la celda: se suman al plan como equivalente genérico. Si ya agregaste alimentos específicos en esa celda, se respetan.</p>':''}`;
+}
+V.eqdist={t:'Equivalentes y distribución',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(),cs=csort(p).reverse();
+ return phead(p)+`<div class="card"><div class="grid" style="align-items:end"><div><label for="eqc">Consulta</label><select id="eqc">${cs.map(x=>`<option value="${x.id}"${x.id===c.id?' selected':''}>${fd(x.fecha)}</option>`).join('')}</select></div>
+  <div><button data-x="edit">Editar en Consulta</button></div></div></div><div class="card">${eqHTML(c,p,false)}</div>`},
+ i(){const p=cur();if(!p)return;$('#eqc').onchange=e=>{DB.csel[p.id]=e.target.value;save();render()};
+  $('#view').onclick=e=>{if(e.target.closest('[data-x]')){location.hash='cons';setTimeout(()=>{const t=$('#eqt');t&&t.scrollIntoView({behavior:'smooth'})},120)}}}};
 
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
