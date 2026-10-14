@@ -387,6 +387,8 @@ function loadFoods(){FOODS=(DB.smae&&DB.smae.length?DB.smae:BASE).map(f=>{const 
  return{...f,id:f.g+'|'+f.n,kcal:f.kcal??m[0],p:f.p??m[1],l:f.l??m[2],hc:f.hc??m[3]}})}
 loadFoods();
 const MEALS=['Desayuno','Colación 1','Comida','Colación 2','Cena'];
+/* Equivalentes capturados en la columna Eq que aún no se reparten en un tiempo de comida (se guardan como G|grupo con t=UND) */
+const UND='Por distribuir';
 /* Totales del plan de equivalentes de una consulta (macros, equivalentes por grupo, micros de la base) */
 function planT(c){const t={kcal:0,p:0,l:0,hc:0,g:{},mic:{}};
  (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f)return;const n=+d.n||0;
@@ -461,13 +463,13 @@ V.pac={t:'Pacientes e historia clínica',h(){
    if(b.dataset.a==='del'&&confirm('¿Borrar este paciente y todas sus consultas?')){DB.p=DB.p.filter(x=>x.id!==id);if(DB.sel===id)DB.sel=null;save();fillSel();go()}}}};
 
 /* ---------- CONSULTA: historial + energía + pediatría + composición + plan ---------- */
-const dietRow=(d,i)=>{const f=foodOf(d.k);if(!f)return'';const n=+d.n||0;
+const dietRow=(d,i)=>{const f=foodOf(d.k);if(!f||d.t===UND)return'';const n=+d.n||0;
  return`<tr data-i="${i}"><td><select data-m="${i}">${MEALS.map(m=>`<option${m===d.t?' selected':''}>${m}</option>`).join('')}</select><td>${esc(f.n)} <small style="color:var(--mut)">(${esc(f.po)})</small>
  <td><input data-q="${i}" type="number" min="0" step="0.5" value="${d.n}" style="width:80px"><td class="n kc">${fx(f.kcal*n,0)}<td class="n pp">${fx(f.p*n)}<td class="n ll">${fx(f.l*n)}<td class="n hh">${fx(f.hc*n)}<td><button class="s d" data-d="${i}">✕</button>`};
 /* Datos del plan por grupo y por tiempo de comida (equivalentes genéricos G|grupo + alimentos del catálogo) */
-function eqData(c){const G=Object.keys(GR),M=MEALS,r=G.map(()=>({m:{},n:0,kcal:0,p:0,l:0,hc:0})),mk={};M.forEach(m=>mk[m]=0);
- (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f)return;const gi=G.indexOf(f.g);if(gi<0)return;const n=+d.n||0,m=M.includes(d.t)?d.t:'Comida',x=r[gi];
-  x.m[m]=(x.m[m]||0)+n;x.n+=n;x.kcal+=f.kcal*n;x.p+=f.p*n;x.l+=f.l*n;x.hc+=f.hc*n;mk[m]+=f.kcal*n});
+function eqData(c){const G=Object.keys(GR),M=MEALS,r=G.map(()=>({m:{},u:0,n:0,kcal:0,p:0,l:0,hc:0})),mk={};M.forEach(m=>mk[m]=0);
+ (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f)return;const gi=G.indexOf(f.g);if(gi<0)return;const n=+d.n||0,x=r[gi];x.n+=n;x.kcal+=f.kcal*n;x.p+=f.p*n;x.l+=f.l*n;x.hc+=f.hc*n;
+  if(d.t===UND){x.u+=n;return}const m=M.includes(d.t)?d.t:'Comida';x.m[m]=(x.m[m]||0)+n;mk[m]+=f.kcal*n});
  const T=r.reduce((a,x)=>({n:a.n+x.n,kcal:a.kcal+x.kcal,p:a.p+x.p,l:a.l+x.l,hc:a.hc+x.hc}),{n:0,kcal:0,p:0,l:0,hc:0});
  return{G,r,T,mk}}
 V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC();DB.csel[p.id]=c.id;
@@ -487,7 +489,7 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
  ${d('cin','Perímetro cintura','cm')}${d('cad','Perímetro cadera','cm')}${d('bra','Perímetro brazo','cm')}${d('mus','Perímetro muslo','cm')}</div><div id="o3" style="margin-top:14px"></div></div>
  <div class="card" id="eqplan"><h2>Plan de equivalentes y distribución por tiempo de comida</h2>
  <div class="eqwrap"><div class="wrap" id="eqtab"></div><div class="eqside" id="eqside"></div></div>
- <p class="note">Captura los equivalentes de cada grupo en el tiempo de comida que corresponda (acepta medios) y presiona Enter o cambia de celda. Adecuación: ${adqLegend()}</p>
+ <p class="note">Escribe el total de equivalentes del grupo en <b>Eq</b> (el sistema calcula kcal y macros) y luego repártelos en los tiempos de comida; lo que falte repartir se marca en <b>Por distribuir</b>. También puedes capturar directo en cada tiempo de comida (acepta medios). Presiona Enter o cambia de celda. Adecuación: ${adqLegend()}</p>
  <div class="eqsum" id="eqsum"></div>
  <details class="dd"><summary>Alimentos específicos agregados desde el <a href="#cat">Catálogo SMAE</a></summary>
  <div class="wrap"><table><thead><tr><th>Tiempo<th>Alimento<th>Porciones<th class="n">kcal<th class="n">Prot (g)<th class="n">Lípidos (g)<th class="n">HC (g)<th></tr></thead><tbody id="dtb"></tbody></table></div>
@@ -496,10 +498,10 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
  i(){const p=cur();if(!p)return;const c=curC();
   /* ---- Cuadro de equivalentes (izquierda: Eq y macros por grupo · derecha: distribución por tiempo) ---- */
   const drawEq=()=>{const D=eqData(c),e=en(c,p),mt=metaOf(c,e);
-   $('#eqtab').innerHTML=`<table class="eqt"><thead><tr><th>Grupo<th class="n">Eq<th class="n">Kcal<th class="n">Pro<th class="n">Lip<th class="n">HCO${MEALS.map((m,mi)=>`<th class="n${mi?'':' sp'}">${m}`).join('')}</tr></thead><tbody>
-    ${D.G.map((g,gi)=>`<tr data-g="${gi}"><td>${esc(g)}<td class="n" data-o="n"><td class="n" data-o="kcal"><td class="n" data-o="p"><td class="n" data-o="l"><td class="n" data-o="hc">${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}"><input type="number" min="0" step="0.5" data-eq="${gi}|${mi}" aria-label="${esc(g)} · ${m}">`).join('')}`).join('')}
-    <tr class="h"><td>Total<td class="n" data-t="n"><td class="n" data-t="kcal"><td class="n" data-t="p"><td class="n" data-t="l"><td class="n" data-t="hc">${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}" data-mk="${mi}">`).join('')}
-    <tr><td>% de la energía del día<td><td><td><td><td>${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}" data-mp="${mi}">`).join('')}</tbody></table>`;
+   $('#eqtab').innerHTML=`<table class="eqt"><thead><tr><th>Grupo<th class="n">Eq<th class="n">Kcal<th class="n">Pro<th class="n">Lip<th class="n">HCO${MEALS.map((m,mi)=>`<th class="n${mi?'':' sp'}">${m}`).join('')}<th class="n sp">Por distribuir</tr></thead><tbody>
+    ${D.G.map((g,gi)=>`<tr data-g="${gi}"><td>${esc(g)}<td class="n"><input type="number" min="0" step="0.5" data-eqt="${gi}" aria-label="Eq total ${esc(g)}"><td class="n" data-o="kcal"><td class="n" data-o="p"><td class="n" data-o="l"><td class="n" data-o="hc">${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}"><input type="number" min="0" step="0.5" data-eq="${gi}|${mi}" aria-label="${esc(g)} · ${m}">`).join('')}<td class="n sp" data-u="${gi}">`).join('')}
+    <tr class="h"><td>Total<td class="n" data-t="n"><td class="n" data-t="kcal"><td class="n" data-t="p"><td class="n" data-t="l"><td class="n" data-t="hc">${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}" data-mk="${mi}">`).join('')}<td class="n sp" data-t="u">
+    <tr><td>% de la energía del día<td><td><td><td><td>${MEALS.map((m,mi)=>`<td class="n${mi?'':' sp'}" data-mp="${mi}">`).join('')}<td class="n sp"></tbody></table>`;
    $('#eqside').innerHTML=`<label>Dieta (meta en kcal)</label><div class="gap"><input data-mt="k" type="number" step="10" min="0" value="${mt.k}" style="max-width:130px"><span class="note" style="margin:0">kcal</span></div>
     <p class="note" style="margin:4px 0 10px">Por defecto toma el GET + ETA de la consulta.</p>
     <table><tr><th><th class="n">%<th class="n">Kcal<th class="n">Gramos</tr>
@@ -509,9 +511,10 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
   const updEq=()=>{const D=eqData(c),e=en(c,p),mt=metaOf(c,e),T=D.T,
     goal={kcal:mt.k,p:mt.k*mt.p/400,l:mt.k*mt.l/900,hc:mt.k*mt.hc/400},set=(s,v)=>{const el=$(s);if(el)el.textContent=v};
    D.r.forEach((x,gi)=>{const tr=$(`#eqtab tr[data-g="${gi}"]`);if(!tr)return;
-    tr.querySelectorAll('[data-o]').forEach(td=>{const k=td.dataset.o;td.textContent=x.n?(k==='n'?qn(x.n):fx(x[k],k==='kcal'?0:1)):'·'});
-    tr.querySelectorAll('input').forEach(inp=>{if(inp===document.activeElement)return;inp.value=x.m[MEALS[+inp.dataset.eq.split('|')[1]]]||''})});
-   set('#eqtab [data-t=n]',qn(T.n));set('#eqtab [data-t=kcal]',fx(T.kcal,0));['p','l','hc'].forEach(k=>set(`#eqtab [data-t=${k}]`,fx(T[k],1)));
+    tr.querySelectorAll('[data-o]').forEach(td=>{const k=td.dataset.o;td.textContent=x.n?fx(x[k],k==='kcal'?0:1):'·'});
+    tr.querySelectorAll('input').forEach(inp=>{if(inp===document.activeElement)return;inp.value=inp.dataset.eqt!==undefined?(x.n?qn(x.n):''):(x.m[MEALS[+inp.dataset.eq.split('|')[1]]]||'')});
+    const u=tr.querySelector('[data-u]');if(u)u.innerHTML=x.u>0?`<span class="pill" style="background:var(--warn)">${qn(x.u)}</span>`:(x.n?'<span style="color:var(--ok);font-weight:700">✓</span>':'·')});
+   set('#eqtab [data-t=n]',qn(T.n));{const U=D.r.reduce((a,x)=>a+x.u,0);set('#eqtab [data-t=u]',U>0?qn(U):'')}set('#eqtab [data-t=kcal]',fx(T.kcal,0));['p','l','hc'].forEach(k=>set(`#eqtab [data-t=${k}]`,fx(T[k],1)));
    MEALS.forEach((m,mi)=>{set(`#eqtab [data-mk="${mi}"]`,fx(D.mk[m],0));set(`#eqtab [data-mp="${mi}"]`,T.kcal?fx(D.mk[m]/T.kcal*100,0)+' %':'—')});
    ['hc','l','p'].forEach(k=>{set(`[data-mk2=${k}]`,fx(mt.k*mt[k]/100,0)+' kcal');set(`[data-mg=${k}]`,fx(goal[k],1)+' g')});
    const sp=mt.hc+mt.l+mt.p,el=$('#mpsum');if(el){el.textContent=fx(sp,0)+' %';el.style.color=Math.round(sp)===100?'var(--ok)':'var(--bad)'}
@@ -546,9 +549,20 @@ V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC(
    if(t.dataset.q!==undefined){const i=+t.dataset.q,d=c.dieta[i],fd2=foodOf(d.k);d.n=t.value;save();const r=t.closest('tr'),n=+d.n||0;
     r.querySelector('.kc').textContent=fx(fd2.kcal*n,0);r.querySelector('.pp').textContent=fx(fd2.p*n);r.querySelector('.ll').textContent=fx(fd2.l*n);r.querySelector('.hh').textContent=fx(fd2.hc*n);updEq()}};
   v.onchange=e=>{const t=e.target;
-   if(t.dataset.eq){const[gi,mi]=t.dataset.eq.split('|').map(Number),g=Object.keys(GR)[gi],m=MEALS[mi],want=Math.max(0,num(t.value)||0),
+   /* Eq total editable: lo que no está repartido en los tiempos de comida queda en "Por distribuir" */
+   if(t.dataset.eqt!==undefined){const g=Object.keys(GR)[+t.dataset.eqt],k='G|'+g,want=num(t.value),
+    sumN=a=>a.reduce((s2,d)=>s2+(+d.n||0),0),dist=sumN(c.dieta.filter(d=>d.t!==UND&&(foodOf(d.k)||{}).g===g));
+    c.dieta=c.dieta.filter(d=>!(d.k===k&&d.t===UND));
+    if(want!=null&&want>dist)c.dieta.push({k,n:want-dist,t:UND});
+    else if(want!=null&&want>0&&want<dist)toast('Ya hay '+qn(dist)+' equivalentes repartidos en los tiempos de comida; redúcelos ahí.');
+    save();updEq();const tot=sumN(c.dieta.filter(d=>(foodOf(d.k)||{}).g===g));t.value=tot?qn(tot):'';return}
+   if(t.dataset.eq){const gg=Object.keys(GR)[+t.dataset.eq.split('|')[0]],rel0=c.dieta.filter(d=>(foodOf(d.k)||{}).g===gg),
+    und0=rel0.filter(d=>d.t===UND).reduce((a,d)=>a+(+d.n||0),0),tgt=rel0.reduce((a,d)=>a+(+d.n||0),0);
+    const[gi,mi]=t.dataset.eq.split('|').map(Number),g=Object.keys(GR)[gi],m=MEALS[mi],want=Math.max(0,num(t.value)||0),
     fpart=c.dieta.filter(d=>!d.k.startsWith('G|')&&d.t===m&&(foodOf(d.k)||{}).g===g).reduce((a,d)=>a+(+d.n||0),0),gen=Math.max(0,want-fpart),k='G|'+g,ix=c.dieta.findIndex(d=>d.k===k&&d.t===m);
     if(gen>0){if(ix>=0)c.dieta[ix].n=gen;else c.dieta.push({k,n:gen,t:m})}else if(ix>=0)c.dieta.splice(ix,1);
+    if(und0>0){const dn=c.dieta.filter(d=>d.t!==UND&&(foodOf(d.k)||{}).g===gg).reduce((a,d)=>a+(+d.n||0),0),rem=tgt-dn;
+     c.dieta=c.dieta.filter(d=>!(d.k==='G|'+gg&&d.t===UND));if(rem>0)c.dieta.push({k:'G|'+gg,n:rem,t:UND})}
     save();updEq();return}
    if(t.id==='afsel'&&t.value){c.af=t.value;$('[data-f=af]').value=t.value;save();calc()}
    if(t.dataset.f==='formula'){c.formula=t.value;save();calc()}
@@ -756,7 +770,7 @@ V.whatsapp={t:'WhatsApp',h(){const p=cur();if(!p)return noP;const log=((p.mod&&p
 function foodOf(k){if(k.startsWith('G|')){const g=k.slice(2),m=GR[g];return m?{id:k,n:'Equivalente de '+g,g,po:'1 equivalente',w:0,kcal:m[0],p:m[1],l:m[2],hc:m[3]}:null}return FOODS.find(x=>x.id===k)}
 const qn=n=>n?String(Math.round(n*100)/100):'';
 function eqHTML(c,p,edit){
- const G=Object.keys(GR),M=MEALS,cell={},fp={},gt={},mt={};
+ const G=Object.keys(GR),M=[...MEALS,...((c.dieta||[]).some(d=>d.t===UND)?[UND]:[])],cell={},fp={},gt={},mt={};
  G.forEach(g=>{cell[g]={};fp[g]={};gt[g]={n:0,kcal:0,p:0,l:0,hc:0}});
  M.forEach(m=>mt[m]={kcal:0,p:0,l:0,hc:0});
  (c.dieta||[]).forEach(d=>{const f=foodOf(d.k);if(!f||!cell[f.g])return;const n=+d.n||0,m=M.includes(d.t)?d.t:'Comida';
