@@ -72,6 +72,15 @@ nav a.on{background:var(--pri);color:#fff}
 .eqsum{position:sticky;bottom:0;background:var(--card);border-top:2px solid var(--pri);margin-top:12px;padding-top:6px;z-index:5}
 .eqsum th{background:var(--pri);color:#fff}
 details.dd{margin-top:14px;border-top:1px solid var(--bd);padding-top:10px}details.dd summary{cursor:pointer;font-weight:600}
+/* ===== Dietas dinámicas: pestañas de colores ===== */
+.dtabs{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:6px 0 20px}
+.dtab{flex:1 1 190px;max-width:270px;flex-direction:column;justify-content:center;text-align:center;gap:2px;padding:18px 14px;border-radius:18px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 12px #0003;opacity:.7;transform:scale(.96);transition:transform .15s,opacity .15s,box-shadow .15s}
+.dtab:hover{opacity:1}
+.dtab.on{opacity:1;transform:scale(1.04);box-shadow:0 8px 22px #0004,0 0 0 3px var(--card),0 0 0 6px var(--a)}
+.dtab .de{font-size:32px;line-height:1.1}.dtab small{font-size:12px;font-weight:600}
+.dsec{border-top:6px solid var(--a);background-image:linear-gradient(180deg,color-mix(in srgb,var(--a) 9%,transparent),transparent 140px)}
+button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
+.dsec .chip.on{background:var(--a);border-color:var(--a)}
 /* ===== Responsivo ===== */
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
 @media(max-width:820px){aside{position:fixed;left:-250px}aside.open{left:0}#burger{display:inline-flex}main{padding:14px}}
@@ -733,12 +742,123 @@ V.med={t:'Mediciones',h(){const p=cur();if(!p)return noP;const cs=csort(p).rever
   ${cs.map(c=>`<tr><td>${fd(c.fecha)}<td class="n">${fx(num(c.peso))}<td class="n">${fx(num(c.est))}<td class="n">${fx(imcOf(c))}<td class="n">${fx(num(c.graso))}<td class="n">${fx(num(c.musc))}<td class="n">${fx(num(c.cin))}<td class="n">${fx(num(c.cad))}<td class="n">${fx(num(c.bra))}<td class="n">${fx(num(c.mus))}<td class="n"><button class="s g" data-x="open" data-id="${c.id}">Abrir</button>`).join('')||'<tr><td colspan="11">Sin mediciones.'}</table></div>`},
  i(){const p=cur();if(!p)return;$('#view').onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;
   if(b.dataset.x==='open')goCons(p,b.dataset.id);else if(b.dataset.x==='new'){const n=newCons(p);p.cons.push(n);goCons(p,n.id)}}}};
-V.dietas={t:'Dietas dinámicas',h(){const p=cur();if(!p)return noP;const cs=csort(p).reverse();
- return phead(p)+`<div class="card wrap"><table><tr><th>Consulta<th class="n">Meta (kcal)<th class="n">Plan (kcal)<th class="n">% de adecuación<th class="n">Prot (g)<th class="n">Lípidos (g)<th class="n">HC (g)<th></tr>
-  ${cs.map(c=>{const t=planT(c),e=en(c,p),mt=metaOf(c,e);return `<tr><td>${fd(c.fecha)}<td class="n">${fx(mt.k,0)}<td class="n">${fx(t.kcal,0)}<td class="n">${pill(mt.k?t.kcal/mt.k*100:null)}<td class="n">${fx(t.p,0)}<td class="n">${fx(t.l,0)}<td class="n">${fx(t.hc,0)}<td class="n"><button class="s g" data-x="plan" data-id="${c.id}">Editar plan</button>`}).join('')||'<tr><td colspan="8">Aún no hay planes. Crea una consulta.'}</table></div>
-  <p class="note">Adecuación: ${adqLegend()}</p>
-  <p class="note">Arma el plan en el cuadro de equivalentes de la Consulta o agrega alimentos desde <a href="#cat">Equivalentes (SMAE)</a> con el botón +.</p>`},
- i(){const p=cur();if(!p)return;$('#view').onclick=e=>{const b=e.target.closest('[data-x]');if(b){goCons(p,b.dataset.id);setTimeout(()=>{const t=$('#eqplan');t&&t.scrollIntoView({behavior:'smooth'})},120)}}}};
+/* ---------- DIETAS DINÁMICAS: Menús · Recetas · Menú de cero ----------
+   Menús y recetas son una biblioteca (DB.menus / DB.recetas): súbelos una vez y asígnalos a cualquier paciente.
+   Los archivos se guardan en el navegador (imágenes reducidas; PDF/Word/Excel hasta 900 KB). */
+const lib=k=>(DB[k]=DB[k]||[]);
+const DS={tab:'menus',edit:null,view:null,q:'',only:false,pend:null};
+const DTABS=[['menus','Menús','🍽️','#ff5a36','#ffb100'],['recetas','Recetas','👩‍🍳','#a21caf','#f472b6'],['cero','Menú de cero','✨','#0891b2','#2563eb']];
+const MENU_CATS=['Reducción de peso','Mantenimiento','Aumento de masa','Diabetes','Hipertensión','Dislipidemia','Vegetariano','Pediátrico','Deportista'];
+const REC_CATS=['Desayuno','Comida','Cena','Colación','Postre','Bebida','Salsa / aderezo'];
+const nrm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const readFile=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+async function attach(f,imgOnly){
+ if(f.type.startsWith('image/')){const d=await imgURL(f,imgOnly?900:1400,false,.8);return{name:f.name,type:'image/jpeg',size:Math.round(d.length*.75),data:d}}
+ if(imgOnly){toast('Para recetas sube una imagen');return null}
+ if(f.size>900*1024){toast(f.name+': máximo 900 KB (o sube una foto del menú)');return null}
+ return{name:f.name,type:f.type||'application/octet-stream',size:f.size,data:await readFile(f)}}
+function safeSave(undo){try{save();return true}catch{if(undo)undo();toast('Almacenamiento lleno: elimina archivos o exporta un respaldo');return false}}
+const fileBlock=a=>!a?'':a.type.startsWith('image/')?`<img src="${a.data}" alt="${esc(a.name)}" style="max-width:100%;border-radius:10px;margin-top:8px">`:
+ `<p><a href="${a.data}" download="${esc(a.name)}"><button class="s pr" type="button">⬇ Descargar ${esc(a.name)}</button></a></p>`;
+
+function menuList(p){const q=nrm2(DS.q),L=lib('menus').filter(m=>(!DS.only||(m.asig&&m.asig[p.id]))&&nrm2(m.nombre+' '+(m.cat||'')).includes(q));
+ return `<div class="wrap"><table><tr><th>Menú<th>Categoría<th class="n">kcal<th>Archivo<th>Estado<th></tr>
+ ${L.map(m=>`<tr><td><b>${esc(m.nombre)}</b><td>${esc(m.cat)||'—'}<td class="n">${m.kcal!=null?fx(m.kcal,0):'—'}<td>${m.archivo?'📎 '+esc(m.archivo.name):'—'}
+ <td>${m.asig&&m.asig[p.id]?`<span class="pill" style="background:var(--ok)">Asignado ${fd(m.asig[p.id])}</span>`:''}
+ <td class="n"><button class="s g" data-act="mview" data-id="${m.id}">Ver</button> <button class="s g" data-act="masig" data-id="${m.id}">${m.asig&&m.asig[p.id]?'Quitar':'Asignar'}</button> <button class="s g" data-act="medit" data-id="${m.id}">Editar</button> <button class="s g" data-act="mdup" data-id="${m.id}">Duplicar</button> <button class="s d" data-act="mdel" data-id="${m.id}">✕</button>`).join('')||'<tr><td colspan=6>Aún no hay menús. Usa “Subir / crear menú”.'}</table></div>`}
+function menuForm(m){return `<h2>${m.id?'Editar menú':'Nuevo menú'}</h2><div class="grid">
+ <div style="grid-column:span 2"><label for="mn-nombre">Nombre del menú</label><input id="mn-nombre" value="${esc(m.nombre)}" placeholder="Ej. Menú 1500 kcal · semana 1"></div>
+ <div><label for="mn-cat">Categoría</label><input id="mn-cat" list="mn-cats" value="${esc(m.cat)}"><datalist id="mn-cats">${MENU_CATS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+ <div><label for="mn-kcal">Energía (kcal)</label><input id="mn-kcal" type="number" step="10" value="${esc(m.kcal)}"></div></div>
+ <h2 style="margin-top:14px">Comidas del menú</h2><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${MEALS.map((x,i)=>`<div><label for="mn-c${i}">${x}</label><textarea id="mn-c${i}" placeholder="Un alimento por línea">${esc((m.comidas||{})[x])}</textarea></div>`).join('')}</div>
+ <div style="margin-top:12px"><label for="mn-notas">Notas / indicaciones</label><textarea id="mn-notas">${esc(m.notas)}</textarea></div>
+ <div style="margin-top:12px"><label>Archivo del menú (foto, PDF, Word o Excel · máx. 900 KB)</label><div class="gap"><label class="g btnlike" for="mn-file">📎 Subir archivo</label><input id="mn-file" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" hidden><span id="mn-fn" class="note" style="margin:0">${DS.pend?esc(DS.pend.name):'Sin archivo'}</span><button type="button" class="g s" data-act="mclear">Quitar</button></div></div>
+ <p><button class="pr" data-act="msave">Guardar menú</button> <button class="g" data-act="mcancel">Cancelar</button></p>`}
+function menuView(m,p){const c=lastC(p),mt=metaOf(c||{},c&&en(c,p));
+ return `<div class="card" style="border-left:6px solid var(--a)"><div class="gap"><h2 style="margin:0;flex:1">${esc(m.nombre)}</h2><button class="g s" data-act="mclose">Cerrar</button></div>
+ <p class="note">${esc(m.cat)||'Sin categoría'}${m.kcal!=null?` · ${fx(m.kcal,0)} kcal · frente a la meta del paciente (${fx(mt.k,0)} kcal): ${pill(mt.k?m.kcal/mt.k*100:null)}`:''}</p>
+ ${MEALS.map(x=>m.comidas&&m.comidas[x]?`<p style="margin:8px 0"><b>${x}</b><br>${esc(m.comidas[x]).replace(/\n/g,'<br>')}</p>`:'').join('')}
+ ${m.notas?`<p><b>Notas</b><br>${esc(m.notas).replace(/\n/g,'<br>')}</p>`:''}${fileBlock(m.archivo)}</div>`}
+
+function recList(){const q=nrm2(DS.q),L=lib('recetas').filter(r=>nrm2(r.nombre+' '+(r.cat||'')+' '+(r.ing||'')).includes(q));
+ return L.length?`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">${L.map(r=>`<div class="card" style="margin:0;padding:0;overflow:hidden">
+  ${r.foto?`<img src="${r.foto.data}" alt="" style="width:100%;height:130px;object-fit:cover;display:block">`:`<div style="height:130px;display:grid;place-items:center;font-size:44px;background:linear-gradient(135deg,var(--a),var(--b))">🥘</div>`}
+  <div style="padding:12px"><b>${esc(r.nombre)}</b><div class="note" style="margin:2px 0 8px">${esc(r.cat)||'—'}${r.kcal!=null?' · '+fx(r.kcal,0)+' kcal/porción':''}</div>
+  <div class="gap"><button class="s g" data-act="rview" data-id="${r.id}">Ver</button><button class="s g" data-act="redit" data-id="${r.id}">Editar</button><button class="s g" data-act="rdup" data-id="${r.id}">Duplicar</button><button class="s d" data-act="rdel" data-id="${r.id}">✕</button></div></div></div>`).join('')}</div>`
+  :'<p class="note">Aún no hay recetas. Usa “Nueva receta”.</p>'}
+function recForm(r){return `<h2>${r.id?'Editar receta':'Nueva receta'}</h2><div class="grid">
+ <div style="grid-column:span 2"><label for="rc-nombre">Nombre de la receta</label><input id="rc-nombre" value="${esc(r.nombre)}"></div>
+ <div><label for="rc-cat">Categoría</label><input id="rc-cat" list="rc-cats" value="${esc(r.cat)}"><datalist id="rc-cats">${REC_CATS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+ <div><label for="rc-por">Porciones</label><input id="rc-por" type="number" step="1" value="${esc(r.por)}"></div>
+ <div><label for="rc-tie">Tiempo de preparación</label><input id="rc-tie" value="${esc(r.tie)}" placeholder="Ej. 25 min"></div>
+ <div><label for="rc-kcal">kcal por porción</label><input id="rc-kcal" type="number" step="1" value="${esc(r.kcal)}"></div>
+ <div style="grid-column:span 2"><label for="rc-eq">Equivalentes por porción</label><input id="rc-eq" value="${esc(r.eq)}" placeholder="Ej. 1 Cereal sin grasa, 2 Verduras, 1 AOA bajo"></div></div>
+ <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"><div><label for="rc-ing">Ingredientes</label><textarea id="rc-ing" style="min-height:140px">${esc(r.ing)}</textarea></div>
+ <div><label for="rc-pre">Preparación</label><textarea id="rc-pre" style="min-height:140px">${esc(r.pre)}</textarea></div></div>
+ <div style="margin-top:12px"><label>Foto de la receta</label><div class="gap"><label class="g btnlike" for="rc-file">📷 Subir foto</label><input id="rc-file" type="file" accept="image/*" hidden><span id="rc-fn" class="note" style="margin:0">${DS.pend?esc(DS.pend.name):'Sin foto'}</span><button type="button" class="g s" data-act="rclear">Quitar</button></div></div>
+ <p><button class="pr" data-act="rsave">Guardar receta</button> <button class="g" data-act="rcancel">Cancelar</button></p>`}
+function recView(r){return `<div class="card" style="border-left:6px solid var(--a)"><div class="gap"><h2 style="margin:0;flex:1">${esc(r.nombre)}</h2><button class="g s" data-act="rclose">Cerrar</button></div>
+ <p class="note">${esc(r.cat)||'Sin categoría'}${r.por?` · ${esc(r.por)} porciones`:''}${r.tie?` · ${esc(r.tie)}`:''}${r.kcal!=null?` · ${fx(r.kcal,0)} kcal/porción`:''}${r.eq?` · Equivalentes: ${esc(r.eq)}`:''}</p>
+ ${r.foto?`<img src="${r.foto.data}" alt="" style="max-width:320px;width:100%;border-radius:10px">`:''}
+ ${r.ing?`<p><b>Ingredientes</b><br>${esc(r.ing).replace(/\n/g,'<br>')}</p>`:''}${r.pre?`<p><b>Preparación</b><br>${esc(r.pre).replace(/\n/g,'<br>')}</p>`:''}</div>`}
+
+V.dietas={t:'Dietas dinámicas',h(){const p=cur();if(!p)return noP;const T=DTABS.find(x=>x[0]===DS.tab),[k,,,ca,cb]=T;
+ const cnt={menus:lib('menus').length+' en biblioteca',recetas:lib('recetas').length+' guardadas',cero:(p.cons||[]).length+' planes'};
+ const tabs=`<div class="dtabs">${DTABS.map(([id,n,e,a,b])=>`<button class="dtab${DS.tab===id?' on':''}" data-act="tab" data-id="${id}" style="--a:${a};--b:${b}"><span class="de">${e}</span><span>${n}</span><small>${cnt[id]}</small></button>`).join('')}</div>`;
+ let body='';
+ if(k==='menus'){const m=DS.edit!==null?(DS.edit?lib('menus').find(x=>x.id===DS.edit)||{}:{}):null;
+  body=m?menuForm(m):`<div class="gap" style="margin-bottom:12px"><button class="pr" data-act="mnew">＋ Subir / crear menú</button><div style="flex:1;min-width:200px"><input id="dq" type="search" placeholder="Buscar menú…" value="${esc(DS.q)}"></div>
+   <span class="chip${DS.only?' on':''}" data-act="only">Solo asignados a ${esc(p.nombre)}</span></div>${DS.view&&lib('menus').find(x=>x.id===DS.view)?menuView(lib('menus').find(x=>x.id===DS.view),p):''}<div id="dlist">${menuList(p)}</div>
+   <p class="note">Sube tus menús (foto, PDF, Word o Excel) o escríbelos por comida. “Asignar” los marca para este paciente.</p>`}
+ else if(k==='recetas'){const r=DS.edit!==null?(DS.edit?lib('recetas').find(x=>x.id===DS.edit)||{}:{}):null;
+  body=r?recForm(r):`<div class="gap" style="margin-bottom:12px"><button class="pr" data-act="rnew">＋ Nueva receta</button><div style="flex:1;min-width:200px"><input id="dq" type="search" placeholder="Buscar receta o ingrediente…" value="${esc(DS.q)}"></div></div>
+   ${DS.view&&lib('recetas').find(x=>x.id===DS.view)?recView(lib('recetas').find(x=>x.id===DS.view)):''}<div id="dlist">${recList()}</div>`}
+ else{const cs=csort(p).reverse();
+  body=`<div class="gap" style="margin-bottom:12px"><button class="pr" data-act="cnew">＋ Nuevo menú de cero</button><span class="note" style="margin:0">Arma el menú desde cero con el cuadro de equivalentes de la Consulta.</span></div>
+   <div class="wrap"><table><tr><th>Consulta<th class="n">Meta (kcal)<th class="n">Plan (kcal)<th class="n">% de adecuación<th class="n">Prot (g)<th class="n">Lípidos (g)<th class="n">HC (g)<th></tr>
+   ${cs.map(c=>{const t=planT(c),e=en(c,p),mt=metaOf(c,e);return `<tr><td>${fd(c.fecha)}<td class="n">${fx(mt.k,0)}<td class="n">${fx(t.kcal,0)}<td class="n">${pill(mt.k?t.kcal/mt.k*100:null)}<td class="n">${fx(t.p,0)}<td class="n">${fx(t.l,0)}<td class="n">${fx(t.hc,0)}<td class="n"><button class="s pr" data-act="cplan" data-id="${c.id}">Editar plan</button>`}).join('')||'<tr><td colspan="8">Aún no hay planes. Crea uno con “Nuevo menú de cero”.'}</table></div>
+   <p class="note">Adecuación: ${adqLegend()}</p><p class="note">También puedes agregar alimentos desde <a href="#cat">Equivalentes (SMAE)</a> con el botón +.</p>`}
+ return phead(p)+tabs+`<div class="card dsec" style="--a:${ca};--b:${cb}">${body}</div>`},
+ i(){const p=cur();if(!p)return;const v=$('#view'),k=DS.tab;
+  const reset=()=>{DS.edit=null;DS.view=null;DS.pend=null;DS.q=''};
+  v.oninput=e=>{if(e.target.id==='dq'){DS.q=e.target.value;$('#dlist').innerHTML=k==='menus'?menuList(p):recList()}};
+  v.onchange=async e=>{const t=e.target;
+   if(t.id==='mn-file'||t.id==='rc-file'){const f=t.files[0];if(!f)return;try{const a=await attach(f,t.id==='rc-file');if(a){DS.pend=a;$(t.id==='mn-file'?'#mn-fn':'#rc-fn').textContent=a.name}}catch{toast('No se pudo leer el archivo')}}};
+  v.onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id,g=s=>$(s).value.trim();
+   const M=()=>lib('menus').find(x=>x.id===id),R=()=>lib('recetas').find(x=>x.id===id);
+   if(a==='tab'){DS.tab=id;reset()}
+   else if(a==='only')DS.only=!DS.only;
+   /* --- Menús --- */
+   else if(a==='mnew'){DS.edit='';DS.pend=null}
+   else if(a==='medit'){DS.edit=id;DS.pend=M().archivo||null}
+   else if(a==='mview')DS.view=id;else if(a==='mclose'||a==='rclose')DS.view=null;
+   else if(a==='mcancel'||a==='rcancel'){DS.edit=null;DS.pend=null}
+   else if(a==='mclear'){DS.pend=null;$('#mn-fn').textContent='Sin archivo';return}
+   else if(a==='rclear'){DS.pend=null;$('#rc-fn').textContent='Sin foto';return}
+   else if(a==='masig'){const m=M();m.asig=m.asig||{};if(m.asig[p.id])delete m.asig[p.id];else m.asig[p.id]=today();save()}
+   else if(a==='mdup'){const m=M();lib('menus').push({...JSON.parse(JSON.stringify(m)),id:uid(),nombre:m.nombre+' (copia)',asig:{},fecha:today()});if(!safeSave(()=>lib('menus').pop()))return;toast('Menú duplicado')}
+   else if(a==='mdel'){if(!confirm('¿Eliminar este menú de la biblioteca?'))return;DB.menus=lib('menus').filter(x=>x.id!==id);save()}
+   else if(a==='msave'){const rec={nombre:g('#mn-nombre'),cat:g('#mn-cat'),kcal:num(g('#mn-kcal')),notas:g('#mn-notas'),archivo:DS.pend,comidas:{}};
+    MEALS.forEach((x,i)=>{const t=g('#mn-c'+i);if(t)rec.comidas[x]=t});
+    if(!rec.nombre)return toast('Ponle un nombre al menú');
+    if(DS.edit){const o=lib('menus').find(x=>x.id===DS.edit),prev={...o};Object.assign(o,rec);if(!safeSave(()=>Object.assign(o,prev)))return}
+    else{lib('menus').push({id:uid(),fecha:today(),asig:{},...rec});if(!safeSave(()=>lib('menus').pop()))return}
+    DS.edit=null;DS.pend=null;toast('Menú guardado')}
+   /* --- Recetas --- */
+   else if(a==='rnew'){DS.edit='';DS.pend=null}
+   else if(a==='redit'){DS.edit=id;DS.pend=R().foto||null}
+   else if(a==='rview')DS.view=id;
+   else if(a==='rdup'){const r=R();lib('recetas').push({...JSON.parse(JSON.stringify(r)),id:uid(),nombre:r.nombre+' (copia)'});if(!safeSave(()=>lib('recetas').pop()))return;toast('Receta duplicada')}
+   else if(a==='rdel'){if(!confirm('¿Eliminar esta receta?'))return;DB.recetas=lib('recetas').filter(x=>x.id!==id);save()}
+   else if(a==='rsave'){const rec={nombre:g('#rc-nombre'),cat:g('#rc-cat'),por:g('#rc-por'),tie:g('#rc-tie'),kcal:num(g('#rc-kcal')),eq:g('#rc-eq'),ing:g('#rc-ing'),pre:g('#rc-pre'),foto:DS.pend};
+    if(!rec.nombre)return toast('Ponle un nombre a la receta');
+    if(DS.edit){const o=lib('recetas').find(x=>x.id===DS.edit),prev={...o};Object.assign(o,rec);if(!safeSave(()=>Object.assign(o,prev)))return}
+    else{lib('recetas').push({id:uid(),...rec});if(!safeSave(()=>lib('recetas').pop()))return}
+    DS.edit=null;DS.pend=null;toast('Receta guardada')}
+   /* --- Menú de cero --- */
+   else if(a==='cnew'){const n=newCons(p);p.cons.push(n);goCons(p,n.id);setTimeout(()=>{const t=$('#eqplan');t&&t.scrollIntoView({behavior:'smooth'})},120);return}
+   else if(a==='cplan'){goCons(p,id);setTimeout(()=>{const t=$('#eqplan');t&&t.scrollIntoView({behavior:'smooth'})},120);return}
+   render()}}};
 V.archivos={t:'Archivos clínicos',h(){const p=cur();if(!p)return noP;const fl=p.files||[];
  return phead(p)+`<div class="card"><label for="cf">Agregar estudios, fotos o PDF</label><input id="cf" type="file" accept="image/*,application/pdf" multiple><p class="note">Las imágenes se reducen a 1400 px; PDF hasta 900 KB. El navegador guarda ~5 MB en total: exporta respaldos desde Ajustes.</p></div>
   <div class="grid">${fl.map(f=>`<div class="card">${f.type.startsWith('image')?`<img src="${f.data}" alt="${esc(f.name)}" style="width:100%;height:130px;object-fit:cover;border-radius:8px">`:'<div style="height:130px;display:grid;place-items:center;border:1px dashed var(--bd);border-radius:8px;font-weight:700">PDF</div>'}
