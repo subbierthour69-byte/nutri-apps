@@ -123,7 +123,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
 .sigl{border-top:1px solid var(--tx);margin-top:2px;padding-top:3px;font-size:12px;font-weight:600}
 .ftw.sm{display:inline-block;max-width:100%}.ft.sm{width:auto}.ft.sm td,.ft.sm th{padding:2px 8px;font-size:12px}.ft.sm input:not([type=checkbox]){width:56px!important;text-align:center;font-size:12px;padding:2px 4px}
-.ft.an td,.ft.an th{padding:2px 8px}.ft.an td+td,.ft.an th+th,.ft.sm td+td,.ft.sm th+th{text-align:center}.ft.an input:not([type=checkbox]){width:88px!important}.ft.an input[type=date]{width:112px!important}
+.ft.an td,.ft.an th{padding:2px 8px}.ft.an td+td,.ft.an th+th,.ft.sm td+td,.ft.sm th+th{text-align:center}.ft.an input:not([type=checkbox]){width:88px!important}.ft.an input.dt{width:96px!important}
 .ft.rec td{border-bottom:1px solid #9fb0ab}.ft.rec td+td,.ft.rec th+th{border-left:1px solid #9fb0ab}
 @media print{
  @page{size:letter;margin:7mm 8mm}
@@ -136,7 +136,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
  .ft th{background:#e6e6e6!important;color:#000;font-size:9px;padding:1px 4px;border-bottom:.5pt solid #888}
  .ft td{padding:1px 4px;border-bottom:.5pt solid #bbb}
  .ft.rec td{border-bottom:.5pt solid #777}.ft.rec td+td,.ft.rec th+th{border-left:.5pt solid #777}
- .ft.sm td,.ft.sm th{padding:0 5px;font-size:8.5px}.ft.sm input:not([type=checkbox]){width:44px!important;font-size:8.5px}.ft.an input:not([type=checkbox]){width:64px!important}.ft.an input[type=date]{width:76px!important}.ft tr{break-inside:avoid}.ft.rec textarea{min-height:26px}
+ .ft.sm td,.ft.sm th{padding:0 5px;font-size:8.5px}.ft.sm input:not([type=checkbox]){width:44px!important;font-size:8.5px}.ft.an input:not([type=checkbox]){width:64px!important}.ft.an input.dt{width:66px!important}.ft tr{break-inside:avoid}.ft.rec textarea{min-height:26px}
  input,select,textarea{border:0!important;background:transparent!important;padding:0 2px!important;font-size:9.5px;min-height:0;appearance:none;-webkit-appearance:none}
  input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:9px;height:9px}
  ::placeholder{color:transparent}
@@ -1227,8 +1227,35 @@ function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">�
 $('#psel').onchange=e=>{DB.sel=e.target.value||null;save();paintTop();render()};
 function render(){const id=(location.hash||'#panel').slice(1),v=V[id]||V.panel;
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(V[id]?id:'panel')));
- const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();v.i&&v.i()}
+ const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();v.i&&v.i();enhanceDates(w)}
 window.addEventListener('hashchange',()=>{editId=null;render()});
+/* =====================================================================
+   FECHAS ESCRITAS (sin calendario): todos los campos de fecha se teclean como dd/mm/aaaa.
+   · Escribe solo números (13102026 → 13/10/2026; con año de 2 dígitos también: 131026).
+   · Presiona H (o T) para poner la fecha de hoy.
+   · Por dentro la fecha sigue guardándose como aaaa-mm-dd, así que no cambia nada de lo demás.
+   ===================================================================== */
+const _vget=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').get,_vset=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
+const isoFmt=i=>/^\d{4}-\d{2}-\d{2}$/.test(i||'')?i.slice(8,10)+'/'+i.slice(5,7)+'/'+i.slice(0,4):'';
+function isoParse(txt,loose){const d=String(txt).replace(/\D/g,'');let dd,mm,yy;
+ if(d.length===8){dd=+d.slice(0,2);mm=+d.slice(2,4);yy=+d.slice(4)}
+ else if(loose&&d.length===6){dd=+d.slice(0,2);mm=+d.slice(2,4);const y2=+d.slice(4);yy=y2>(new Date().getFullYear()%100)+1?1900+y2:2000+y2}
+ else return '';
+ const t=new Date(yy,mm-1,dd);if(yy<1900||yy>2100||t.getFullYear()!==yy||t.getMonth()!==mm-1||t.getDate()!==dd)return '';
+ return `${String(yy).padStart(4,'0')}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`}
+function enhanceDates(root){(root||document).querySelectorAll('input[type=date]').forEach(el=>{
+ const iso=el.getAttribute('value')||'';el.type='text';el.classList.add('dt');el._iso=/^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:'';
+ el.placeholder='dd/mm/aaaa';el.maxLength=10;el.inputMode='numeric';el.autocomplete='off';el.title='Escribe la fecha (solo números) · H = hoy';
+ Object.defineProperty(el,'value',{get(){return el._iso},set(v){el._iso=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';_vset.call(el,isoFmt(el._iso))},configurable:true});
+ _vset.call(el,isoFmt(el._iso));
+ el.addEventListener('focus',()=>el.select());
+ el.addEventListener('keydown',e=>{if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[htHT]$/.test(e.key)){e.preventDefault();el._iso=today();_vset.call(el,isoFmt(el._iso));el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}});
+ el.addEventListener('input',()=>{const d=_vget.call(el).replace(/\D/g,'').slice(0,8),f=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;_vset.call(el,f);
+  if(!f)el._iso='';else{const i=isoParse(f,false);if(i)el._iso=i}});
+ el.addEventListener('change',()=>{const t=_vget.call(el);if(!t.trim())el._iso='';else{const i=isoParse(t,true);if(i)el._iso=i}_vset.call(el,isoFmt(el._iso))});
+})}
+new MutationObserver(()=>enhanceDates($('#view'))).observe($('#view'),{childList:true,subtree:true});
+
 paintBrand();fillSel();render();
 if(!sessionStorage.getItem('nc_ok'))showPicker();
 </script>
