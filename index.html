@@ -117,6 +117,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .hmeta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px;align-items:flex-end}
 @media(max-width:700px){.hdr{grid-template-columns:1fr;justify-items:center}.hl,.hr{justify-content:center}}
 .ic .q{margin:1px 0;gap:2px 14px}.ic .q input.il{padding:3px 8px}.ic p{margin:4px 0 0!important}.ic .ck{margin-top:1px;margin-bottom:1px}
+.keep{break-inside:avoid}
 .free{border:0!important;background:transparent!important;box-shadow:none;resize:none;overflow:hidden;padding:4px 2px!important;width:100%;min-height:54px;line-height:1.5}
 .free:hover{background:#0e8f7810!important}.free:focus{outline:none;background:#2563eb12!important}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
@@ -1179,7 +1180,7 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
   q('Consumo de alcohol:',ti('alc','Consumo')+ti('alc.f','Frecuencia')+ti('alc.c','Cantidad'))+q('Consumo de tabaco:',ti('tab','Consumo')+ti('tab.f','Frecuencia')+ti('tab.c','Cantidad'))+
   q('Consumo de otras sustancias:',ox('sus',['Sí','No'])+ti('sus.c','Cuál')+ti('sus.f','Frecuencia')))+
  sec('Valoración antropométrica',antro)+
- sec('Indicadores dietéticos',
+ sec('Indicadores dietéticos',`<div class="keep">`+
   q('¿Cuánta agua toma al día? (Vasos / L):',ti('agua'))+q('¿Con qué frecuencia?',ox('aguaf',['1 vez al día','2-3 veces al día','4-5 veces al día']))+
   q('¿Qué bebidas consume habitualmente?',cx(BEB,'beb')+ti('beb.o','Otro: ¿cuál?'))+q('¿Añade sal a alimentos ya preparados?',ox('sal',['Sí','No'])+ti('sal.t','Tipo de sal'))+
   q('¿Cuántas comidas realiza al día?',ti('ncom')+`<b>incluye colaciones:</b>`+ti('ncol'))+
@@ -1187,7 +1188,7 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
   <div class="grid" style="margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"><div><label>Alimentos que consume con mayor frecuencia</label><textarea data-i="afrec">${esc(I.afrec)}</textarea></div>
   <div><label>Alimentos que evita o poco frecuentes</label><textarea data-i="aevita">${esc(I.aevita)}</textarea></div></div>`+
   q('¿Tiene alergias alimentarias?',ox('alerg',['No','Sí'])+ti('alerg.c','¿Cuáles?'))+q('¿Tiene alguna intolerancia?',cx(INTOL,'int')+ti('int.o','Otro: ¿cuál?'))+
-  q('¿Quién prepara la comida?',ox('prep',['Usted','Familiar','Compra comida preparada']))+q('¿Con qué frecuencia come fuera de casa?',ox('fuera',['Nunca','1-2 /sem','Casi diario'])))+
+  q('¿Quién prepara la comida?',ox('prep',['Usted','Familiar','Compra comida preparada']))+q('¿Con qué frecuencia come fuera de casa?',ox('fuera',['Nunca','1-2 /sem','Casi diario']))+`</div>`)+
  sec('Indicadores bioquímicos',bq)+
  sec('Recordatorio de 24 horas',rec)+
  sec('Diagnóstico PES',`<textarea class="free" data-i="nota" rows="3" placeholder="Escribe aquí…" aria-label="Diagnóstico PES">${esc(I.nota)}</textarea>`)+
