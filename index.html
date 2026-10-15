@@ -528,7 +528,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
   draw();const go=()=>{$('#view').innerHTML=V.pac.h();V.pac.i()};
   $('#bnew')&&($('#bnew').onclick=()=>{editId='';chips=[];go()});
   $('#bcancel')&&($('#bcancel').onclick=()=>{editId=null;go()});
-  $('#f-nac')&&($('#f-nac').onchange=e=>$('#age').value=edTxt(edad(e.target.value)));
+  $('#f-nac')&&($('#f-nac').oninput=$('#f-nac').onchange=e=>$('#age').value=edTxt(edad(e.target.value)));
   $('#chips')&&($('#chips').onclick=e=>{const c=e.target.dataset.c;if(c){chips=chips.includes(c)?chips.filter(x=>x!==c):[...chips,c];draw()}});
   $('#npat')&&($('#npat').onkeydown=e=>{if(e.key==='Enter'&&e.target.value.trim()){chips.push(e.target.value.trim());e.target.value='';draw()}});
   $('#bsave')&&($('#bsave').onclick=()=>{const g=k=>$('#f-'+k).value.trim();
@@ -1251,8 +1251,9 @@ function enhanceDates(root){(root||document).querySelectorAll('input[type=date]'
  el.addEventListener('focus',()=>el.select());
  el.addEventListener('keydown',e=>{if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&/^[htHT]$/.test(e.key)){e.preventDefault();el._iso=today();_vset.call(el,isoFmt(el._iso));el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}});
  el.addEventListener('input',()=>{const d=_vget.call(el).replace(/\D/g,'').slice(0,8),f=d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;_vset.call(el,f);
-  if(!f)el._iso='';else{const i=isoParse(f,false);if(i)el._iso=i}});
- el.addEventListener('change',()=>{const t=_vget.call(el);if(!t.trim())el._iso='';else{const i=isoParse(t,true);if(i)el._iso=i}_vset.call(el,isoFmt(el._iso))});
+  if(!f)el._iso='';else{const i=isoParse(f,false);if(i)el._iso=i}},true);
+ el.addEventListener('change',()=>{const before=el._iso,t=_vget.call(el);if(!t.trim())el._iso='';else{const i=isoParse(t,true);if(i)el._iso=i}_vset.call(el,isoFmt(el._iso));
+  if(el._iso!==before)el.dispatchEvent(new Event('input',{bubbles:true}))},true);
 })}
 new MutationObserver(()=>enhanceDates($('#view'))).observe($('#view'),{childList:true,subtree:true});
 
