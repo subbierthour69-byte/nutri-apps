@@ -116,6 +116,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .lx{position:absolute;top:-6px;right:-6px;padding:0 6px!important;font-size:11px}
 .hmeta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px;align-items:flex-end}
 @media(max-width:700px){.hdr{grid-template-columns:1fr;justify-items:center}.hl,.hr{justify-content:center}}
+.ic .q{margin:1px 0;gap:2px 14px}.ic .q input.il{padding:3px 8px}.ic p{margin:4px 0 0!important}.ic .ck{margin-top:1px;margin-bottom:1px}
 .free{border:0!important;background:transparent!important;box-shadow:none;resize:none;overflow:hidden;padding:4px 2px!important;width:100%;min-height:54px;line-height:1.5}
 .free:hover{background:#0e8f7810!important}.free:focus{outline:none;background:#2563eb12!important}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
@@ -1167,11 +1168,11 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
   ${P('nac','Fecha de nacimiento','date')}<div><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
   ${T('ec','Estado civil')}${T('ocup','Ocupación')}${T('esc','Escolaridad')}${P('tel','Tel.','tel')}${T('nacion','Nacionalidad')}${P('mail','Correo','email')}</div>`)+
  sec('Antecedentes heredofamiliares',hf)+
- sec('Indicadores clínicos',q('Patologías actuales del sistema digestivo:',ti('pdig'))+
+ sec('Indicadores clínicos',`<div class="ic">`+q('Patologías actuales del sistema digestivo:',ti('pdig'))+
   `<p style="margin:10px 0 2px"><b>Signos físicos</b> <span class="note">(marcar si hay)</span></p><div>${cx(SIGNOS,'sf')}</div>
   <p style="margin:12px 0 2px"><b>Estado emocional y conductual</b></p>${q('Nivel de energía:',ox('nrg',['Bajo','Medio','Alto']))}${q('Estado emocional percibido:',cx(EMO,'emo'))}
   <p style="margin:12px 0 2px"><b>Sistema digestivo</b> <span class="note">(seleccionar lo que el paciente refiere)</span></p><div>${cx(DIG,'dg')}</div>
-  ${q('Frecuencia y duración:',ti('dg.f'))}${q('Problemas de masticación:',ti('mast'))}`)+
+  ${q('Frecuencia y duración:',ti('dg.f'))}${q('Problemas de masticación:',ti('mast'))}`+`</div>`)+
  sec('Indicadores de estilo de vida saludable',
   q('¿Realiza alguna actividad física?',ox('af',['Sí','No'])+ti('af.c','Cuál'))+q('¿Con qué frecuencia y duración?',ti('af.f'))+q('¿Cuántas horas duerme en promedio por noche?',ti('sue'))+
   q('¿Pasa mucho tiempo sentado durante el día?',ox('sent',['Sí','No'])+ti('sent.h','Horas'))+
