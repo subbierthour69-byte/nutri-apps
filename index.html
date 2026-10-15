@@ -107,6 +107,15 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .q{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:5px 0}
 .hcc{margin-bottom:10px;padding:12px 14px}.hcc h2{margin-bottom:8px}
 .q input.il{width:auto;flex:1;min-width:150px;max-width:340px}
+.hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.hl{display:flex;gap:12px;align-items:center;justify-content:flex-start}.hr{display:flex;justify-content:flex-end}
+.hcc h2.ht{text-align:center;font-size:26px!important;margin:0!important;color:var(--tx)!important;white-space:nowrap}
+.lgs{height:66px;display:flex;align-items:center;justify-content:center;position:relative}.lgs label{display:flex;width:100%;height:100%;align-items:center;justify-content:center;margin:0;cursor:pointer}
+.lgs img{max-width:100%;max-height:100%;object-fit:contain}
+.lgph{width:100%;height:100%;border:1.5px dashed var(--bd);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;text-align:center;color:var(--mut);line-height:1.2}.lgph small{font-size:10px;opacity:.8}
+.lx{position:absolute;top:-6px;right:-6px;padding:0 6px!important;font-size:11px}
+.hmeta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px;align-items:flex-end}
+@media(max-width:700px){.hdr{grid-template-columns:1fr;justify-items:center}.hl,.hr{justify-content:center}}
 .free{border:0!important;background:transparent!important;box-shadow:none;resize:none;overflow:hidden;padding:4px 2px!important;width:100%;min-height:54px;line-height:1.5}
 .free:hover{background:#0e8f7810!important}.free:focus{outline:none;background:#2563eb12!important}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
@@ -133,6 +142,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
  .grid{gap:2px 8px;grid-template-columns:repeat(4,1fr)}label{font-size:8.5px;margin:0}p{margin:2px 0}
  .q{margin:1px 0;gap:1px 10px}.q input.il{min-width:80px;max-width:none}.ck{margin:0 8px 0 0;font-size:9.5px}
  .free{min-height:34px}.sig{margin-top:10px}
+ .lgs{height:46px}.lgph{border:0;color:transparent}.lgph small{display:none}.hcc h2.ht{font-size:17px!important;color:#000!important}.hmeta{margin-top:2px}
 }
 /* ===== Responsivo ===== */
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
@@ -1115,6 +1125,10 @@ function bqOut(id,val,p){const q=BQ.find(x=>x[0]===id),v=num(val);if(!q||v==null
 function clasifIMC(c,p){const pe=num(c.peso),t=num(c.est);if(!pe||!t)return'';const imc=pe/(t/100)**2,e=edad(p.nac,c.fecha);
  if(e&&e.a<18){if(e.dec<24)return'—';const L=lms('bmi',p.sexo==='M'?1:2,e.dec);return L?dx('bmi',0,cdf(zs(imc,L))*100):'—'}
  return imc<18.5?'Bajo peso':imc<25?'Normal':imc<30?'Sobrepeso':imc<35?'Obesidad I':imc<40?'Obesidad II':'Obesidad III'}
+/* Logos del encabezado (se suben una vez y se guardan en el navegador): escudo de Campeche, Gobierno de Todos y SANNAFARM */
+function hcLogo(k,l,w){const u=(DB.logos||{})[k];
+ return `<div class="lgs" style="width:${w}px"><label for="lg-${k}" title="${u?'Cambiar logo':'Subir logo'}">${u?`<img src="${u}" alt="${esc(l)}">`:`<span class="lgph">${esc(l)}<small>Subir logo</small></span>`}</label>
+  <input type="file" id="lg-${k}" data-lg="${k}" accept="image/*" hidden>${u?`<button class="s g noprint lx" data-x="lgdel" data-k="${k}" aria-label="Quitar logo">✕</button>`:''}</div>`}
 function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fecha)I.fecha=today();
  const ox=(g,a)=>a.map(v=>`<label class="ck"><input type="checkbox" data-ir="${g}" value="${esc(v)}"${I[g]===v?' checked':''}>${esc(v)}</label>`).join('');
  const cx=(a,pre)=>a.map(([k,l])=>`<label class="ck"><input type="checkbox" data-ic="${pre}.${k}"${I[pre+'.'+k]?' checked':''}>${esc(l)}</label>`).join('');
@@ -1145,8 +1159,9 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
  const hasCol=!(I['off.cm']&&I['off.cv']);
  const hf=`<div class="ftw"><table class="ft"><tr><th>Familiar${HF_COLS.map(c=>`<th style="text-align:center">${c[1]}`).join('')}<th>Otros</tr>
   ${FAMS.map((f,i)=>`<tr><td>${f}${HF_COLS.map(([k])=>`<td style="text-align:center"><input type="checkbox" data-ic="hf.${i}.${k}"${I[`hf.${i}.${k}`]?' checked':''} style="width:auto" aria-label="${f} ${k}">`).join('')}<td><input data-i="hf.${i}.otros" value="${esc(I[`hf.${i}.otros`])}" aria-label="Otros ${f}">`).join('')}</table></div>`;
- return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="gap"><div style="flex:1;min-width:240px"><div class="note" style="margin:0">SANNAFARM · Gobierno del Estado de Campeche</div><h2 style="font-size:22px;margin:2px 0 0">Historia Clínica</h2></div>
-  <div class="gap">${T('fecha','Fecha','date')}${T('exp','N.º de expediente')}<button class="g noprint" data-x="print">🖨 Imprimir</button></div></div></div>`+
+ return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="hdr"><div class="hl">${hcLogo('esc','Escudo de Campeche',62)}${hcLogo('gob','Gobierno de Todos',118)}</div>
+  <h2 class="ht">Historia Clínica</h2><div class="hr">${hcLogo('san','SANNAFARM',150)}</div></div>
+  <div class="hmeta">${T('fecha','Fecha','date')}${T('exp','N.º de expediente')}<button class="g noprint" data-x="print">🖨 Imprimir</button></div></div>`+
  sec('Ficha de Identificación',`<div class="grid">${P('nombre','Nombre(s)')}${P('apellidos','Apellidos')}<div><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
   <div><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
   ${P('nac','Fecha de nacimiento','date')}<div><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
@@ -1181,6 +1196,7 @@ function instI(){const p=cur();if(!p)return;const I=p.hci=p.hci||{},v=$('#view')
  const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)};
  const grow=t=>{t.style.height='auto';t.style.height=Math.max(t.scrollHeight,40)+'px'};v.querySelectorAll('textarea.free').forEach(grow);
  v.oninput=v.onchange=e=>{const t=e.target,d=t.dataset,ch=e.type==='change';
+  if(d.lg!==undefined){if(!ch)return;const f=t.files[0];if(f)imgURL(f,420,false,.92).then(u=>{DB.logos=DB.logos||{};DB.logos[d.lg]=u;try{save()}catch{toast('Almacenamiento lleno')}render()}).catch(()=>toast('No se pudo leer la imagen'));return}
   if(t.classList.contains('free')&&t.tagName==='TEXTAREA')grow(t);
   if(d.i!==undefined){I[d.i]=t.value;if(d.i.startsWith('bq.'))t.classList.toggle('out',bqOut(d.i.split('.')[1],t.value,p))}
   else if(d.ic)I[d.ic]=t.checked;
@@ -1192,6 +1208,7 @@ function instI(){const p=cur();if(!p)return;const I=p.hci=p.hci||{},v=$('#view')
   save()};
  v.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,k=b.dataset.k;
   if(x==='print'){window.print();return}
+  if(x==='lgdel'){delete (DB.logos||{})[k];save();render();return}
   if(x==='nc'){const n=newCons(p);p.cons.push(n);HS.pg=Math.floor((csort(p).length-1)/4)}
   else if(x==='pgp')HS.pg=Math.max(0,(HS.pg||0)-1);else if(x==='pgn')HS.pg=(HS.pg||0)+1;
   else if(x==='rm'){if(!confirm('¿Quitar esta colación del recordatorio? Podrás agregarla de nuevo.'))return;I['off.'+k]=true}
