@@ -111,7 +111,8 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .free:hover{background:#0e8f7810!important}.free:focus{outline:none;background:#2563eb12!important}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
 .sigl{border-top:1px solid var(--tx);margin-top:2px;padding-top:3px;font-size:12px;font-weight:600}
-.ftw.sm{display:inline-block;max-width:100%}.ft.sm{width:auto}.ft.sm td,.ft.sm th{padding:4px 12px}.ft.sm input:not([type=checkbox]){width:70px!important;text-align:center}
+.ftw.sm{display:inline-block;max-width:100%}.ft.sm{width:auto}.ft.sm td,.ft.sm th{padding:2px 8px;font-size:12px}.ft.sm input:not([type=checkbox]){width:56px!important;text-align:center;font-size:12px;padding:2px 4px}
+.ft.an td,.ft.an th{padding:2px 8px}.ft.an td+td,.ft.an th+th,.ft.sm td+td,.ft.sm th+th{text-align:center}.ft.an input:not([type=checkbox]){width:88px!important}.ft.an input[type=date]{width:112px!important}
 .ft.rec td{border-bottom:1px solid #9fb0ab}.ft.rec td+td,.ft.rec th+th{border-left:1px solid #9fb0ab}
 @media print{
  @page{size:letter;margin:7mm 8mm}
@@ -124,7 +125,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
  .ft th{background:#e6e6e6!important;color:#000;font-size:9px;padding:1px 4px;border-bottom:.5pt solid #888}
  .ft td{padding:1px 4px;border-bottom:.5pt solid #bbb}
  .ft.rec td{border-bottom:.5pt solid #777}.ft.rec td+td,.ft.rec th+th{border-left:.5pt solid #777}
- .ft.sm td,.ft.sm th{padding:1px 8px}.ft tr{break-inside:avoid}.ft.rec textarea{min-height:26px}
+ .ft.sm td,.ft.sm th{padding:0 5px;font-size:8.5px}.ft.sm input:not([type=checkbox]){width:44px!important;font-size:8.5px}.ft.an input:not([type=checkbox]){width:64px!important}.ft.an input[type=date]{width:76px!important}.ft tr{break-inside:avoid}.ft.rec textarea{min-height:26px}
  input,select,textarea{border:0!important;background:transparent!important;padding:0 2px!important;font-size:9.5px;min-height:0;appearance:none;-webkit-appearance:none}
  input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:9px;height:9px}
  ::placeholder{color:transparent}
@@ -1125,8 +1126,8 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
  /* --- Antropometría: columnas = consultas (editables, ligadas a la Consulta) --- */
  const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
  const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
- const antro=`<div class="ftw"><table class="ft"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
-  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut);width:150px">${l}${cols.map(c=>!c?'<td>':k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
+ const antro=`<div class="ftw sm"><table class="ft sm an"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
+  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map(c=>!c?'<td>':k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
    `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
   <div class="gap noprint" style="margin-top:8px"><button class="s" data-x="nc">＋ Agregar consulta</button>${cs.length>4||pg>0?`<button class="s g" data-x="pgp"${pg?'':' disabled'}>‹ Anteriores</button><button class="s g" data-x="pgn"${(pg+1)*4<cs.length?'':' disabled'}>Siguientes ›</button>`:''}
   <span class="note" style="margin:0">Estos datos son los mismos de la sección Consulta.</span></div>`;
