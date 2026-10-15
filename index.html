@@ -107,16 +107,31 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .q{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:5px 0}
 .hcc{margin-bottom:10px;padding:12px 14px}.hcc h2{margin-bottom:8px}
 .q input.il{width:auto;flex:1;min-width:150px;max-width:340px}
+.free{border:0!important;background:transparent!important;box-shadow:none;resize:none;overflow:hidden;padding:4px 2px!important;width:100%;min-height:54px;line-height:1.5}
+.free:hover{background:#0e8f7810!important}.free:focus{outline:none;background:#2563eb12!important}
+.sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
+.sigl{border-top:1px solid var(--tx);margin-top:2px;padding-top:3px;font-size:12px;font-weight:600}
+.ftw.sm{display:inline-block;max-width:100%}.ft.sm{width:auto}.ft.sm td,.ft.sm th{padding:4px 12px}.ft.sm input:not([type=checkbox]){width:70px!important;text-align:center}
+.ft.rec td{border-bottom:1px solid #9fb0ab}.ft.rec td+td,.ft.rec th+th{border-left:1px solid #9fb0ab}
 @media print{
- @page{size:letter;margin:9mm}
+ @page{size:letter;margin:7mm 8mm}
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  aside,.top,#toast,#picker,.noprint{display:none!important}
- body{display:block;background:#fff;font-size:11px;line-height:1.35}main{padding:0}
- .card{break-inside:auto;box-shadow:none;margin-bottom:6px;padding:6px 8px;border-color:#ccc}
- .hcc{padding:6px 8px;margin-bottom:6px}
- h2{break-after:avoid;margin-bottom:5px;font-size:13px!important}
- .ftw,.ft tr,.q{break-inside:avoid}.ft td,.ft th{padding:2px 6px}.ft textarea{min-height:26px}
- .q{margin:2px 0}.grid{gap:5px}.ck{margin:1px 12px 1px 0}textarea{min-height:36px}
- input,select,textarea{padding:2px 4px;border-color:#ddd}
+ body{display:block;background:#fff;color:#000;font-size:9.5px;line-height:1.22}main{padding:0}
+ .card{border:0!important;border-top:.75pt solid #777!important;border-radius:0;box-shadow:none;margin:0 0 3px;padding:3px 0;break-inside:auto;background:none}
+ .hcc{padding:3px 0;margin:0 0 3px}.hcc h2{color:#000!important;font-size:11px!important;margin:0 0 2px;break-after:avoid}
+ .ftw{border:.5pt solid #888;border-radius:0;break-inside:avoid}
+ .ft th{background:#e6e6e6!important;color:#000;font-size:9px;padding:1px 4px;border-bottom:.5pt solid #888}
+ .ft td{padding:1px 4px;border-bottom:.5pt solid #bbb}
+ .ft.rec td{border-bottom:.5pt solid #777}.ft.rec td+td,.ft.rec th+th{border-left:.5pt solid #777}
+ .ft.sm td,.ft.sm th{padding:1px 8px}.ft tr{break-inside:avoid}.ft.rec textarea{min-height:26px}
+ input,select,textarea{border:0!important;background:transparent!important;padding:0 2px!important;font-size:9.5px;min-height:0;appearance:none;-webkit-appearance:none}
+ input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:9px;height:9px}
+ ::placeholder{color:transparent}
+ textarea{resize:none!important}input[type=date]::-webkit-calendar-picker-indicator{display:none}
+ .grid{gap:2px 8px;grid-template-columns:repeat(4,1fr)}label{font-size:8.5px;margin:0}p{margin:2px 0}
+ .q{margin:1px 0;gap:1px 10px}.q input.il{min-width:80px;max-width:none}.ck{margin:0 8px 0 0;font-size:9.5px}
+ .free{min-height:34px}.sig{margin-top:10px}
 }
 /* ===== Responsivo ===== */
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
@@ -1111,20 +1126,20 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
  const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
  const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
  const antro=`<div class="ftw"><table class="ft"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
-  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut);width:150px">${l}${cols.map(c=>!c?'<td style="color:var(--mut)">—':k==='_imc'?`<td data-imc="${c.id}">${fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))||'—'}`:
+  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut);width:150px">${l}${cols.map(c=>!c?'<td>':k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
    `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
   <div class="gap noprint" style="margin-top:8px"><button class="s" data-x="nc">＋ Agregar consulta</button>${cs.length>4||pg>0?`<button class="s g" data-x="pgp"${pg?'':' disabled'}>‹ Anteriores</button><button class="s g" data-x="pgn"${(pg+1)*4<cs.length?'':' disabled'}>Siguientes ›</button>`:''}
   <span class="note" style="margin:0">Estos datos son los mismos de la sección Consulta.</span></div>`;
  /* --- Bioquímicos --- */
- const bq=`<div class="ftw"><table class="ft"><tr><th>Indicador<th>Valor normal<th>Consulta 1°<th>Consulta 2°<th>Consulta 3°</tr>
+ const bq=`<div class="ftw sm"><table class="ft sm"><tr><th>Indicador<th>Valor normal<th>Consulta 1°<th>Consulta 2°<th>Consulta 3°</tr>
   ${BQ.map(([id,n,ref])=>`<tr><td><b>${n}</b><td>${ref}${[0,1,2].map(i=>{const k=`bq.${id}.${i}`;return `<td><input data-i="${k}" type="number" step="any" value="${esc(I[k])}"${bqOut(id,I[k],p)?' class="out"':''}>`}).join('')}`).join('')}</table></div>
   <p class="note">Los valores fuera de rango se marcan en rojo.</p>`;
  /* --- Recordatorio de 24 h: tabla formal; las colaciones se pueden quitar --- */
- const rcRow=([k,n,col])=>I['off.'+k]?'':`<tr><td style="width:200px"><b>${n}</b><div class="gap" style="margin-top:4px;gap:6px"><span class="note" style="margin:0">Hrs:</span><input type="time" data-i="rc.${k}.hr" value="${esc(I['rc.'+k+'.hr'])}" style="width:115px" aria-label="Hora ${n}"></div>
+ const rcRow=([k,n,col])=>I['off.'+k]?'':`<tr><td style="width:200px"><b>${n}</b><div class="gap" style="margin-top:4px;gap:6px"><span class="note" style="margin:0">Hrs:</span><input type="text" inputmode="numeric" placeholder="hh:mm" data-i="rc.${k}.hr" value="${esc(I['rc.'+k+'.hr'])}" style="width:115px" aria-label="Hora ${n}"></div>
   ${col?`<button class="s g noprint" data-x="rm" data-k="${k}" style="margin-top:6px">Quitar colación</button>`:''}
   <td><textarea data-i="rc.${k}.ali" aria-label="Alimentos ${n}">${esc(I['rc.'+k+'.ali'])}</textarea><td><textarea data-i="rc.${k}.cant" aria-label="Cantidad ${n}">${esc(I['rc.'+k+'.cant'])}</textarea>`;
  const back=REC.filter(r=>r[2]&&I['off.'+r[0]]);
- const rec=`<div class="ftw"><table class="ft"><tr><th>Tiempo de alimentos<th>Alimentos<th>Cantidad / Preparación</tr>${REC.map(rcRow).join('')}</table></div>
+ const rec=`<div class="ftw rec"><table class="ft rec"><tr><th>Tiempo de alimentos<th>Alimentos<th>Cantidad / Preparación</tr>${REC.map(rcRow).join('')}</table></div>
   ${back.length?`<div class="gap noprint" style="margin-top:8px"><span class="note" style="margin:0">El paciente no consume:</span>${back.map(r=>`<button class="s g" data-x="add" data-k="${r[0]}">＋ ${r[1]}</button>`).join('')}</div>`:''}`;
  const hasCol=!(I['off.cm']&&I['off.cv']);
  const hf=`<div class="ftw"><table class="ft"><tr><th>Familiar${HF_COLS.map(c=>`<th style="text-align:center">${c[1]}`).join('')}<th>Otros</tr>
@@ -1158,12 +1173,14 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
   q('¿Quién prepara la comida?',ox('prep',['Usted','Familiar','Compra comida preparada']))+q('¿Con qué frecuencia come fuera de casa?',ox('fuera',['Nunca','1-2 /sem','Casi diario'])))+
  sec('Indicadores bioquímicos',bq)+
  sec('Recordatorio de 24 horas',rec)+
- sec('Nota clínica de 1ra vez',`<textarea data-i="nota" style="min-height:120px">${esc(I.nota)}</textarea>`)+
- sec('Plan nutricional de trabajo',`<textarea data-i="plan" style="min-height:120px">${esc(I.plan)}</textarea>
-  <div style="max-width:380px;margin:26px 0 0 auto;text-align:center"><input data-i="firma" value="${esc(I.firma)}" placeholder="Nombre de la nutrióloga" style="text-align:center"><div style="border-top:1px solid var(--tx);margin-top:4px;padding-top:4px;font-size:12px;font-weight:600">Nombre y firma de la nutrióloga</div></div>`)}
+ sec('Diagnóstico PES',`<textarea class="free" data-i="nota" rows="3" placeholder="Escribe aquí…" aria-label="Diagnóstico PES">${esc(I.nota)}</textarea>`)+
+ sec('Plan nutricional de trabajo',`<textarea class="free" data-i="plan" rows="3" placeholder="Escribe aquí…" aria-label="Plan nutricional de trabajo">${esc(I.plan)}</textarea>
+  <div class="sig"><input class="free" data-i="firma" value="${esc(I.firma)}" aria-label="Nombre de la nutrióloga"><div class="sigl">Nombre y firma de la nutrióloga</div></div>`)}
 function instI(){const p=cur();if(!p)return;const I=p.hci=p.hci||{},v=$('#view');
- const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)||'—'};
+ const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)};
+ const grow=t=>{t.style.height='auto';t.style.height=Math.max(t.scrollHeight,40)+'px'};v.querySelectorAll('textarea.free').forEach(grow);
  v.oninput=v.onchange=e=>{const t=e.target,d=t.dataset,ch=e.type==='change';
+  if(t.classList.contains('free')&&t.tagName==='TEXTAREA')grow(t);
   if(d.i!==undefined){I[d.i]=t.value;if(d.i.startsWith('bq.'))t.classList.toggle('out',bqOut(d.i.split('.')[1],t.value,p))}
   else if(d.ic)I[d.ic]=t.checked;
   else if(d.ir){if(!ch)return;if(t.checked){I[d.ir]=t.value;v.querySelectorAll(`[data-ir="${d.ir}"]`).forEach(x=>{if(x!==t)x.checked=false})}else I[d.ir]=''}
