@@ -131,7 +131,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 @media print{
  @page{size:letter;margin:7mm 8mm}
  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
- aside,.top,#toast,#picker,.noprint{display:none!important}
+ aside,.top,#toast,#picker,#welcome,.noprint{display:none!important}
  body{display:block;background:#fff;color:#000;font-size:9.5px;line-height:1.22}main{padding:0}
  .card{border:0!important;border-top:.75pt solid #777!important;border-radius:0;box-shadow:none;margin:0 0 3px;padding:3px 0;break-inside:auto;background:none}
  .hcc{padding:3px 0;margin:0 0 3px}.hcc h2{color:#000!important;font-size:11px!important;margin:0 0 2px;break-after:avoid}
@@ -149,6 +149,27 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
  .free{min-height:34px}.sig{margin-top:10px}
  .lgs{height:27px}.hdr{gap:8px}.hl{gap:8px}.lgph{border:0;color:transparent}.lgph small{display:none}.hcc h2.ht{font-size:17px!important;color:#000!important}.hmeta{margin-top:2px}
 }
+/* ===== Animación de bienvenida ===== */
+#welcome{position:fixed;inset:0;z-index:200;display:grid;place-items:center;overflow:hidden;text-align:center;color:#fff;cursor:pointer;
+ background:linear-gradient(135deg,#0e8f78,#14b8a6,#2563eb,#0e8f78);background-size:300% 300%;animation:wbg 6s ease infinite;transition:opacity .7s ease,transform .7s ease}
+#welcome.out{opacity:0;transform:scale(1.06);pointer-events:none}
+@keyframes wbg{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.wl{position:relative;z-index:2;padding:20px}
+.wbrand{font-size:15px;letter-spacing:.35em;text-transform:uppercase;font-weight:700;opacity:0;animation:wup .8s .1s ease forwards}
+#welcome h1{font-size:clamp(34px,7vw,72px);line-height:1.1;margin:14px 0 22px;font-weight:800;text-shadow:0 4px 24px #0004}
+#welcome h1 span{display:block;opacity:0;transform:translateY(24px) scale(.96);animation:wup .9s ease forwards}
+#welcome h1 .w1{animation-delay:.5s}#welcome h1 .w2{animation-delay:.95s;color:#fef08a}
+.wbar{width:min(260px,60vw);height:5px;border-radius:99px;background:#ffffff40;margin:0 auto;overflow:hidden;opacity:0;animation:wup .6s 1.4s ease forwards}
+.wbar i{display:block;height:100%;width:0;background:#fff;border-radius:99px;animation:wfill 1.7s 1.4s ease forwards}
+.wsub{font-size:13px;opacity:0;margin:12px 0 0;animation:wup .6s 1.8s ease forwards}
+@keyframes wup{to{opacity:1;transform:none}}
+@keyframes wfill{to{width:100%}}
+.wf{position:absolute;font-size:clamp(30px,5vw,54px);opacity:0;animation:wfloat 5s ease-in-out infinite,wshow .8s ease forwards;filter:drop-shadow(0 4px 8px #0003)}
+.f1{left:8%;top:18%;animation-delay:.2s}.f2{left:84%;top:14%;animation-delay:.5s}.f3{left:14%;top:70%;animation-delay:.8s}.f4{left:80%;top:68%;animation-delay:.3s}
+.f5{left:44%;top:8%;animation-delay:.6s}.f6{left:50%;top:84%;animation-delay:.9s}.f7{left:90%;top:42%;animation-delay:.4s}.f8{left:4%;top:44%;animation-delay:.7s}
+@keyframes wfloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-22px) rotate(8deg)}}
+@keyframes wshow{to{opacity:.95}}
+@media(prefers-reduced-motion:reduce){#welcome,.wf,.wbrand,#welcome h1 span,.wbar,.wbar i,.wsub{animation:none!important;opacity:1;transform:none}.wbar i{width:100%}.wf{display:none}}
 /* ===== Responsivo ===== */
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
 @media(max-width:820px){aside{position:fixed;left:-250px}aside.open{left:0}#burger{display:inline-flex}main{padding:14px}}
@@ -168,6 +189,10 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 </main>
 <div id="toast"></div>
 <div id="picker" hidden></div>
+<div id="welcome" role="status" aria-label="Bienvenida">
+  <span class="wf f1">🥑</span><span class="wf f2">🍎</span><span class="wf f3">🥕</span><span class="wf f4">🥦</span><span class="wf f5">🍊</span><span class="wf f6">🫐</span><span class="wf f7">🍋</span><span class="wf f8">🥬</span>
+  <div class="wl"><div class="wbrand">NutriClin</div><h1><span class="w1">¡Bienvenida,</span><span class="w2">nutrióloga!</span></h1><div class="wbar"><i></i></div><p class="wsub">Toca para continuar</p></div>
+</div>
 
 <script>
 /* =====================================================================
@@ -1001,7 +1026,7 @@ function showPicker(){const el=$('#picker');el.hidden=false;
  el.innerHTML=`<div class="pk"><h1>NutriClin</h1><p style="font-size:17px">¿Cómo vas a trabajar hoy?</p><div class="pkg">${Object.entries(MODOS).map(([k,m])=>`<button class="pkc" data-m="${k}" style="--a:${m.a};--b:${m.b}"><span class="pke">${m.e}</span><b>${m.n}</b><small>${m.d}</small>${k===MODE?'<em>Último uso</em>':''}</button>`).join('')}</div>
  <p style="font-size:12px;opacity:.8">Cada modo guarda sus propios pacientes, menús y su propia historia clínica. Puedes cambiar de modo cuando quieras desde el menú lateral.</p></div>`;
  el.onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const m=b.dataset.m;sessionStorage.setItem('nc_ok','1');
-  if(m!==MODE){save();localStorage.setItem('nutriclin_modo',m);location.reload()}else{localStorage.setItem('nutriclin_modo',m);el.hidden=true}}}
+  if(m!==MODE){save();localStorage.setItem('nutriclin_modo',m);sessionStorage.setItem('nc_skipw','1');location.reload()}else{localStorage.setItem('nutriclin_modo',m);el.hidden=true}}}
 function paintBrand(){const m=MODOS[MODE];
  $('.brand').innerHTML=`NutriClin<div class="msub">${m.e} ${m.n}${DB.org?' · '+esc(DB.org):''}</div><button class="g s" id="swmode" style="margin:8px 0 0 0;color:#c9e6df;border-color:#ffffff33">⇄ Cambiar modo</button>`;
  $('#swmode').onclick=()=>{sessionStorage.removeItem('nc_ok');showPicker()};
@@ -1295,6 +1320,10 @@ new MutationObserver(()=>enhanceDates($('#view'))).observe($('#view'),{childList
 
 paintBrand();fillSel();render();
 if(!sessionStorage.getItem('nc_ok'))showPicker();
+/* Bienvenida: se muestra al abrir la página (no al cambiar de modo) y se cierra sola o con un toque */
+(function(){const w=$('#welcome');if(!w)return;if(sessionStorage.getItem('nc_skipw')){sessionStorage.removeItem('nc_skipw');w.remove();return}
+ const close=()=>{if(w.classList.contains('out'))return;w.classList.add('out');setTimeout(()=>w.remove(),750)};
+ w.onclick=close;setTimeout(close,3600);document.addEventListener('keydown',close,{once:true})})();
 </script>
 </body>
 </html>
