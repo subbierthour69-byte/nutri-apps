@@ -226,8 +226,8 @@ setTheme(DB.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'li
 $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
-const NAV=[['General',[['panel','Panel','panel']]],['Clínica',[['pac','Pacientes','users'],['cons','Consulta','pulse']]],
- ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['hc','Historia clínica','list'],['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
+const NAV=[['Atención',[['hc','Historia clínica','list'],['pac','Pacientes','users'],['cons','Consulta','pulse'],['notas','Notas subsecuentes','repeat']]],['General',[['panel','Panel','panel']]],
+ ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
 $('#burger').innerHTML=ico('menu');
@@ -505,7 +505,7 @@ const kpi=(l,v)=>`<div class="card kpi" style="margin:0">${v}<small>${l}</small>
 V.panel={t:'Panel',h(){const p=cur(),c=p&&curC(),e=p&&c&&en(c,p);
  return `<div class="grid">${kpi('Pacientes',DB.p.length)}${kpi('Consultas registradas',DB.p.reduce((a,x)=>a+(x.cons||[]).length,0))}
  ${kpi('IMC del paciente activo',e?fx(e.imc):'—')}${kpi('GET + ETA (kcal/día)',e&&e.tot?fx(e.tot,0):'—')}</div>
- <div class="card" style="margin-top:16px"><h2>Flujo de trabajo</h2><p style="margin:0">1) Registra al paciente. 2) En <b>Consulta</b> captura medidas, revisa energía, percentiles y composición (con semáforo bajo/óptimo/elevado). 3) Arma el plan en el <b>cuadro de equivalentes y distribución</b> (o agrega alimentos con el botón + del <b>Catálogo SMAE</b>) y revisa el % de adecuación en verde/amarillo/rojo. 4) Revisa la cobertura en <b>Micronutrientes</b>.</p></div>`}};
+ <div class="card" style="margin-top:16px"><h2>Flujo de trabajo</h2><p style="margin:0">1) Llena la <b>Historia clínica</b>: el paciente se registra solo. 2) En <b>Consulta</b> captura medidas, revisa energía, percentiles y composición (con semáforo bajo/óptimo/elevado). 3) Arma el plan en el <b>cuadro de equivalentes y distribución</b> (o agrega alimentos con el botón + del <b>Catálogo SMAE</b>) y revisa el % de adecuación en verde/amarillo/rojo. 4) Revisa la cobertura en <b>Micronutrientes</b>.</p></div>`}};
 
 /* ---------- PACIENTES ---------- */
 V.pac={t:'Pacientes e historia clínica',h(){
@@ -538,8 +538,8 @@ V.pac={t:'Pacientes e historia clínica',h(){
    save();editId=null;fillSel();go();toast('Paciente guardado')});
   $('#view').onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id;
    if(b.dataset.a==='ed'){editId=id;chips=[...(DB.p.find(x=>x.id===id).pat||[])];go()}
-   if(b.dataset.a==='sel'){DB.sel=id;save();location.hash='cons'}
-   if(b.dataset.a==='hist'){DB.sel=id;save();location.hash='hc'}
+   if(b.dataset.a==='sel'){HS.draft=null;DB.sel=id;save();location.hash='cons'}
+   if(b.dataset.a==='hist'){HS.draft=null;DB.sel=id;save();location.hash='hc'}
    if(b.dataset.a==='del'&&confirm('¿Borrar este paciente y todas sus consultas?')){DB.p=DB.p.filter(x=>x.id!==id);if(DB.sel===id)DB.sel=null;save();fillSel();go()}}}};
 
 /* ---------- CONSULTA: historial + energía + pediatría + composición + plan ---------- */
@@ -1054,8 +1054,8 @@ function hcFind(id){for(const s of getHC().secs){const i=s.f.findIndex(f=>f.id==
 const mv=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]]};
 V.hc={t:'Historia clínica',
  h(){const H=getHC(),m=MODOS[MODE];
-  if(!HS.cfg){const p=cur();if(!p)return noP+'<p><button class="g" data-x="cfg">⚙ Configurar plantilla</button></p>';
-   return phead(p)+`<div class="gap" style="margin-bottom:12px"><h2 style="margin:0;flex:1">${esc(H.nombre)}</h2>${H.ref?`<a href="${H.ref.data}" download="${esc(H.ref.name)}"><button class="g s" type="button">📎 Formato de referencia</button></a>`:''}<button class="g s" data-x="cfg">⚙ Configurar plantilla</button></div>`+
+  if(!HS.cfg){const p=hcPat();if(!p)return noP+'<p><button class="g" data-x="cfg">⚙ Configurar plantilla</button></p>';
+   return `<div class="gap" style="margin-bottom:12px"><h2 style="margin:0;flex:1">${esc(H.nombre)}</h2>${H.ref?`<a href="${H.ref.data}" download="${esc(H.ref.name)}"><button class="g s" type="button">📎 Formato de referencia</button></a>`:''}<button class="g s" data-x="cfg">⚙ Configurar plantilla</button></div>`+
     (H.secs.map(s=>`<div class="card" style="border-top:5px solid ${m.a}"><h2>${esc(s.t)}</h2><div class="grid">${s.f.map(f=>hcField(f,(p.hcd||{})[f.id])).join('')}</div></div>`).join('')||'<div class="msg">La plantilla no tiene campos. Usa “Configurar plantilla”.</div>')}
   return `<div class="card" style="border-top:5px solid ${m.a}"><div class="gap"><h2 style="margin:0;flex:1">Configurar historia clínica · ${m.e} ${m.n}</h2><button class="g" data-x="done">← Volver a la historia</button></div>
    <p class="note">Cada modo tiene su propia plantilla. Importa la tuya (CSV con columnas <b>Sección, Campo, Tipo, Opciones</b> o JSON) o edítala aquí. Los datos ya capturados se conservan en los campos que mantengan el mismo nombre.</p>
@@ -1074,12 +1074,14 @@ V.hc={t:'Historia clínica',
   '<p><button data-x="sa">＋ Nueva sección</button></p>'},
  i(){const v=$('#view'),H=getHC();
   v.oninput=e=>{const t=e.target,d=t.dataset;
-   if(d.h){const p=cur();if(!p)return;p.hcd=p.hcd||{};p.hcd[d.h]=t.value;save()}
+   if(hcPInput(e))return;
+   if(d.h){const p=hcPat();if(!p)return;p.hcd=p.hcd||{};p.hcd[d.h]=t.value;if(DB.p.includes(p))save()}
    else if(d.cn){H.nombre=t.value;save()}
    else if(d.cs){const s=H.secs.find(x=>x.id===d.cs);if(s){s.t=t.value;save()}}
    else if(d.cf&&d.k!=='tp'){const r=hcFind(d.cf);if(r){r.f[d.k]=d.k==='o'?t.value.split(',').map(x=>x.trim()).filter(Boolean):t.value;save()}}};
   v.onchange=async e=>{const t=e.target,d=t.dataset;
-   if(d.h){const p=cur();if(p){p.hcd=p.hcd||{};p.hcd[d.h]=t.value;save()}}
+   if(hcPInput(e))return;
+   if(d.h){const p=hcPat();if(p){p.hcd=p.hcd||{};p.hcd[d.h]=t.value;if(DB.p.includes(p))save()}}
    else if(d.cf&&d.k==='tp'){const r=hcFind(d.cf);if(r){r.f.tp=t.value;save();render()}}
    else if(t.id==='hc-imp'){const f=t.files[0];if(!f)return;try{const tx=await f.text(),tpl=/\.json$/i.test(f.name)?jsonToTemplate(tx):csvToTemplate(tx);
      if(!tpl.secs.length)throw 0;if(!confirm('Se reemplazará la plantilla actual por la importada ('+tpl.secs.reduce((a,s)=>a+s.f.length,0)+' campos). ¿Continuar?'))return;
@@ -1087,6 +1089,7 @@ V.hc={t:'Historia clínica',
    else if(t.id==='hc-ref'){const f=t.files[0];if(!f)return;try{const a=await attach(f,false);if(a){H.ref=a;try{save()}catch{H.ref=null;toast('Almacenamiento lleno')}render()}}catch{toast('No se pudo leer el archivo')}}};
   v.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,d=b.dataset;
    const si=()=>H.secs.findIndex(s=>s.id===d.s);
+   if(x==='newhc'){HS.draft=newDraft();render();return}
    if(x==='cfg')HS.cfg=true;else if(x==='done')HS.cfg=false;
    else if(x==='imp'){$('#hc-imp').click();return}
    else if(x==='exp'){download('plantilla-historia-clinica.json',JSON.stringify({nombre:H.nombre,secs:H.secs.map(s=>({t:s.t,f:s.f.map(f=>({l:f.l,tp:f.tp,o:f.o}))}))},null,1),'application/json');return}
@@ -1131,7 +1134,34 @@ function clasifIMC(c,p){const pe=num(c.peso),t=num(c.est);if(!pe||!t)return'';co
 function hcLogo(k,l,w){const u=(DB.logos||{})[k];
  return `<div class="lgs" style="width:${w}px"><label for="lg-${k}" title="${u?'Cambiar logo':'Subir logo'}">${u?`<img src="${u}" alt="${esc(l)}">`:`<span class="lgph">${esc(l)}<small>Subir logo</small></span>`}</label>
   <input type="file" id="lg-${k}" data-lg="${k}" accept="image/*" hidden>${u?`<button class="s g noprint lx" data-x="lgdel" data-k="${k}" aria-label="Quitar logo">✕</button>`:''}</div>`}
-function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fecha)I.fecha=today();
+/* ---------- Registro automático del paciente al llenar la historia clínica ----------
+   Si no hay paciente activo (o se pulsa “Nueva historia clínica”) se trabaja sobre un borrador; en cuanto tiene
+   nombre y fecha de nacimiento se guarda como paciente, queda seleccionado y se crea su primera consulta. */
+const newDraft=()=>({id:uid(),nombre:'',apellidos:'',nac:'',sexo:'F',est:'',tel:'',mail:'',antec:'',hist:'',pat:[],cons:[],hci:{},hcd:{}});
+const hcPat=()=>HS.draft||cur();
+function hcRegister(p){if(HS.draft!==p||!(p.nombre||'').trim()||!p.nac)return;
+ HS.draft=null;if(!p.cons.length)p.cons.push(newCons(p));DB.p.push(p);DB.sel=p.id;save();fillSel();
+ const b=$('#newpbanner');if(b)b.remove();const an=$('#antro');if(an)an.innerHTML=antroBlock(p);
+ toast('Paciente registrado automáticamente: '+pn(p))}
+function hcPInput(e){const t=e.target,d=t.dataset;if(d.p===undefined)return false;const p=hcPat();if(!p)return true;p[d.p]=t.value;
+ if(d.p==='nac'){const el=$('#hc-edad');if(el)el.value=edTxt(edad(p.nac))}
+ hcRegister(p);if(e.type==='change')fillSel();if(DB.p.includes(p))save();return true}
+const draftBanner=p=>HS.draft===p?'<div class="msg noprint" id="newpbanner" style="margin:8px 0">Paciente nuevo: se registrará automáticamente al capturar <b>nombre</b> y <b>fecha de nacimiento</b>.</div>':'';
+function identCard(p){return `<div class="card">${draftBanner(p)}<div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Datos del paciente</h2><button class="g s noprint" data-x="newhc">＋ Nueva historia clínica</button></div>
+ <div class="grid"><div><label>Nombre(s)</label><input data-p="nombre" value="${esc(p.nombre)}"></div><div><label>Apellidos</label><input data-p="apellidos" value="${esc(p.apellidos)}"></div>
+ <div><label>Fecha de nacimiento</label><input data-p="nac" type="date" value="${esc(p.nac)}"></div><div><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
+ <div><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
+ <div><label>Teléfono</label><input data-p="tel" type="tel" value="${esc(p.tel)}"></div></div></div>`}
+function antroBlock(p){
+ const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
+ const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+return `<div class="ftw sm"><table class="ft sm an"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
+  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map(c=>!c?'<td>':k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
+   `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
+  <div class="gap noprint" style="margin-top:8px"><button class="s" data-x="nc">＋ Agregar consulta</button>${cs.length>4||pg>0?`<button class="s g" data-x="pgp"${pg?'':' disabled'}>‹ Anteriores</button><button class="s g" data-x="pgn"${(pg+1)*4<cs.length?'':' disabled'}>Siguientes ›</button>`:''}
+  <span class="note" style="margin:0">Estos datos son los mismos de la sección Consulta.</span></div>`;
+}
+function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.hci=p.hci||{};if(!I.fecha)I.fecha=today();
  const ox=(g,a)=>a.map(v=>`<label class="ck"><input type="checkbox" data-ir="${g}" value="${esc(v)}"${I[g]===v?' checked':''}>${esc(v)}</label>`).join('');
  const cx=(a,pre)=>a.map(([k,l])=>`<label class="ck"><input type="checkbox" data-ic="${pre}.${k}"${I[pre+'.'+k]?' checked':''}>${esc(l)}</label>`).join('');
  const ti=(k,ph='')=>`<input class="il" type="text" data-i="${k}" value="${esc(I[k])}" placeholder="${esc(ph)}" aria-label="${esc(ph||k)}">`;
@@ -1140,13 +1170,7 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
  const T=(k,l,t='text')=>`<div><label>${l}</label><input data-i="${k}" type="${t}" value="${esc(I[k])}"></div>`;
  const P=(k,l,t='text')=>`<div><label>${l}</label><input data-p="${k}" type="${t}" value="${esc(p[k])}"></div>`;
  /* --- Antropometría: columnas = consultas (editables, ligadas a la Consulta) --- */
- const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
- const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
- const antro=`<div class="ftw sm"><table class="ft sm an"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
-  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map(c=>!c?'<td>':k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
-   `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
-  <div class="gap noprint" style="margin-top:8px"><button class="s" data-x="nc">＋ Agregar consulta</button>${cs.length>4||pg>0?`<button class="s g" data-x="pgp"${pg?'':' disabled'}>‹ Anteriores</button><button class="s g" data-x="pgn"${(pg+1)*4<cs.length?'':' disabled'}>Siguientes ›</button>`:''}
-  <span class="note" style="margin:0">Estos datos son los mismos de la sección Consulta.</span></div>`;
+ const antro=`<div id="antro">${antroBlock(p)}</div>`;
  /* --- Bioquímicos --- */
  const bq=`<div class="ftw sm"><table class="ft sm"><tr><th>Indicador<th>Valor normal<th>Consulta 1°<th>Consulta 2°<th>Consulta 3°</tr>
   ${BQ.map(([id,n,ref])=>`<tr><td><b>${n}</b><td>${ref}${[0,1,2].map(i=>{const k=`bq.${id}.${i}`;return `<td><input data-i="${k}" type="number" step="any" value="${esc(I[k])}"${bqOut(id,I[k],p)?' class="out"':''}>`}).join('')}`).join('')}</table></div>
@@ -1163,7 +1187,7 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
   ${FAMS.map((f,i)=>`<tr><td>${f}${HF_COLS.map(([k])=>`<td style="text-align:center"><input type="checkbox" data-ic="hf.${i}.${k}"${I[`hf.${i}.${k}`]?' checked':''} style="width:auto" aria-label="${f} ${k}">`).join('')}<td><input data-i="hf.${i}.otros" value="${esc(I[`hf.${i}.otros`])}" aria-label="Otros ${f}">`).join('')}</table></div>`;
  return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="hdr"><div class="hl">${hcLogo('esc','Escudo de Campeche',62)}${hcLogo('gob','Gobierno de Todos',118)}</div>
   <h2 class="ht">Historia Clínica</h2><div class="hr">${hcLogo('san','SANNAFARM',150)}</div></div>
-  <div class="hmeta">${T('fecha','Fecha','date')}${T('exp','N.º de expediente')}<button class="g noprint" data-x="print">🖨 Imprimir</button></div></div>`+
+  <div class="hmeta">${T('fecha','Fecha','date')}${T('exp','N.º de expediente')}<button class="g noprint" data-x="print">🖨 Imprimir</button><button class="g noprint" data-x="newhc">＋ Nueva historia clínica</button></div>${draftBanner(p)}</div>`+
  sec('Ficha de Identificación',`<div class="grid">${P('nombre','Nombre(s)')}${P('apellidos','Apellidos')}<div><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
   <div><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
   ${P('nac','Fecha de nacimiento','date')}<div><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
@@ -1194,7 +1218,7 @@ function instH(){const p=cur();if(!p)return noP;const I=p.hci=p.hci||{};if(!I.fe
  sec('Diagnóstico PES',`<textarea class="free" data-i="nota" rows="3" placeholder="Escribe aquí…" aria-label="Diagnóstico PES">${esc(I.nota)}</textarea>`)+
  sec('Plan nutricional de trabajo',`<textarea class="free" data-i="plan" rows="3" placeholder="Escribe aquí…" aria-label="Plan nutricional de trabajo">${esc(I.plan)}</textarea>
   <div class="sig"><input class="free" data-i="firma" value="${esc(I.firma)}" aria-label="Nombre de la nutrióloga"><div class="sigl">Nombre y firma de la nutrióloga</div></div>`)}
-function instI(){const p=cur();if(!p)return;const I=p.hci=p.hci||{},v=$('#view');
+function instI(){const p=hcPat();if(!p)return;const I=p.hci=p.hci||{},v=$('#view');
  const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)};
  const grow=t=>{t.style.height='auto';t.style.height=Math.max(t.scrollHeight,40)+'px'};v.querySelectorAll('textarea.free').forEach(grow);
  v.oninput=v.onchange=e=>{const t=e.target,d=t.dataset,ch=e.type==='change';
@@ -1203,29 +1227,34 @@ function instI(){const p=cur();if(!p)return;const I=p.hci=p.hci||{},v=$('#view')
   if(d.i!==undefined){I[d.i]=t.value;if(d.i.startsWith('bq.'))t.classList.toggle('out',bqOut(d.i.split('.')[1],t.value,p))}
   else if(d.ic)I[d.ic]=t.checked;
   else if(d.ir){if(!ch)return;if(t.checked){I[d.ir]=t.value;v.querySelectorAll(`[data-ir="${d.ir}"]`).forEach(x=>{if(x!==t)x.checked=false})}else I[d.ir]=''}
-  else if(d.p!==undefined){p[d.p]=t.value;if(d.p==='nac')$('#hc-edad').value=edTxt(edad(p.nac));if(ch)fillSel()}
+  else if(d.p!==undefined){hcPInput(e);return}
   else if(d.pp!==undefined)p.pat=t.value.split(',').map(x=>x.trim()).filter(Boolean);
   else if(d.c){const[id,k]=d.c.split('|'),c=p.cons.find(x=>x.id===id);if(!c)return;c[k]=t.value;refresh(c)}
   else return;
   save()};
  v.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,k=b.dataset.k;
   if(x==='print'){window.print();return}
+  if(x==='newhc'){HS.draft=newDraft();render();return}
   if(x==='lgdel'){delete (DB.logos||{})[k];save();render();return}
   if(x==='nc'){const n=newCons(p);p.cons.push(n);HS.pg=Math.floor((csort(p).length-1)/4)}
   else if(x==='pgp')HS.pg=Math.max(0,(HS.pg||0)-1);else if(x==='pgn')HS.pg=(HS.pg||0)+1;
   else if(x==='rm'){if(!confirm('¿Quitar esta colación del recordatorio? Podrás agregarla de nuevo.'))return;I['off.'+k]=true}
   else if(x==='add')delete I['off.'+k];
   save();render()}}
+/* ---------- Notas de pacientes subsecuentes (por paciente, la más reciente primero) ---------- */
+MODS.notas={t:'Notas de pacientes subsecuentes',f:[['date','Fecha','date'],['peso','Peso (kg)','num'],['ev','Evolución / subjetivo','area'],['dx','Diagnóstico PES','area'],['pl','Plan / indicaciones','area'],['prox','Próxima cita','date']],
+ sum:(rows,p)=>`<p class="note" style="margin:0 0 10px">Notas de seguimiento de ${esc(pn(p))}. Cada nota queda con su fecha; la más reciente aparece primero.</p>`};
+V.notas=modView('notas');
 const _hcH=V.hc.h,_hcI=V.hc.i;
-V.hc.h=function(){return MODE==='inst'?instH():_hcH()};
+V.hc.h=function(){if(MODE==='inst')return instH();if(HS.cfg)return _hcH();let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}return identCard(p)+_hcH()};
 V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
 
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
    ===================================================================== */
 function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">— Sin paciente —</option>'+DB.p.map(p=>`<option value="${p.id}"${p.id===DB.sel?' selected':''}>${esc(p.nombre+' '+p.apellidos)}</option>`).join('')}
-$('#psel').onchange=e=>{DB.sel=e.target.value||null;save();paintTop();render()};
-function render(){const id=(location.hash||'#panel').slice(1),v=V[id]||V.panel;
+$('#psel').onchange=e=>{HS.draft=null;DB.sel=e.target.value||null;save();paintTop();render()};
+function render(){const id=(location.hash||'#hc').slice(1),v=V[id]||V.panel;
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(V[id]?id:'panel')));
  const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();v.i&&v.i();enhanceDates(w)}
 window.addEventListener('hashchange',()=>{editId=null;render()});
