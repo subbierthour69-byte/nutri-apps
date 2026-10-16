@@ -1148,12 +1148,12 @@ function hcRegister(p){if(HS.draft!==p||!(p.nombre||'').trim()||!p.nac)return;
  HS.draft=null;if(!p.cons.length)p.cons.push(newCons(p));DB.p.push(p);DB.sel=p.id;save();fillSel();
  const b=$('#newpbanner');if(b)b.remove();const an=$('#antro');if(an)an.innerHTML=antroBlock(p);
  toast('Paciente registrado automáticamente: '+pn(p))}
-function hcPInput(e){const t=e.target,d=t.dataset;if(d.p===undefined)return false;const p=hcPat();if(!p)return true;p[d.p]=t.value;
+function hcPInput(e){const t=e.target,d=t.dataset;if(d.p===undefined)return false;const p=hcPat();if(!p)return true;p[d.p]=t.value;if(d.p==='nombre')p.apellidos='';
  if(d.p==='nac'){const el=$('#hc-edad');if(el)el.value=edTxt(edad(p.nac))}
  hcRegister(p);if(e.type==='change')fillSel();if(DB.p.includes(p))save();return true}
 const draftBanner=p=>HS.draft===p?'<div class="msg noprint" id="newpbanner" style="margin:8px 0">Paciente nuevo: se registrará automáticamente al capturar <b>nombre</b> y <b>fecha de nacimiento</b>.</div>':'';
 function identCard(p){return `<div class="card">${draftBanner(p)}<div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Datos del paciente</h2><button class="g s noprint" data-x="newhc">＋ Nueva historia clínica</button></div>
- <div class="grid"><div><label>Nombre(s)</label><input data-p="nombre" value="${esc(p.nombre)}"></div><div><label>Apellidos</label><input data-p="apellidos" value="${esc(p.apellidos)}"></div>
+ <div class="grid"><div style="grid-column:span 2"><label>Nombre</label><input data-p="nombre" value="${esc(pn(p))}"></div>
  <div><label>Fecha de nacimiento</label><input data-p="nac" type="date" value="${esc(p.nac)}"></div><div><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
  <div><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
  <div><label>Teléfono</label><input data-p="tel" type="tel" value="${esc(p.tel)}"></div></div></div>`}
@@ -1195,7 +1195,7 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="hdr"><div class="hl">${hcLogo('l1','Logo izquierdo',200)}</div>
   <h2 class="ht">Historia Clínica</h2><div class="hr">${hcLogo('r1','Logo derecho',135)}</div></div>
   <div class="hmeta">${T('fecha','Fecha','date',140)}${T('exp','N.º de expediente','text',170)}<button class="g noprint" data-x="print">🖨 Imprimir</button><button class="g noprint" data-x="newhc">＋ Nueva historia clínica</button></div>${draftBanner(p)}</div>`+
- sec('Ficha de Identificación',`<div class="fic">${P('nombre','Nombre(s)','text','s4')}${P('apellidos','Apellidos','text','s4')}<div style="grid-column:span 2"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
+ sec('Ficha de Identificación',`<div class="fic"><div style="grid-column:span 8"><label>Nombre</label><input data-p="nombre" value="${esc(pn(p))}"></div><div style="grid-column:span 2"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
   <div style="grid-column:span 2"><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
   ${P('nac','Fecha de nacimiento','date','s2')}<div style="grid-column:span 4"><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
   ${T('ec','Estado civil','text','s3')}${T('ocup','Ocupación','text','s3')}${T('esc','Escolaridad','text','s3')}${P('tel','Tel.','tel','s2')}${T('nacion','Nacionalidad','text','s3')}${P('mail','Correo','email','s4')}</div>`)+
