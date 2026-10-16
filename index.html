@@ -107,7 +107,8 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .q{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:5px 0}
 .hcc{margin-bottom:10px;padding:12px 14px}.hcc h2{margin-bottom:8px}
 .q input.il{width:190px;flex:none}.q input.il{padding:3px 8px}.q input.il.xs{width:64px}.q input.il.s{width:120px}.q input.il.l{width:340px;max-width:100%}
-.grid.fx{display:flex;flex-wrap:wrap;gap:6px 12px}
+.fic{display:grid;grid-template-columns:repeat(12,1fr);gap:6px 12px}.fic>div{min-width:0}
+@media screen and (max-width:900px){.fic{grid-template-columns:repeat(6,1fr)}.fic>div{grid-column:span 3!important}}
 .hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}
 .hl{display:flex;gap:12px;align-items:center;justify-content:flex-start}.hr{display:flex;justify-content:flex-end}
 .hcc h2.ht{text-align:center;font-size:26px!important;margin:0!important;color:var(--tx)!important;white-space:nowrap}
@@ -143,7 +144,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
  input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:9px;height:9px}
  ::placeholder{color:transparent}
  textarea{resize:none!important}input[type=date]::-webkit-calendar-picker-indicator{display:none}
- .grid{gap:2px 8px;grid-template-columns:repeat(4,1fr)}label{font-size:8.5px;margin:0}p{margin:2px 0}
+ .grid{gap:2px 8px;grid-template-columns:repeat(4,1fr)}.fic{gap:2px 10px;grid-template-columns:repeat(12,1fr)}label{font-size:8.5px;margin:0}p{margin:2px 0}
  .q{margin:1px 0;gap:1px 10px}.q input.il{min-width:0}.ck{margin:0 8px 0 0;font-size:9.5px}
  .free{min-height:34px}.sig{margin-top:10px}
  .lgs{height:27px}.hdr{gap:8px}.hl{gap:8px}.lgph{border:0;color:transparent}.lgph small{display:none}.hcc h2.ht{font-size:17px!important;color:#000!important}.hmeta{margin-top:2px}
@@ -1172,8 +1173,9 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  const ti=(k,ph='')=>`<input class="il ${SZ[k]||'m'}" type="text" data-i="${k}" value="${esc(I[k])}" placeholder="${esc(ph)}" aria-label="${esc(ph||k)}">`;
  const q=(l,inner)=>`<div class="q"><b>${l}</b>${inner}</div>`;
  const sec=(t,b)=>`<div class="card hcc" style="border-top:5px solid ${HI_COL}"><h2 style="color:${HI_COL};font-size:17px">${t}</h2>${b}</div>`;
- const T=(k,l,t='text',w)=>`<div${w?` style="width:${w}px"`:''}><label>${l}</label><input data-i="${k}" type="${t}" value="${esc(I[k])}"></div>`;
- const P=(k,l,t='text',w)=>`<div${w?` style="width:${w}px"`:''}><label>${l}</label><input data-p="${k}" type="${t}" value="${esc(p[k])}"></div>`;
+ const SP=w=>typeof w==='string'?` style="grid-column:span ${w.slice(1)}"`:w?` style="width:${w}px"`:'';
+ const T=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-i="${k}" type="${t}" value="${esc(I[k])}"></div>`;
+ const P=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-p="${k}" type="${t}" value="${esc(p[k])}"></div>`;
  /* --- Antropometría: columnas = consultas (editables, ligadas a la Consulta) --- */
  const antro=`<div id="antro">${antroBlock(p)}</div>`;
  /* --- Bioquímicos --- */
@@ -1193,10 +1195,10 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="hdr"><div class="hl">${hcLogo('l1','Logo izquierdo',200)}</div>
   <h2 class="ht">Historia Clínica</h2><div class="hr">${hcLogo('r1','Logo derecho',135)}</div></div>
   <div class="hmeta">${T('fecha','Fecha','date',140)}${T('exp','N.º de expediente','text',170)}<button class="g noprint" data-x="print">🖨 Imprimir</button><button class="g noprint" data-x="newhc">＋ Nueva historia clínica</button></div>${draftBanner(p)}</div>`+
- sec('Ficha de Identificación',`<div class="grid fx">${P('nombre','Nombre(s)','text',190)}${P('apellidos','Apellidos','text',190)}<div style="width:155px"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
-  <div style="width:100px"><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
-  ${P('nac','Fecha de nacimiento','date',130)}<div style="width:210px"><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
-  ${T('ec','Estado civil','text',120)}${T('ocup','Ocupación','text',160)}${T('esc','Escolaridad','text',140)}${P('tel','Tel.','tel',140)}${T('nacion','Nacionalidad','text',140)}${P('mail','Correo','email',230)}</div>`)+
+ sec('Ficha de Identificación',`<div class="fic">${P('nombre','Nombre(s)','text','s4')}${P('apellidos','Apellidos','text','s4')}<div style="grid-column:span 2"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
+  <div style="grid-column:span 2"><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
+  ${P('nac','Fecha de nacimiento','date','s2')}<div style="grid-column:span 4"><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
+  ${T('ec','Estado civil','text','s3')}${T('ocup','Ocupación','text','s3')}${T('esc','Escolaridad','text','s3')}${P('tel','Tel.','tel','s2')}${T('nacion','Nacionalidad','text','s3')}${P('mail','Correo','email','s4')}</div>`)+
  sec('Antecedentes heredofamiliares',hf)+
  sec('Indicadores clínicos',`<div class="ic">`+q('Patologías actuales del sistema digestivo:',ti('pdig'))+
   `<p style="margin:10px 0 2px"><b>Signos físicos</b> <span class="note">(marcar si hay)</span></p><div>${cx(SIGNOS,'sf')}</div>
@@ -1213,7 +1215,7 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
   q('¿Cuánta agua toma al día? (Vasos / L):',ti('agua'))+q('¿Con qué frecuencia?',ox('aguaf',['1 vez al día','2-3 veces al día','4-5 veces al día']))+
   q('¿Qué bebidas consume habitualmente?',cx(BEB,'beb')+ti('beb.o','Otro: ¿cuál?'))+q('¿Añade sal a alimentos ya preparados?',ox('sal',['Sí','No'])+ti('sal.t','Tipo de sal'))+
   q('¿Cuántas comidas realiza al día?',ti('ncom')+`<b>incluye colaciones:</b>`+ti('ncol'))+
-  `<p style="margin:10px 0 4px"><b>Horarios aproximados:</b></p><div class="grid fx">${T('h.des','Desayuno','text',110)}${T('h.alm','Almuerzo','text',110)}${T('h.cen','Cena','text',110)}${hasCol?T('h.col','Colaciones (S/A)','text',140):''}</div>
+  `<p style="margin:10px 0 4px"><b>Horarios aproximados:</b></p><div class="fic">${T('h.des','Desayuno','text',hasCol?'s3':'s4')}${T('h.alm','Almuerzo','text',hasCol?'s3':'s4')}${T('h.cen','Cena','text',hasCol?'s3':'s4')}${hasCol?T('h.col','Colaciones (S/A)','text','s3'):''}</div>
   <div class="grid" style="margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"><div><label>Alimentos que consume con mayor frecuencia</label><textarea data-i="afrec">${esc(I.afrec)}</textarea></div>
   <div><label>Alimentos que evita o poco frecuentes</label><textarea data-i="aevita">${esc(I.aevita)}</textarea></div></div>`+
   q('¿Tiene alergias alimentarias?',ox('alerg',['No','Sí'])+ti('alerg.c','¿Cuáles?'))+q('¿Tiene alguna intolerancia?',cx(INTOL,'int')+ti('int.o','Otro: ¿cuál?'))+
