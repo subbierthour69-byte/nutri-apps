@@ -14,21 +14,21 @@
 -->
 <style>
 /* ===== Tokens claro/oscuro ===== */
-:root{--bg:#f3f6f4;--card:#fff;--tx:#17302c;--mut:#667a76;--pri:#0e8f78;--bd:#dde7e4;--side:#10302c;--bad:#c8432f;--warn:#d98a14;--ok:#1f9d5a}
-:root[data-theme=dark]{--bg:#0e1917;--card:#162623;--tx:#e3efec;--mut:#92aaa5;--bd:#27403b;--side:#09201d}
+:root{--bg:#eef7f6;--card:#fff;--tx:#15303a;--mut:#5f7782;--pri:#0e8f78;--pri2:#2563eb;--acc:#fef08a;--grad:linear-gradient(135deg,#0e8f78,#14b8a6 45%,#2563eb);--bd:#d3e5e8;--side:#0b5a78;--bad:#c8432f;--warn:#d98a14;--ok:#1f9d5a}
+:root[data-theme=dark]{--bg:#0a1a24;--card:#102b38;--tx:#e3f1f2;--mut:#93b0b8;--bd:#1f4352;--side:#06293a}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh}
 h1{font-size:22px;margin:0}h2{font-size:15px;margin:0 0 12px}a{color:var(--pri)}
 /* ===== Menú lateral ===== */
-aside{width:236px;background:var(--side);color:#c9e6df;padding:16px 10px;position:sticky;top:0;height:100vh;overflow:auto;flex-shrink:0;transition:left .2s;z-index:20}
+aside{width:236px;background:linear-gradient(180deg,#0e8f78 0%,#0f7a96 45%,#2563eb 100%);color:#eafffb;padding:16px 10px;position:sticky;top:0;height:100vh;overflow:auto;flex-shrink:0;transition:left .2s;z-index:20}
 .brand{font-size:18px;font-weight:700;color:#fff;padding:4px 10px 10px}
-.sec{font-size:11px;color:#7fb5a9;margin:16px 10px 4px}
+.sec{font-size:11px;color:#c7f9ee;margin:16px 10px 4px}
 nav a{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:8px;color:inherit;text-decoration:none;cursor:pointer}
-nav a:hover{background:#ffffff14}nav a.on{background:var(--pri);color:#fff}
+nav a:hover{background:#ffffff1f}nav a.on{background:#ffffff33;color:#fff;font-weight:700;box-shadow:inset 4px 0 0 var(--acc)}
 svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 /* ===== Contenido ===== */
 main{flex:1;min-width:0;padding:20px}
-.top{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.top h1{flex:1}
+.top{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.top h1{flex:1}#title{background:linear-gradient(90deg,#0e8f78,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}:root[data-theme=dark] #title{background:linear-gradient(90deg,#5eead4,#93c5fd);-webkit-background-clip:text;background-clip:text}
 #burger{display:none}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
@@ -37,14 +37,14 @@ input,select,textarea,button{font:inherit;color:inherit}
 input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg)}
 input:focus,select:focus,textarea:focus,button:focus-visible,nav a:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
 textarea{min-height:70px;resize:vertical}
-button{border:0;border-radius:8px;padding:8px 14px;background:var(--pri);color:#fff;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+button{border:0;border-radius:8px;padding:8px 14px;background:var(--grad);color:#fff;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
 button.g{background:transparent;color:var(--tx);border:1px solid var(--bd)}button.d{background:var(--bad)}button.s{padding:4px 9px;font-size:12px}
 table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
 th{font-size:12px;color:var(--mut);font-weight:600}td.n,th.n{text-align:right}.wrap{overflow-x:auto}
 td input{padding:4px 6px;min-width:70px}
 .kpi{font-size:24px;font-weight:700;margin:0}.kpi small{font-size:12px;color:var(--mut);font-weight:400;display:block}
 .chip{display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid var(--bd);margin:2px;cursor:pointer;font-size:12px;background:var(--bg)}
-.chip.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.chip.on{background:var(--grad);border-color:var(--pri);color:#fff}
 .msg{padding:12px;border-radius:8px;background:#d98a1422;border:1px solid var(--warn)}
 tr.h td{background:var(--bg);font-weight:700;color:var(--pri)}
 .bar{height:8px;border-radius:4px;background:var(--bd);min-width:90px}.bar i{display:block;height:100%;border-radius:4px}
@@ -58,7 +58,7 @@ pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:
 .av img{width:100%;height:100%;object-fit:cover;display:block}
 .gap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .btnlike{display:inline-flex;align-items:center;margin:0;padding:4px 9px;font-size:12px;border:1px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer}
-nav a.on{background:var(--pri);color:#fff}
+nav a.on{background:#ffffff33;color:#fff}
 /* ===== Semáforo (v2.1): píldoras de estado y plan de equivalentes ===== */
 .pill{display:inline-block;padding:2px 10px;border-radius:99px;color:#fff;font-weight:700;font-size:12px;white-space:nowrap;line-height:1.5}
 .eqwrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}
@@ -66,11 +66,11 @@ nav a.on{background:var(--pri);color:#fff}
 .eqt input{width:58px;min-width:0;padding:3px 5px;text-align:right}
 .eqt .sp{border-left:2px solid var(--bd)}
 .eqt tr.h td{border-top:2px solid var(--pri)}
-.eqt thead th{background:var(--pri);color:#fff}
+.eqt thead th{background:var(--grad);color:#fff}
 .eqside{border:1px solid var(--bd);border-radius:10px;padding:12px;background:var(--bg)}
 .eqside input{background:var(--card)}
 .eqsum{position:sticky;bottom:0;background:var(--card);border-top:2px solid var(--pri);margin-top:12px;padding-top:6px;z-index:5}
-.eqsum th{background:var(--pri);color:#fff}
+.eqsum th{background:var(--grad);color:#fff}
 details.dd{margin-top:14px;border-top:1px solid var(--bd);padding-top:10px}details.dd summary{cursor:pointer;font-weight:600}
 /* ===== Dietas dinámicas: pestañas de colores ===== */
 .dtabs{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:6px 0 20px}
@@ -82,7 +82,7 @@ details.dd{margin-top:14px;border-top:1px solid var(--bd);padding-top:10px}detai
 button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .dsec .chip.on{background:var(--a);border-color:var(--a)}
 /* ===== Selector de modo ===== */
-#picker{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(circle at 20% 15%,#134e4a,#0b1f24 60%,#111827);padding:20px;overflow:auto}
+#picker{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:linear-gradient(135deg,#0b6b63,#0f5a99 55%,#1e40af);padding:20px;overflow:auto}
 #picker[hidden]{display:none}
 .pk{max-width:780px;text-align:center;color:#e8f5f2}.pk h1{font-size:36px;color:#fff;margin-bottom:6px}
 .pkg{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0}
@@ -90,11 +90,11 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .pkc:hover,.pkc:focus-visible{transform:translateY(-5px) scale(1.03)}
 .pke{font-size:56px;line-height:1}.pkc small{font-size:13px;font-weight:400;opacity:.95;line-height:1.4}
 .pkc em{position:absolute;top:12px;right:14px;font-size:11px;font-style:normal;background:#0005;padding:2px 9px;border-radius:99px}
-.msub{font-size:12px;color:#9fd9cc;font-weight:500;padding:0 10px}
+.msub{font-size:12px;color:#d8fff6;font-weight:500;padding:0 10px}
 /* ===== Historia clínica institucional: tablas formales, casillas e impresión ===== */
 .ftw{border:1px solid var(--bd);border-radius:10px;overflow-x:auto}
 .ft{border-collapse:collapse;width:100%}
-.ft th{background:var(--pri);color:#fff;font-weight:600;padding:8px 10px;text-align:left;border:0;font-size:13px}
+.ft th{background:var(--grad);color:#fff;font-weight:600;padding:8px 10px;text-align:left;border:0;font-size:13px}
 .ft td{padding:6px 10px;border:0;border-bottom:1px solid var(--bd);vertical-align:top;white-space:normal}
 .ft tr:last-child td{border-bottom:0}
 .ft input:not([type=checkbox]),.ft textarea{border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:6px;width:100%;min-width:0}
@@ -550,7 +550,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
  <div><label>Historia clínica: padecimiento actual, medicamentos, alergias</label><textarea id="f-hist">${esc(p.hist)}</textarea></div></div>
  <p><button id="bsave">Guardar paciente</button> <button class="g" id="bcancel">Cancelar</button></p>`}</div>
  <div class="card wrap"><table><tr><th>Paciente<th>Edad<th>Sexo<th>Patologías<th class="n">Consultas<th></tr>
- ${DB.p.map(x=>`<tr><td>${avHTML(x,32)} ${esc(x.nombre+' '+x.apellidos)}<td>${edTxt(edad(x.nac))}<td>${x.sexo==='M'?'Hombre':'Mujer'}<td>${esc((x.pat||[]).join(', '))||'—'}<td class="n">${(x.cons||[]).length}
+ ${DB.p.map(x=>`<tr><td>${avHTML(x,32)} ${esc(pn(x))}<td>${edTxt(edad(x.nac))}<td>${x.sexo==='M'?'Hombre':'Mujer'}<td>${esc((x.pat||[]).join(', '))||'—'}<td class="n">${(x.cons||[]).length}
  <td class="n"><button class="s g" data-a="hist" data-id="${x.id}">Historia</button> <button class="s g" data-a="sel" data-id="${x.id}">Consulta</button> <button class="s g" data-a="ed" data-id="${x.id}">Editar</button> <button class="s d" data-a="del" data-id="${x.id}">Borrar</button>`).join('')||'<tr><td colspan=6>Aún no hay pacientes.'}</table></div>`},
  i(){const draw=()=>{const c=$('#chips');if(!c)return;c.innerHTML=[...new Set([...PAT,...chips])].map(x=>`<span class="chip${chips.includes(x)?' on':''}" data-c="${esc(x)}">${esc(x)}</span>`).join('')};
   draw();const go=()=>{$('#view').innerHTML=V.pac.h();V.pac.i()};
@@ -583,7 +583,7 @@ function eqData(c){const G=Object.keys(GR),M=MEALS,r=G.map(()=>({m:{},u:0,n:0,kc
 V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC();DB.csel[p.id]=c.id;
  const d=(k,l,u,st='0.1')=>`<div><label>${l}</label><input data-f="${k}" type="number" step="${st}" value="${esc(c[k])}" placeholder="${u}"></div>`;
  const cs=[...p.cons].sort((a,b)=>b.fecha.localeCompare(a.fecha));
- return `<div class="card"><h2>${avHTML(p,34)} ${esc(p.nombre+' '+p.apellidos)} · ${p.sexo==='M'?'Hombre':'Mujer'}</h2><div class="grid" style="align-items:end">
+ return `<div class="card"><h2>${avHTML(p,34)} ${esc(pn(p))} · ${p.sexo==='M'?'Hombre':'Mujer'}</h2><div class="grid" style="align-items:end">
  <div><label>Historial de consultas</label><select id="csel">${cs.map(x=>`<option value="${x.id}"${x.id===c.id?' selected':''}>${x.fecha}${x.peso?' · '+x.peso+' kg':''}</option>`).join('')}</select></div>
  <div><button id="bnc">+ Nueva consulta</button> <button class="d s" id="bdc">Eliminar</button></div>
  <div><label>Fecha de la consulta</label><input data-f="fecha" type="date" value="${esc(c.fecha)}"></div>
@@ -1284,7 +1284,7 @@ V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
    ===================================================================== */
-function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">— Sin paciente —</option>'+DB.p.map(p=>`<option value="${p.id}"${p.id===DB.sel?' selected':''}>${esc(p.nombre+' '+p.apellidos)}</option>`).join('')}
+function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">— Sin paciente —</option>'+DB.p.map(p=>`<option value="${p.id}"${p.id===DB.sel?' selected':''}>${esc(pn(p))}</option>`).join('')}
 $('#psel').onchange=e=>{HS.draft=null;DB.sel=e.target.value||null;save();paintTop();render()};
 function render(){const id=(location.hash||'#hc').slice(1),v=V[id]||V.panel;
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(V[id]?id:'panel')));
