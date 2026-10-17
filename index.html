@@ -4,11 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NutriClin · Nutrición clínica</title>
+<meta name="theme-color" content="#0e8f78">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NutriClin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <!--
   NutriClin v2.1 — un solo archivo, sin dependencias ni servidor.
   DESPLIEGUE: sube como index.html a un repo y activa Settings → Pages → main / root.
   DATOS: localStorage del navegador (locales y privados). Exporta respaldos en Ajustes.
   PEDIATRÍA: tablas L-M-S oficiales de la CDC (NCHS 2000) incluidas en este script.
+  NOVEDADES v2.2: app instalable que funciona SIN INTERNET (sw.js + manifest.webmanifest + iconos: sube los 7 archivos
+  juntos a la raíz del repo) · botón "Historial clínico (Word)" en Pacientes, Historia clínica, Datos generales y Ajustes.
   NOVEDADES v2.1: semáforo (bajo/óptimo/elevado) en composición corporal · plan de equivalentes
   con distribución por tiempo de comida al lado y % de adecuación en colores.
 -->
@@ -1280,6 +1289,119 @@ V.notas=modView('notas');
 const _hcH=V.hc.h,_hcI=V.hc.i;
 V.hc.h=function(){if(MODE==='inst')return instH();if(HS.cfg)return _hcH();let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}return identCard(p)+_hcH()};
 V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
+
+/* =====================================================================
+   8d. APP SIN INTERNET (PWA) + HISTORIAL CLÍNICO EN WORD (.docx)
+   · Se instala en celular y laptop y abre sin conexión (index.html + sw.js + manifest + iconos).
+   · "Historial clínico (Word)": genera un .docx real (sin librerías) con datos generales,
+     historia clínica, mediciones, consultas, planes y registros del expediente.
+   ===================================================================== */
+const APP_VER='2.2';
+(function(){
+/* ---------- PWA: service worker, instalación, estado de conexión ---------- */
+const PWA={sw:'none',ev:null,persist:null,reg:null};
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+$('#theme').insertAdjacentHTML('beforebegin','<span id="net" class="pill" hidden style="background:var(--warn)">📴 Sin conexión · todo funciona</span><button id="pwa-top" class="g s" hidden>⬇ Instalar app</button>');
+const netPaint=()=>{const n=$('#net');if(n)n.hidden=navigator.onLine;const b=$('#pwa-top');if(b)b.hidden=!PWA.ev||standalone()};
+addEventListener('online',netPaint);addEventListener('offline',netPaint);netPaint();
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();PWA.ev=e;netPaint()});
+addEventListener('appinstalled',()=>{PWA.ev=null;netPaint();toast('App instalada')});
+const install=async()=>{if(!PWA.ev)return toast('Usa el menú del navegador → "Instalar app" / "Añadir a pantalla de inicio"');PWA.ev.prompt();try{await PWA.ev.userChoice}catch{}PWA.ev=null;netPaint()};
+$('#pwa-top').onclick=install;
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+ navigator.serviceWorker.register('sw.js').then(reg=>{PWA.reg=reg;PWA.sw=navigator.serviceWorker.controller?'ok':'pend';
+  reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)toast('Nueva versión lista: cierra y vuelve a abrir la app')})})}).catch(()=>{PWA.sw='err'});
+ navigator.serviceWorker.ready.then(()=>{PWA.sw='ok'}).catch(()=>{});
+}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().then(v=>{PWA.persist=v})}catch{}
+async function refreshNow(){      // descarga la última versión del index y la guarda para uso sin internet
+ if(!navigator.onLine)return toast('Sin conexión: se usará la versión guardada');
+ try{const r=await fetch('index.html?v='+Date.now(),{cache:'reload'});if(!r.ok)throw 0;
+  for(const k of(await caches.keys()).filter(k=>k.startsWith('nutriclin-'))){const c=await caches.open(k);await c.put('./index.html',r.clone())}
+  toast('Versión actualizada: recargando…');setTimeout(()=>location.reload(),700)}catch{toast('No se pudo actualizar ahora')}}
+const pwaCard=()=>{const ok=PWA.sw==='ok',p=cur();
+ return `<div class="card"><h2>App sin internet · Word</h2>
+ <p>Estado: ${ok?'<b style="color:var(--ok)">✔ lista para funcionar sin conexión</b>':PWA.sw==='pend'?'preparando archivos… recarga la página una vez':'<b style="color:var(--warn)">solo en línea: abre la página desde https:// (GitHub Pages) con internet una vez</b>'} · ${standalone()?'instalada como app':'abierta en el navegador'} · versión ${APP_VER}</p>
+ <div class="gap"><button id="pwa-inst">⬇ Instalar app</button><button class="g" id="pwa-upd">↻ Actualizar a la última versión</button></div>
+ <p class="note"><b>Celular:</b> Android/Chrome → botón Instalar (o menú ⋮ → Instalar app). iPhone/Safari → Compartir → Añadir a pantalla de inicio. <b>Laptop:</b> Chrome/Edge → icono de instalar en la barra de direcciones.</p>
+ <p class="note">Tus datos se guardan <b>en cada dispositivo</b> (celular y laptop son independientes). Para pasarlos de uno a otro: Exportar respaldo en uno e Importar respaldo en el otro. Haz un respaldo seguido, sobre todo si limpias el navegador. ${PWA.persist===true?'Almacenamiento protegido por el navegador.':PWA.persist===false?'El navegador no garantizó almacenamiento permanente: instala la app y respalda.':''}</p>
+ <div class="gap" style="margin-top:8px"><label class="note" style="margin:0;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="dx-pagos" style="width:auto"> incluir pagos</label>
+ ${p?`<button class="g" data-docx="${p.id}">⬇ Historial de ${esc(pn(p))} (Word)</button>`:''}<button class="g" data-docx="ALL">⬇ Todos los pacientes (Word)</button></div></div>`};
+const _ajH=V.aj.h,_ajI=V.aj.i;
+V.aj.h=function(){return pwaCard()+_ajH.apply(this,arguments)};
+V.aj.i=function(){_ajI.apply(this,arguments);$('#pwa-inst').onclick=install;$('#pwa-upd').onclick=refreshNow};
+
+/* ---------- Word (.docx) sin librerías: ZIP "store" + WordprocessingML ---------- */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipStore(files){const enc=new TextEncoder(),parts=[],cd=[];let off=0;
+ files.forEach(f=>{const nm=enc.encode(f.n),d=enc.encode(f.d),crc=crc32(d),sz=d.length;
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,sz,true);h.setUint32(22,sz,true);h.setUint16(26,nm.length,true);
+  parts.push(new Uint8Array(h.buffer),nm,d);
+  const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,sz,true);c.setUint32(24,sz,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+  cd.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+sz});
+ const cs=cd.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
+const X=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const R=(t,o={})=>'<w:r><w:rPr>'+(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'')+'</w:rPr>'+String(t??'').split('\n').map((s,i)=>(i?'<w:br/>':'')+`<w:t xml:space="preserve">${X(s)}</w:t>`).join('')+'</w:r>';
+const Pp=(t,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}<w:spacing w:before="${o.bf||0}" w:after="${o.af??80}"/></w:pPr>${R(t,o)}</w:p>`;
+const H2=t=>Pp(t,{b:1,sz:26,c:'0E8F78',bf:280,af:100,keep:1}),H3=t=>Pp(t,{b:1,sz:22,bf:200,af:60,keep:1});
+const PB='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+function T(rows,o={}){if(!rows.length)return'';const w=o.w||rows[0].map(()=>1),sw=w.reduce((a,b)=>a+b,0),sz=o.sz||18,hdr=o.hdr!==false,W=i=>Math.round(10200*w[i]/sw);
+ const bd=['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>`).join('');
+ return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="70" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${w.map((_,i)=>`<w:gridCol w:w="${W(i)}"/>`).join('')}</w:tblGrid>`+
+ rows.map((r,ri)=>{const h=hdr&&ri===0;return `<w:tr>${h?'<w:trPr><w:tblHeader/></w:trPr>':''}${r.map((c,ci)=>`<w:tc><w:tcPr><w:tcW w:w="${W(ci)}" w:type="dxa"/>${h?'<w:shd w:val="clear" w:color="auto" w:fill="0E8F78"/>':o.kv&&ci===0?'<w:shd w:val="clear" w:color="auto" w:fill="EAF4F2"/>':''}</w:tcPr>${Pp(c,{sz,b:h||(o.kv&&ci===0),c:h?'FFFFFF':'',af:20})}</w:tc>`).join('')}</w:tr>`}).join('')+'</w:tbl>'+Pp('',{af:60})}
+const KV=rows=>T(rows,{w:[1,2.6],hdr:false,kv:true,sz:20});
+const cellTxt=(f,v)=>v==null||v===''?'—':f[2]==='date'?fd(v):String(v);
+function pedRows(c,p){try{const h=pedHTML(c,p);if(!h||typeof DOMParser==='undefined')return null;const t=new DOMParser().parseFromString(h,'text/html').querySelector('table');
+ return t?[...t.querySelectorAll('tr')].map(r=>[...r.children].map(x=>x.textContent.trim())):null}catch{return null}}
+function bodyOf(p,opt){const o=[];
+ o.push(Pp('Historial clínico nutricional',{b:1,sz:40,c:'0E8F78',af:40}));
+ o.push(Pp((DB.org?DB.org+' · ':'')+'Generado el '+fd(today()),{sz:18,c:'666666',af:160}));
+ o.push(H2('Datos generales'));
+ o.push(KV([['Nombre',pn(p)],['Edad',edTxt(edad(p.nac))],['Fecha de nacimiento',fd(p.nac)],['Sexo',p.sexo==='M'?'Hombre':'Mujer'],['Estatura inicial',p.est?p.est+' cm':'—'],['Teléfono',p.tel||'—'],['Correo',p.mail||'—'],['Patologías',(p.pat||[]).join(', ')||'—']]));
+ const extra=[['Antecedentes',p.antec],['Historia clínica (notas)',p.hist]].filter(x=>x[1]);if(extra.length)o.push(KV(extra.map(x=>[x[0],String(x[1])])));
+ const HC=getHC(),secs=HC.secs.map(s=>[s.t,s.f.map(f=>[f.l,(p.hcd||{})[f.id]]).filter(x=>x[1]!=null&&String(x[1]).trim()!=='')]).filter(x=>x[1].length);
+ if(secs.length){o.push(H2(HC.nombre||'Historia clínica'));secs.forEach(([t,rows])=>{o.push(H3(t));o.push(KV(rows.map(r=>[r[0],String(r[1])])))})}
+ const cs=csort(p);
+ if(cs.length){o.push(H2('Evolución de mediciones'));
+  o.push(T([['Fecha','Peso (kg)','Est. (cm)','IMC','% grasa','Músculo (kg)','Cintura','Abdomen','Cadera']].concat(cs.map(c=>{const im=num(c.peso)&&num(c.est)?num(c.peso)/(num(c.est)/100)**2:null;
+   return[fd(c.fecha),fx(num(c.peso)),fx(num(c.est)),fx(im),fx(num(c.graso)),fx(num(c.musc)),fx(num(c.cin)),fx(num(c.abd)),fx(num(c.cad))]})),{sz:17}));
+  cs.slice().reverse().forEach(c=>{o.push(H2('Consulta del '+fd(c.fecha)));
+   const e=en(c,p);if(e&&!e.err)o.push(T([['GEB','Actividad','ETA','GET','GET + ETA'],[fx(e.geb,0)+' kcal',fx(e.act,0)+' kcal',fx(e.eta,0)+' kcal',fx(e.get,0)+' kcal',fx(e.tot,0)+' kcal']],{sz:18}));
+   const pr=pedRows(c,p);if(pr&&pr.length>1){o.push(H3('Evaluación pediátrica (CDC)'));o.push(T(pr,{sz:18}))}
+   const items=(c.dieta||[]).filter(d=>foodOf(d.k));
+   if(items.length){o.push(H3('Plan de alimentación'));const rows=[['Tiempo','Alimento / equivalente','Porciones','kcal']];
+    MEALS.forEach(m=>items.filter(d=>(MEALS.includes(d.t)?d.t:'Comida')===m).forEach(d=>{const f=foodOf(d.k),n=+d.n||0;rows.push([m,f.n+(f.po&&!d.k.startsWith('G|')?' ('+f.po+')':''),String(Math.round(n*100)/100),fx(f.kcal*n,0)])}));
+    const t=planT(c);rows.push(['Total','Pro '+fx(t.p,1)+' g · Lip '+fx(t.l,1)+' g · HCO '+fx(t.hc,1)+' g','',fx(t.kcal,0)]);o.push(T(rows,{w:[1.2,3.6,1,1],sz:18}))}
+   if(c.notas)o.push(KV([['Notas',c.notas]]))})}
+ Object.keys(MODS).forEach(k=>{if(k==='pagos'&&!opt.pagos)return;const M=MODS[k],rows=((p.mod||{})[k]||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));if(!rows.length)return;
+  o.push(H2(M.t));const long=M.f.some(f=>f[2]==='area')||M.f.length>8;
+  if(!long)o.push(T([M.f.map(f=>f[1])].concat(rows.map(r=>M.f.map(f=>cellTxt(f,r[f[0]])))),{sz:17}));
+  else rows.forEach(r=>{const s=M.f[1]&&['text','dl','sel'].includes(M.f[1][2])&&r[M.f[1][0]]?' · '+r[M.f[1][0]]:'';o.push(H3(fd(r.date)+s));
+   o.push(T(M.f.slice(1).filter(f=>r[f[0]]!=null&&r[f[0]]!=='').map(f=>[f[1],cellTxt(f,r[f[0]])]),{w:[1,2.6],hdr:false,kv:true,sz:19}))})});
+ if((p.files||[]).length){o.push(H2('Archivos clínicos adjuntos'));o.push(T([['Archivo','Fecha']].concat(p.files.map(f=>[f.name,fd(f.date)])),{w:[3,1],sz:18}))}
+ o.push(Pp('Documento generado por NutriClin. La información es confidencial y está destinada al equipo de salud tratante.',{i:1,sz:16,c:'888888',bf:240}));
+ return o.join('')}
+const NS='http://schemas.openxmlformats.org/';
+function buildDocx(list,opt){const body=list.map((p,i)=>(i?PB:'')+bodyOf(p,opt||{})).join('')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+ const H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',W=NS+'wordprocessingml/2006/main';
+ return zipStore([
+  {n:'[Content_Types].xml',d:H+`<Types xmlns="${NS}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`},
+  {n:'_rels/.rels',d:H+`<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${NS}officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`},
+  {n:'word/_rels/document.xml.rels',d:H+`<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${NS}officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+  {n:'word/styles.xml',d:H+`<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="es-MX"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="259" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`},
+  {n:'word/document.xml',d:H+`<w:document xmlns:w="${W}"><w:body>${body}</w:body></w:document>`}])}
+function exportDocx(list,opt,name){const a=document.createElement('a');a.href=URL.createObjectURL(buildDocx(list,opt));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-docx]');if(!b)return;const id=b.dataset.docx,cb=$('#dx-pagos'),list=id==='ALL'?DB.p:DB.p.filter(x=>x.id===id);
+ if(!list.length)return toast('No hay pacientes para exportar');
+ try{exportDocx(list,{pagos:!!(cb&&cb.checked)},id==='ALL'?'Historiales-'+today()+'.docx':'Historial-'+pn(list[0]).replace(/\s+/g,'-')+'-'+today()+'.docx');toast('Word generado: revisa tus descargas')}catch(err){console.error(err);toast('No se pudo generar el Word')}});
+const bar=p=>`<div class="gap noprint" style="margin:0 0 12px"><button data-docx="${p.id}">⬇ Historial clínico (Word)</button><label class="note" style="margin:0;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="dx-pagos" style="width:auto"> incluir pagos</label></div>`;
+const _pacH=V.pac.h;V.pac.h=function(){return _pacH.apply(this,arguments).replace(/<button class="s g" data-a="hist" data-id="([^"]+)">/g,'<button class="s g" data-docx="$1">Word</button> <button class="s g" data-a="hist" data-id="$1">')};
+const _datH=V.datos.h;V.datos.h=function(){const p=cur();return _datH.apply(this,arguments)+(p?bar(p):'')};
+const _hcH=V.hc.h;V.hc.h=function(){const h=_hcH.apply(this,arguments),p=cur();return(p&&!HS.cfg?bar(p):'')+h};
+window.NCX={buildDocx,zipStore};
+})();
 
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
