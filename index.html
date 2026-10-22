@@ -16,8 +16,8 @@
   DESPLIEGUE: sube como index.html a un repo y activa Settings → Pages → main / root.
   DATOS: localStorage del navegador (locales y privados). Exporta respaldos en Ajustes.
   PEDIATRÍA: tablas L-M-S oficiales de la CDC (NCHS 2000) incluidas en este script.
-  NOVEDADES v2.2: app instalable SIN INTERNET (sw.js + manifest + iconos) · Historial clínico en Word (logos + historia completa)
-  · Asistente flotante (no se imprime): percentil CDC en menores (en todas las pantallas del paciente), análisis del R24 y grupos recomendados.
+  NOVEDADES v2.2: app instalable SIN INTERNET (sw.js + manifest + iconos) · Historia clínica en formato oficial SANNAFARM
+  (3 páginas = 2 hojas, Aptos 12 sin espaciado) para Word e impresión/PDF · Asistente flotante (no se imprime).
   NOVEDADES v2.1: semáforo (bajo/óptimo/elevado) en composición corporal · plan de equivalentes
   con distribución por tiempo de comida al lado y % de adecuación en colores.
 -->
@@ -1344,14 +1344,14 @@ function zipStore(files){const enc=new TextEncoder(),parts=[],cd=[];let off=0;
  const cs=cd.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
  return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
 const X=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const R=(t,o={})=>'<w:r><w:rPr>'+(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'')+(o.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`:'')+'</w:rPr>'+String(t??'').split('\n').map((s,i)=>(i?'<w:br/>':'')+`<w:t xml:space="preserve">${X(s)}</w:t>`).join('')+'</w:r>';
+const R=(t,o={})=>'<w:r><w:rPr>'+(o.b?'<w:b/>':'')+(o.i?'<w:i/>':'')+(o.c?`<w:color w:val="${o.c}"/>`:'')+(o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:'')+(o.u?'<w:u w:val="single"/>':'')+(o.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`:'')+'</w:rPr>'+String(t??'').split('\n').map((s,i)=>(i?'<w:br/>':'')+`<w:t xml:space="preserve">${X(s)}</w:t>`).join('')+'</w:r>';
 const PP=(inner,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.top?'<w:pBdr><w:top w:val="single" w:sz="6" w:space="2" w:color="777777"/></w:pBdr>':''}<w:spacing w:before="${o.bf||0}" w:after="${o.af??80}"/>${o.al?`<w:jc w:val="${o.al}"/>`:''}</w:pPr>${inner}</w:p>`;
 const Pp=(t,o={})=>PP(R(t,o),o);
 const PR=(runs,o={})=>PP(runs.map(r=>R(r.t,{sz:o.sz,...r})).join(''),o);      // párrafo con varios tramos (negritas, etc.)
 const H2=t=>Pp(t,{b:1,sz:26,c:'0E8F78',bf:280,af:100,keep:1}),H3=t=>Pp(t,{b:1,sz:22,bf:200,af:60,keep:1});
 const PB='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 /* Tabla genérica: celdas = texto o {t,b,c}. o.hdr (encabezado), o.kv (1ª col sombreada), o.gray (encabezado gris tipo impresión) */
-function T(rows,o={}){if(!rows.length)return'';const w=o.w||rows[0].map(()=>1),sw=w.reduce((a,b)=>a+b,0),sz=o.sz||18,hdr=o.hdr!==false,W=i=>Math.round(10800*w[i]/sw);
+function T(rows,o={}){if(!rows.length)return'';const w=o.w||rows[0].map(()=>1),sw=w.reduce((a,b)=>a+b,0),sz=o.sz||18,hdr=o.hdr!==false,W=i=>Math.round(10080*w[i]/sw);
  const bd=['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="${o.line||'BFBFBF'}"/>`).join('');
  return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="8" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="8" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${w.map((_,i)=>`<w:gridCol w:w="${W(i)}"/>`).join('')}</w:tblGrid>`+
  rows.map((r,ri)=>{const h=hdr&&ri===0;return `<w:tr><w:trPr><w:cantSplit/>${h?'<w:tblHeader/>':''}</w:trPr>${r.map((c,ci)=>{const k=c!==null&&typeof c==='object'?c:{t:c},fill=h?(o.gray?'E6E6E6':'0E8F78'):k.fill?k.fill:(o.kv&&ci===0)||k.shade?'EAF4F2':'';
@@ -1362,7 +1362,7 @@ const cellTxt=(f,v)=>v==null||v===''?'—':f[2]==='date'?fd(v):String(v);
 function pedRows(c,p){try{const h=pedHTML(c,p);if(!h||typeof DOMParser==='undefined')return null;const t=new DOMParser().parseFromString(h,'text/html').querySelector('table');
  return t?[...t.querySelectorAll('tr')].map(r=>[...r.children].map(x=>x.textContent.trim())):null}catch{return null}}
 /* ---------- Imágenes (logos): data URL → bytes + tamaño ---------- */
-let MEDIA=[];
+let MEDIA=[],DID=0;
 function imgInfo(u){const m=/^data:image\/(png|jpe?g);base64,(.+)$/i.exec(u||'');if(!m)return null;let b;try{const bin=atob(m[2]);b=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i)}catch{return null}
  const png=/png/i.test(m[1]);let w=0,h=0;
  if(png){w=((b[16]<<24)|(b[17]<<16)|(b[18]<<8)|b[19])>>>0;h=((b[20]<<24)|(b[21]<<16)|(b[22]<<8)|b[23])>>>0}
@@ -1370,72 +1370,151 @@ function imgInfo(u){const m=/^data:image\/(png|jpe?g);base64,(.+)$/i.exec(u||'')
  return w>0&&h>0?{b,ext:png?'png':'jpeg',w,h}:null}
 function imgRun(key,hIn){const lg=DB.logos||{},u=(key in lg)?lg[key]:(typeof LOGO_DEF!=='undefined'?LOGO_DEF[key]:''),inf=imgInfo(u);if(!inf)return'';
  let cy=Math.round(hIn*914400),cx=Math.round(cy*inf.w/inf.h);const mx=Math.round(2.6*914400);if(cx>mx){cy=Math.round(cy*mx/cx);cx=mx}
- const n=MEDIA.length+1,id='rIdImg'+n;MEDIA.push({id,n,inf});
- return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Logo ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="logo${n}.${inf.ext==='png'?'png':'jpg'}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`}
-/* ---------- Historia clínica institucional (formato SANNAFARM · logos · mismo orden que la impresión) ---------- */
-function hcInst(p){const I=p.hci||{},o=[],v=x=>x==null||String(x).trim()===''?'—':String(x),cs=csort(p);
- /* opciones: lo SELECCIONADO va en negritas, azul y con fondo; lo no seleccionado en gris claro */
- const on={b:1,c:'1F3A8A',shd:'CFE0FF'},off={c:'8A8A8A'};
- const opt=(sel,l)=>({t:(sel?'☒ ':'☐ ')+l+'   ',...(sel?on:off)});
- const opts=(arr,cur)=>arr.map(x=>opt(cur===x,x)),chk=(arr,pre)=>arr.map(([k,l])=>opt(!!I[pre+'.'+k],l));
- const ex=(l,x)=>x?[{t:l+': '+x+'   ',b:1}]:[];
- const Q=(l,t)=>PR([{t:l+' ',b:1},...(Array.isArray(t)?t:[{t:v(t)}])],{sz:17,af:10}),SEC=t=>Pp(t,{b:1,sz:20,bf:70,af:20,keep:1,top:1});
- const TB=(rows,w)=>T(rows,{w,gray:1,sz:16,line:'999999',tight:1});
- const mkc=c=>c?{t:'☒',b:1,c:'1F3A8A',fill:'CFE0FF',al:'center'}:{t:'☐',c:'8A8A8A',al:'center'};
- const hdr=`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3600"/><w:gridCol w:w="3600"/><w:gridCol w:w="3600"/></w:tblGrid><w:tr>
-  <w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${PP(imgRun('l1',.4),{af:0})}</w:tc>
-  <w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${Pp('Historia Clínica',{b:1,sz:36,al:'center',af:0})}</w:tc>
-  <w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${PP(imgRun('r1',.4),{af:0,al:'right'})}</w:tc></w:tr></w:tbl>`;
- o.push(hdr);
- o.push(PR([{t:'Fecha: ',b:1},{t:fd(I.fecha||today())},{t:'          N.º de expediente: ',b:1},{t:v(I.exp)}],{sz:18,bf:40,af:20}));
- o.push(SEC('Ficha de Identificación'));
- const gp=[['Nombre',pn(p)],['Edad',edTxt(edad(p.nac))],['Sexo',p.sexo==='M'?'Hombre':'Mujer'],['Fecha de nacimiento',fd(p.nac)],['Patología de base',(p.pat||[]).join(', ')||'—'],['Estado civil',v(I.ec)],['Ocupación',v(I.ocup)],['Escolaridad',v(I.esc)],['Teléfono',v(p.tel)],['Nacionalidad',v(I.nacion)],['Correo',v(p.mail)]];
- {const rows=[];for(let i=0;i<gp.length;i+=2){const a=gp[i],b=gp[i+1]||['',''];rows.push([{t:a[0],b:1,shade:1},a[1],{t:b[0],b:1,shade:1},b[1]])}o.push(T(rows,{w:[1.15,2,1.15,2],hdr:false,sz:16,line:'999999',tight:1}))}
- o.push(SEC('Antecedentes heredofamiliares'));
- o.push(TB([['Familiar',...HF_COLS.map(c=>c[1]),'Otros']].concat(FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>mkc(I[`hf.${i}.${k}`])),v(I[`hf.${i}.otros`])])),[1.6,.8,.5,.5,.9,.9,.8,1.6]));
- o.push(SEC('Indicadores clínicos'));
- o.push(Q('Patologías actuales del sistema digestivo:',I.pdig));
- o.push(Q('Signos físicos:',chk(SIGNOS,'sf')));
- o.push(Q('Nivel de energía:',opts(['Bajo','Medio','Alto'],I.nrg)));
- o.push(Q('Estado emocional percibido:',chk(EMO,'emo')));
- o.push(Q('Sistema digestivo:',chk(DIG,'dg')));
- o.push(Q('Frecuencia y duración:',I['dg.f']));o.push(Q('Problemas de masticación:',I.mast));
- o.push(SEC('Indicadores de estilo de vida saludable'));
- const j=(...a)=>a.filter(Boolean).join(' · ');
- o.push(Q('¿Realiza alguna actividad física?',[...opts(['Sí','No'],I.af),...ex('Cuál',I['af.c'])]));
- o.push(Q('¿Con qué frecuencia y duración?',I['af.f']));o.push(Q('¿Cuántas horas duerme en promedio por noche?',I.sue));
- o.push(Q('¿Pasa mucho tiempo sentado durante el día?',[...opts(['Sí','No'],I.sent),...ex('Horas',I['sent.h'])]));
- o.push(Q('Consumo de alcohol:',j(I.alc&&'Consumo: '+I.alc,I['alc.f']&&'Frecuencia: '+I['alc.f'],I['alc.c']&&'Cantidad: '+I['alc.c'])));
- o.push(Q('Consumo de tabaco:',j(I.tab&&'Consumo: '+I.tab,I['tab.f']&&'Frecuencia: '+I['tab.f'],I['tab.c']&&'Cantidad: '+I['tab.c'])));
- o.push(Q('Consumo de otras sustancias:',[...opts(['Sí','No'],I.sus),...ex('Cuál',I['sus.c']),...ex('Frecuencia',I['sus.f'])]));
- o.push(SEC('Valoración antropométrica'));
- const AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
- const cval=(c,k)=>k==='fecha'?fd(c.fecha):k==='_imc'?fx(imcOf(c)):k==='_cl'?clasifIMC(c,p)||'—':v(c[k]);
- if(!cs.length)o.push(Pp('Sin consultas registradas.',{sz:17}));
- for(let pg=0;pg*4<cs.length;pg++){const col=cs.slice(pg*4,pg*4+4);
-  o.push(TB([['Parámetro',...col.map((_,i)=>'Consulta '+(pg*4+i+1)+'°')]].concat(AR.map(([l,k])=>[{t:l,i:1},...col.map(c=>cval(c,k))])),[1.4,...col.map(()=>1.3)]))}
- o.push(SEC('Indicadores dietéticos'));
- o.push(Q('¿Cuánta agua toma al día? (Vasos / L):',I.agua));o.push(Q('¿Con qué frecuencia?',opts(['1 vez al día','2-3 veces al día','4-5 veces al día'],I.aguaf)));
- o.push(Q('¿Qué bebidas consume habitualmente?',[...chk(BEB,'beb'),...ex('Otro',I['beb.o'])]));
- o.push(Q('¿Añade sal a alimentos ya preparados?',[...opts(['Sí','No'],I.sal),...ex('Tipo de sal',I['sal.t'])]));
- o.push(Q('¿Cuántas comidas realiza al día?',v(I.ncom)+'      Incluye colaciones: '+v(I.ncol)));
- o.push(Q('Horarios aproximados:',j(I['h.des']&&'Desayuno: '+I['h.des'],I['h.alm']&&'Almuerzo: '+I['h.alm'],I['h.cen']&&'Cena: '+I['h.cen'],I['h.col']&&'Colaciones: '+I['h.col'])));
- o.push(Q('Alimentos que consume con mayor frecuencia:',I.afrec));o.push(Q('Alimentos que evita o poco frecuentes:',I.aevita));
- o.push(Q('¿Tiene alergias alimentarias?',[...opts(['No','Sí'],I.alerg),...ex('¿Cuáles?',I['alerg.c'])]));
- o.push(Q('¿Tiene alguna intolerancia?',[...chk(INTOL,'int'),...ex('Otro',I['int.o'])]));
- o.push(Q('¿Quién prepara la comida?',opts(['Usted','Familiar','Compra comida preparada'],I.prep)));
- o.push(Q('¿Con qué frecuencia come fuera de casa?',opts(['Nunca','1-2 /sem','Casi diario'],I.fuera)));
- o.push(SEC('Indicadores bioquímicos'));
- o.push(TB([['Indicador','Valor normal','Consulta 1°','Consulta 2°','Consulta 3°']].concat(BQ.map(([id,n,ref])=>[{t:n,b:1},ref,...[0,1,2].map(i=>{const x=I[`bq.${id}.${i}`];return x==null||x===''?'':(bqOut(id,x,p)?{t:String(x),b:1,c:'C00000'}:String(x))})])),[1.4,1.6,1,1,1]));
- o.push(Pp('Los valores fuera de rango se marcan en rojo.',{i:1,sz:14,c:'666666',af:0}));
- o.push(SEC('Recordatorio de 24 horas'));
- o.push(TB([['Tiempo de alimentos','Alimentos','Cantidad / Preparación']].concat(REC.filter(r=>!I['off.'+r[0]]).map(([k,n])=>[{t:n+'  ·  Hrs: '+v(I[`rc.${k}.hr`]),b:1},v(I[`rc.${k}.ali`]),v(I[`rc.${k}.cant`])])),[1.5,2.4,1.4]));
- o.push(SEC('Diagnóstico PES'));o.push(Pp(v(I.nota),{sz:18,af:20}));
- o.push(SEC('Plan nutricional de trabajo'));o.push(Pp(v(I.plan),{sz:18,af:20}));
- o.push(Pp('',{af:200}));o.push(Pp(I.firma||'______________________________',{al:'right',sz:18,af:0}));o.push(Pp('Nombre y firma de la nutrióloga',{al:'right',sz:14,c:'666666',af:0}));
- return o.join('')}
-function bodyOf(p,opt){const o=[],inst=MODE==='inst';
- if(inst){o.push(hcInst(p));o.push(PB);o.push(Pp('Seguimiento clínico · '+pn(p),{b:1,sz:32,c:'0E8F78',af:40}));o.push(Pp((DB.org?DB.org+' · ':'')+'Generado el '+fd(today()),{sz:18,c:'666666',af:120}))}
+ let m=MEDIA.find(x=>x.key===key);if(!m){m={id:'rIdImg'+(MEDIA.length+1),n:MEDIA.length+1,inf,key};MEDIA.push(m)}const n=++DID,id=m.id;
+ return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Logo ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="logo${m.n}.${inf.ext==='png'?'png':'jpg'}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`}
+/* ---------- Formato oficial SANNAFARM: 3 páginas (2 hojas), Aptos 12, sin espaciado ---------- */
+const S_=x=>x==null?'':String(x).trim();
+/* Modelo del formulario (se usa igual para el Word y para la impresión/PDF) */
+function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
+ const T_=s=>['t',s],U=(v,n)=>['u',S_(v),n],O=(sel,l)=>['o',l,!!sel],lb=(l,v,n)=>[T_(l+' '),U(v,n)],G=T_('   ');
+ const opts=(arr,cur)=>arr.map(x=>O(cur===x,x)),chk=(arr,pre)=>arr.map(([k,l])=>O(I[pre+'.'+k],l));
+ const norm=a=>a.reduce((o,x)=>{if(Array.isArray(x)&&typeof x[0]==='string')o.push(x);else if(Array.isArray(x))o.push(...norm(x));return o},[]),L=(...parts)=>B.push({t:'p',parts:norm(parts)}),H=text=>B.push({t:'h',text});
+ /* ===== HOJA 1 · cara 1 ===== */
+ B.push({t:'hdr'});
+ B.push({t:'p',al:'center',parts:[...lb('Fecha:',fd(I.fecha||today()),11),G,...lb('N.º de expediente:',I.exp,11)]});
+ H('Ficha de Identificación');
+ L(lb('Nombre:',pn(p),22),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',12),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9));
+ L(lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),16));
+ L(lb('Estado civil:',I.ec,8),G,lb('Ocupación:',I.ocup,10),G,lb('Escolaridad:',I.esc,8),G,lb('Tel:',p.tel,12));
+ L(lb('Nacionalidad:',I.nacion,10),G,lb('Correo:',p.mail,18));
+ H('Antecedentes heredofamiliares');
+ B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
+ H('Indicadores clínicos');
+ L(lb('Patologías actuales del sistema digestivo:',I.pdig,18));
+ L(['b','Signos físicos'],T_(' (marcar si hay):'));L(chk(SIGNOS,'sf'));
+ L(['b','Estado emocional y conductual']);
+ L(T_('Nivel de energía: '),opts(['Bajo','Medio','Alto'],I.nrg));
+ L(T_('Estado emocional percibido: '),chk(EMO,'emo'));
+ L(['b','Sistema digestivo'],T_(' (Seleccionar lo que el paciente refiere):'));L(chk(DIG,'dg'));
+ L(lb('Frecuencia y duración:',I['dg.f'],18));L(lb('Problemas de masticación:',I.mast,18));
+ H('Indicadores de estilo de vida saludable');
+ L(T_('¿Realiza alguna actividad física? '),O(I.af==='Sí','Sí'),O(I.af==='No','No'),T_('- Cual: '),U(I['af.c'],14));
+ L(lb('¿Con qué frecuencia y duración?:',I['af.f'],16));L(lb('¿Cuántas horas duerme en promedio por noche?:',I.sue,16));
+ L(T_('¿Pasa mucho tiempo sentado durante el día? '),U(I.sent,6),T_(' horas: '),U(I['sent.h'],14));
+ L(lb('Consumo de alcohol:',I.alc,8),G,lb('Frecuencia:',I['alc.f'],10),G,lb('Cantidad:',I['alc.c'],10));
+ B.push({t:'pb'});
+ /* ===== HOJA 1 · cara 2 ===== */
+ B.push({t:'hdr'});
+ L(lb('Consumo de tabaco:',I.tab,8),G,lb('Frecuencia:',I['tab.f'],10),G,lb('Cantidad:',I['tab.c'],10));
+ L(T_('Consumo de otras sustancias: '),O(I.sus==='Sí','Sí'),O(I.sus==='No','No'),T_('- Cual: '),U(I['sus.c'],8),G,lb('Frecuencia:',I['sus.f'],10));
+ H('Valoración antropométrica');
+ const AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. Cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+ const cv=(c,k)=>c?(k==='fecha'?fd(c.fecha):k==='_imc'?(imcOf(c)?fx(imcOf(c)):''):k==='_cl'?(imcOf(c)?(clasifIMC(c,p)||''):''):S_(c[k])):'';
+ const tabs=[];for(let pg=0;pg===0||pg*4<cs.length;pg++){const col=[0,1,2,3].map(i=>cs[pg*4+i]);tabs.push({head:['Parámetro',...col.map((_,i)=>'Consulta '+(pg*4+i+1)+'º')],rows:AR.map(([l,k])=>[l,...col.map(c=>cv(c,k))])})}
+ B.push({t:'antro',tabs});
+ H('Indicadores dietéticos');
+ L(lb('¿Cuánta agua toma al día? Vasos / L:',I.agua,12));
+ L(T_('¿Con qué frecuencia? '),opts(['1 vez al día','2-3 veces al día','4-5 veces al día'],I.aguaf));
+ L(T_('¿Qué bebidas consume habitualmente?'));
+ L(chk(BEB,'beb'),I['beb.o']?[T_(' '),U(I['beb.o'],10)]:[]);
+ L(T_('¿Añade sal a alimentos ya preparados? '),O(I.sal==='Sí','Sí'),O(I.sal==='No','No'),T_('/ Tipo de sal: '),U(I['sal.t'],10));
+ L(lb('¿Cuántas comidas realiza al día?',I.ncom,8),T_(' incluye colaciones: '),U(I.ncol,8));
+ L(T_('Horarios aproximados:'));
+ L(lb('Desayuno:',I['h.des'],6),G,lb('Almuerzo:',I['h.alm'],6),G,lb('Cena:',I['h.cen'],6),G,lb('Colaciones (S/A):',I['h.col'],8));
+ L(lb('Alimentos que consume con mayor frecuencia:',I.afrec,14));
+ L(lb('Alimentos que evita o pocos frecuentes:',I.aevita,14));
+ L(T_('¿Tiene alergias alimentarias? '),O(I.alerg==='No','No'),O(I.alerg==='Sí','Sí'),T_('– ¿Cuáles? '),U(I['alerg.c'],10));
+ L(T_('¿Tiene alguna intolerancia? '),chk(INTOL,'int'),I['int.o']?[T_(' Otro: '),U(I['int.o'],8)]:[]);
+ L(T_('¿Quién prepara la comida? '),opts(['Usted','Familiar','Compra comida preparada'],I.prep));
+ L(T_('¿Con qué frecuencia come fuera de casa? '),opts(['Nunca','1-2 /sem','Casi diario'],I.fuera));
+ H('Indicadores bioquímicos');
+ const bq=BQ.map(([id,n,ref])=>[n,String(ref).replace(/\s*·\s*/,'\n'),...[0,1,2].map(i=>{const x=I[`bq.${id}.${i}`];return x==null||x===''?'':{v:String(x),out:!!bqOut(id,x,p)}})]);
+ B.push({t:'bq',head:true,rows:bq.slice(0,6)});
+ B.push({t:'pb'});
+ /* ===== HOJA 2 (una sola cara) ===== */
+ B.push({t:'hdr'});
+ B.push({t:'bq',head:false,rows:bq.slice(6)});
+ H('Recordatorio de 24 horas');
+ const RL={des:'Desayuno',alm:'Almuerzo',cen:'Cena',cm:'Colación mat.',cv:'Colación Vesp.'};
+ B.push({t:'r24',rows:REC.filter(r=>!I['off.'+r[0]]).map(([k,n])=>[RL[k]||n,S_(I[`rc.${k}.hr`]),S_(I[`rc.${k}.ali`]),S_(I[`rc.${k}.cant`])])});
+ H('NOTA CLINICA DE 1RA VEZ:');B.push({t:'lines',text:I.nota,n:5});
+ H('PLAN NUTRICIONAL DE TRABAJO:');B.push({t:'lines',text:I.plan,n:5});
+ B.push({t:'firma',text:I.firma});
+ return B}
+/* ----- Render a Word ----- */
+const TINY='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>';
+const PBK='<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>';
+const FP=(inner,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.bb?'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="000000"/></w:pBdr>':''}<w:spacing w:before="${o.bf||0}" w:after="0" w:line="240" w:lineRule="auto"/>${o.al?`<w:jc w:val="${o.al}"/>`:''}</w:pPr>${inner}</w:p>`;
+const FR=(t,o={})=>R(t,{sz:24,...o});
+const NB='\u00A0',HFW=[1850,1300,600,700,1700,1100,1000,1830];
+function partsX(parts){return parts.map(x=>{const[k,a,b]=x;
+ if(k==='b')return FR(a,{b:1});if(k==='t')return FR(a);
+ if(k==='u'){const v=S_(a);return v?FR(v,{u:1}):FR(NB.repeat(b||10),{u:1})}
+ return b?FR('☒'+NB+String(a).replace(/ /g,NB),{b:1,shd:'D9E2F3'})+FR('  '):FR('☐'+NB+String(a).replace(/ /g,NB))+FR('  ')}).join('')}
+function TFx(rows,o){const W=o.w,sum=W.reduce((a,b)=>a+b,0),bd=(o.borders==='h'?['top','bottom','insideH']:['top','left','bottom','right','insideH','insideV']).map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join('');
+ return `<w:tbl><w:tblPr><w:tblW w:w="${sum}" w:type="dxa"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="70" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>`+
+ rows.map((r,ri)=>`<w:tr><w:trPr><w:cantSplit/>${o.minH&&o.minH[ri]?`<w:trHeight w:val="${o.minH[ri]}" w:hRule="atLeast"/>`:''}</w:trPr>${r.map((c,ci)=>{const k=c!==null&&typeof c==='object'?c:{t:c};
+  return `<w:tc><w:tcPr><w:tcW w:w="${W[ci]}" w:type="dxa"/></w:tcPr>${FP(R(k.t,{sz:24,b:k.b,i:k.i,c:k.c,shd:k.shd}),{al:k.al})}</w:tc>`}).join('')}</w:tr>`).join('')+'</w:tbl>'}
+function hdrX(){const cell=(w,inner,v)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${v?'<w:vAlign w:val="center"/>':''}</w:tcPr>${inner}</w:tc>`;
+ return `<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="3700"/><w:gridCol w:w="2680"/><w:gridCol w:w="3700"/></w:tblGrid><w:tr>`+
+  cell(3700,FP(imgRun('l1',.42)),1)+cell(2680,FP(FR('Historia Clínica',{b:1}),{al:'center'}),1)+cell(3700,FP(imgRun('r1',.42),{al:'right'}),1)+'</w:tr></w:tbl>'+TINY}
+function paperDocx(p){const o=[];
+ paperModel(p).forEach(b=>{switch(b.t){
+  case 'hdr':o.push(hdrX());break;
+  case 'pb':o.push(PBK);break;
+  case 'p':o.push(FP(partsX(b.parts),{al:b.al}));break;
+  case 'h':o.push(FP(FR(b.text,{b:1}),{keep:1}));break;
+  case 'hf':{const sel=c=>c?{t:'[X]',b:1,shd:'D9E2F3',al:'center'}:{t:'[  ]',al:'center'};
+   o.push(TFx([b.head.map((h,i)=>({t:h,b:1,al:i&&i<7?'center':''})),...b.rows.map(r=>[r[0],...r.slice(1,7).map(sel),{t:': '+r[7]}])],{w:HFW,borders:'h'}));o.push(TINY);break}
+  case 'antro':b.tabs.forEach(t=>{o.push(TFx([t.head.map((h,i)=>({t:h,b:1,i:!i,al:i?'center':'right'})),...t.rows.map(r=>r.map((c,i)=>i?{t:c,al:'center'}:{t:c,i:1,al:'right'}))],{w:[1840,2060,2060,2060,2060],borders:'grid'}));o.push(TINY)});break;
+  case 'bq':{const W=[2000,2000,2000,2000,2080],hd=b.head?[['Indicador','Valor normal','Consulta 1º','Consulta 2º','Consulta 3º'].map((h,i)=>({t:h,b:1,al:i>1?'center':''}))]:[];
+   o.push(TFx([...hd,...b.rows.map(r=>[{t:r[0],b:1},r[1],...r.slice(2).map(x=>x?{t:x.v,b:x.out,c:x.out?'C00000':'',al:'center'}:'')])],{w:W,borders:'grid'}));o.push(TINY);break}
+  case 'r24':o.push(TFx([['Tiempo de alimentos','Alimentos','Cantidad/ Preparación'].map(h=>({t:h,b:1})),...b.rows.map(r=>[{t:r[0]+'\nHrs: '+r[1]},r[2],r[3]])],{w:[2400,3900,3780],borders:'grid',minH:[0,...b.rows.map((_,i)=>i<3?1080:i===3?900:720)]}));o.push(TINY);break;
+  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(FP(FR(l),{bb:1})));for(let i=used;i<b.n;i++)o.push(FP('',{bb:1}));break}
+  case 'firma':{const t=S_(b.text);o.push(FP(FR(t+NB.repeat(Math.max(2,34-t.length)),{u:1}),{al:'right',bf:480}));o.push(FP(FR('Nombre y firma de la nutrióloga',{b:1}),{al:'right'}));break}
+ }});return o.join('')}
+/* ----- Render HTML (impresión / PDF del navegador) ----- */
+const lgU=k=>{const L=DB.logos||{};return(k in L)?L[k]:(typeof LOGO_DEF!=='undefined'?LOGO_DEF[k]:'')};
+function partsH(parts){return parts.map(([k,a,b])=>k==='b'?`<b>${esc(a)}</b>`:k==='t'?esc(a).replace(/  /g,'&nbsp; '):k==='u'?(S_(a)?`<span class="uv">${esc(S_(a))}</span>`:`<span class="ub" style="width:${(b||10)*.62}ch"></span>`):`<span class="op${b?' on':''}">${b?'☒':'☐'}&nbsp;${esc(a)}</span>&nbsp; `).join('')}
+function paperHTML(p){const o=['<section class="pgp">'],cl=(x,i)=>x&&x.v!==undefined?`<td class="c${x.out?' red':''}">${esc(x.v)}</td>`:`<td class="c">${esc(x||'')}</td>`;
+ paperModel(p).forEach(b=>{switch(b.t){
+  case 'hdr':o.push(`<table class="hd"><tr><td class="hl"><img src="${lgU('l1')}" alt=""></td><td class="hm">Historia Clínica</td><td class="hr"><img src="${lgU('r1')}" alt=""></td></tr></table>`);break;
+  case 'pb':o.push('</section><section class="pgp">');break;
+  case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
+  case 'h':o.push(`<h4>${esc(b.text)}</h4>`);break;
+  case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c">${c?'<span class="on">[X]</span>':'[&nbsp;&nbsp;]'}</td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
+  case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
+  case 'bq':o.push(`<table class="gr"><colgroup><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:20.8%"></colgroup>${b.head?'<tr><th>Indicador</th><th>Valor normal</th><th class="c">Consulta 1º</th><th class="c">Consulta 2º</th><th class="c">Consulta 3º</th></tr>':''}${b.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td style="white-space:pre-line">${esc(r[1])}</td>${r.slice(2).map(cl).join('')}</tr>`).join('')}</table>`);break;
+  case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:38.7%"><col style="width:37.5%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos</th><th>Cantidad/ Preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.75:i===3?.62:.5}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td><td style="white-space:pre-wrap">${esc(r[3])}</td></tr>`).join('')}</table>`);break;
+  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');break}
+  case 'firma':o.push(`<div class="fm"><span class="uv">${esc(S_(b.text))||'&nbsp;'.repeat(30)}</span></div><p style="text-align:right"><b>Nombre y firma de la nutrióloga</b></p>`);break;
+ }});o.push('</section>');return o.join('')}
+const pst=document.createElement('style');
+pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:.5in .75in}
+@media print{body.paper-print{display:block!important;background:#fff!important}body.paper-print>*:not(#hcpaper){display:none!important}
+body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/normal Aptos,Calibri,Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#hcpaper p,#hcpaper h4{margin:0;padding:0;font-size:12pt;line-height:normal}#hcpaper h4{font-weight:700}
+#hcpaper .pgp{break-after:page}#hcpaper .pgp:last-child{break-after:auto}
+#hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:0 4px;font-size:12pt;text-align:left;vertical-align:top;font-weight:400;line-height:normal;border:0}
+#hcpaper .hd td{padding:0;vertical-align:middle}#hcpaper .hd img{height:.42in;max-width:2.6in}#hcpaper .hm{text-align:center;font-weight:700}#hcpaper .hr{text-align:right}
+#hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
+#hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}
+#hcpaper .gr th,#hcpaper .gr td{border:1px solid #000}#hcpaper .red{color:#c00000;font-weight:700}
+#hcpaper .uv{text-decoration:underline;text-underline-offset:2px}#hcpaper .ub{display:inline-block;border-bottom:1px solid #000;height:1em}
+#hcpaper .on{font-weight:700;background:#d9e2f3}#hcpaper .op{white-space:nowrap}
+#hcpaper .ln{border-bottom:1px solid #000;min-height:1.2em;white-space:pre-wrap}#hcpaper .fm{text-align:right;margin-top:.5in}}`;
+document.head.appendChild(pst);
+const hashR=()=>(location.hash||'#hc').slice(1);
+function paperFill(){if(MODE!=='inst'||hashR()!=='hc')return false;const p=hcPat();if(!p)return false;let h=$('#hcpaper');if(!h){document.body.insertAdjacentHTML('beforeend','<div id="hcpaper"></div>');h=$('#hcpaper')}
+ h.innerHTML=paperHTML(p);h.querySelectorAll('img').forEach(i=>i.decode&&i.decode().catch(()=>{}));return true}
+function paperOn(){if(paperFill())document.body.classList.add('paper-print')}
+function paperOff(){document.body.classList.remove('paper-print');const h=$('#hcpaper');if(h)h.innerHTML=''}
+addEventListener('beforeprint',paperOn);addEventListener('afterprint',paperOff);
+let ptm=null;const pprep=()=>{clearTimeout(ptm);ptm=setTimeout(paperFill,700)};
+document.addEventListener('input',pprep);document.addEventListener('change',pprep);addEventListener('hashchange',pprep);setTimeout(pprep,1200);
+window.NCP={paperOn,paperOff,paperHTML,paperDocx,paperModel};
+function bodyOf(p,opt){const o=[],inst=MODE==='inst';let lead='';
+ if(inst){lead=paperDocx(p)}
  else{
  o.push(Pp('Historial clínico nutricional',{b:1,sz:40,c:'0E8F78',af:40}));
  o.push(Pp((DB.org?DB.org+' · ':'')+'Generado el '+fd(today()),{sz:18,c:'666666',af:160}));
@@ -1462,18 +1541,20 @@ function bodyOf(p,opt){const o=[],inst=MODE==='inst';
   else rows.forEach(r=>{const s=M.f[1]&&['text','dl','sel'].includes(M.f[1][2])&&r[M.f[1][0]]?' · '+r[M.f[1][0]]:'';o.push(H3(fd(r.date)+s));
    o.push(T(M.f.slice(1).filter(f=>r[f[0]]!=null&&r[f[0]]!=='').map(f=>[f[1],cellTxt(f,r[f[0]])]),{w:[1,2.6],hdr:false,kv:true,sz:19}))})});
  if((p.files||[]).length){o.push(H2('Archivos clínicos adjuntos'));o.push(T([['Archivo','Fecha']].concat(p.files.map(f=>[f.name,fd(f.date)])),{w:[3,1],sz:18}))}
- o.push(Pp('Documento generado por NutriClin. La información es confidencial y está destinada al equipo de salud tratante.',{i:1,sz:16,c:'888888',bf:240}));
- return o.join('')}
+ const foot=Pp('Documento generado por NutriClin. La información es confidencial y está destinada al equipo de salud tratante.',{i:1,sz:16,c:'888888',bf:240});
+ if(inst)return o.length?lead+PBK+Pp('Seguimiento clínico · '+pn(p),{b:1,sz:32,c:'0E8F78',af:40})+Pp((DB.org?DB.org+' · ':'')+'Generado el '+fd(today()),{sz:18,c:'666666',af:120})+o.join('')+foot:lead;
+ o.push(foot);return o.join('')}
 const NS='http://schemas.openxmlformats.org/';
-function buildDocx(list,opt){MEDIA=[];const body=list.map((p,i)=>(i?PB:'')+bodyOf(p,opt||{})).join('')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="560" w:right="720" w:bottom="520" w:left="720" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+function buildDocx(list,opt){MEDIA=[];DID=0;const body=list.map((p,i)=>(i?PBK:'')+bodyOf(p,opt||{})).join('')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="720" w:right="1080" w:bottom="720" w:left="1080" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
  const H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',W=NS+'wordprocessingml/2006/main',media=MEDIA.slice();
  const defs=(media.some(m=>m.inf.ext==='png')?'<Default Extension="png" ContentType="image/png"/>':'')+(media.some(m=>m.inf.ext==='jpeg')?'<Default Extension="jpg" ContentType="image/jpeg"/>':'');
  const rel=media.map(m=>`<Relationship Id="${m.id}" Type="${NS}officeDocument/2006/relationships/image" Target="media/image${m.n}.${m.inf.ext==='png'?'png':'jpg'}"/>`).join('');
  return zipStore([
-  {n:'[Content_Types].xml',d:H+`<Types xmlns="${NS}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${defs}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`},
+  {n:'[Content_Types].xml',d:H+`<Types xmlns="${NS}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${defs}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/></Types>`},
   {n:'_rels/.rels',d:H+`<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${NS}officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`},
-  {n:'word/_rels/document.xml.rels',d:H+`<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${NS}officeDocument/2006/relationships/styles" Target="styles.xml"/>${rel}</Relationships>`},
-  {n:'word/styles.xml',d:H+`<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="es-MX"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="259" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`},
+  {n:'word/_rels/document.xml.rels',d:H+`<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${NS}officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="${NS}officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>${rel}</Relationships>`},
+  {n:'word/styles.xml',d:H+`<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Aptos" w:hAnsi="Aptos" w:eastAsia="Aptos" w:cs="Aptos"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="es-MX"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>`},
+  {n:'word/fontTable.xml',d:H+`<w:fonts xmlns:w="${W}"><w:font w:name="Aptos"><w:altName w:val="Calibri"/><w:panose1 w:val="020B0004020202020204"/><w:charset w:val="00"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font></w:fonts>`},
   {n:'word/document.xml',d:H+`<w:document xmlns:w="${W}" xmlns:r="${NS}officeDocument/2006/relationships" xmlns:wp="${NS}drawingml/2006/wordprocessingDrawing" xmlns:a="${NS}drawingml/2006/main" xmlns:pic="${NS}drawingml/2006/picture"><w:body>${body}</w:body></w:document>`},
   ...media.map(m=>({n:`word/media/image${m.n}.${m.inf.ext==='png'?'png':'jpg'}`,d:m.inf.b}))])}
 function exportDocx(list,opt,name){const a=document.createElement('a');a.href=URL.createObjectURL(buildDocx(list,opt));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
