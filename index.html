@@ -238,7 +238,7 @@ const cur=()=>DB.p.find(x=>x.id===DB.sel);
 const curC=()=>{const p=cur();if(!p||!p.cons||!p.cons.length)return null;return p.cons.find(c=>c.id===DB.csel[p.id])||p.cons[p.cons.length-1]};
 function newCons(p){const l=[...(p.cons||[])].sort((a,b)=>a.fecha.localeCompare(b.fecha)).pop()||{};
  return{id:uid(),fecha:today(),peso:'',est:l.est||p.est||'',graso:'',musc:'',cin:'',abd:'',cad:'',bra:'',mus:'',
-  formula:l.formula||'',af:l.af||'',eta:l.eta??'',dieta:JSON.parse(JSON.stringify(l.dieta||[])),meta:JSON.parse(JSON.stringify(l.meta||{})),micro:{},notas:''}}
+  formula:l.formula||'',af:l.af||'',eta:l.eta??'',dieta:JSON.parse(JSON.stringify(l.dieta||[])),meta:JSON.parse(JSON.stringify(l.meta||{})),dm:JSON.parse(JSON.stringify(l.dm||{})),micro:{},notas:''}}
 function ensureC(p){if(!p.cons)p.cons=[];if(!p.cons.length){p.cons.push(newCons(p));save()}}
 
 /* =====================================================================
@@ -854,8 +854,8 @@ V.med={t:'Mediciones',h(){const p=cur();if(!p)return noP;const cs=csort(p).rever
    Menús y recetas son una biblioteca (DB.menus / DB.recetas): súbelos una vez y asígnalos a cualquier paciente.
    Los archivos se guardan en el navegador (imágenes reducidas; PDF/Word/Excel hasta 900 KB). */
 const lib=k=>(DB[k]=DB[k]||[]);
-const DS={tab:'menus',edit:null,view:null,q:'',only:false,pend:null};
-const DTABS=[['menus','Menús','🍽️','#ff5a36','#ffb100'],['recetas','Recetas','👩‍🍳','#a21caf','#f472b6'],['cero','Menú de cero','✨','#0891b2','#2563eb']];
+const DS={tab:'dieta',edit:null,view:null,q:'',only:false,pend:null};
+const DTABS=[['dieta','Dietas automáticas','✨','#0891b2','#2563eb'],['menus','Menús','🍽️','#ff5a36','#ffb100'],['recetas','Recetas','👩‍🍳','#a21caf','#f472b6']];
 const MENU_CATS=['Reducción de peso','Mantenimiento','Aumento de masa','Diabetes','Hipertensión','Dislipidemia','Vegetariano','Pediátrico','Deportista'];
 const REC_CATS=['Desayuno','Comida','Cena','Colación','Postre','Bebida','Salsa / aderezo'];
 const nrm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -911,7 +911,7 @@ function recView(r){return `<div class="card" style="border-left:6px solid var(-
  ${r.ing?`<p><b>Ingredientes</b><br>${esc(r.ing).replace(/\n/g,'<br>')}</p>`:''}${r.pre?`<p><b>Preparación</b><br>${esc(r.pre).replace(/\n/g,'<br>')}</p>`:''}</div>`}
 
 V.dietas={t:'Dietas dinámicas',h(){const p=cur();if(!p)return noP;const T=DTABS.find(x=>x[0]===DS.tab),[k,,,ca,cb]=T;
- const cnt={menus:lib('menus').length+' en biblioteca',recetas:lib('recetas').length+' guardadas',cero:(p.cons||[]).length+' planes'};
+ const cnt={menus:lib('menus').length+' en biblioteca',recetas:lib('recetas').length+' guardadas',dieta:(p.cons||[]).filter(c=>(c.dieta||[]).length||(c.dm&&c.dm.nombre)).length+' dietas'};
  const tabs=`<div class="dtabs">${DTABS.map(([id,n,e,a,b])=>`<button class="dtab${DS.tab===id?' on':''}" data-act="tab" data-id="${id}" style="--a:${a};--b:${b}"><span class="de">${e}</span><span>${n}</span><small>${cnt[id]}</small></button>`).join('')}</div>`;
  let body='';
  if(k==='menus'){const m=DS.edit!==null?(DS.edit?lib('menus').find(x=>x.id===DS.edit)||{}:{}):null;
@@ -1792,6 +1792,296 @@ document.addEventListener('input',sched);document.addEventListener('change',sche
 const _render=render;render=function(){const x=_render.apply(this,arguments);paint();return x};
 window.NCA={pedNow,r24,recs,build,paint};
 })();
+
+/* =====================================================================
+   8d. DIETAS DINÁMICAS v2 · estilo "Dietas automáticas"
+   Pantalla 1: rango de calorías + Generar. Pantalla 2: dieta con pestañas por tiempo de comida
+   (hora, generación automática, catálogo, tip, hashtags, alimentos, recetas y contador de calorías).
+   ENLACES: el plan se guarda en la CONSULTA del paciente (c.dieta, c.meta, c.dm), así que Consulta, Cuadro de
+   equivalentes, Micronutrientes y el historial en Word lo ven. La propuesta toma de la HISTORIA CLÍNICA
+   (alergias, intolerancias, lo que no le gusta, colaciones quitadas, horas del R24, patologías y recomendaciones)
+   y del REGISTRO (edad, sexo, peso, talla, GET/meta).
+   ===================================================================== */
+(function(){
+const MK=MEALS.slice(),GK=Object.keys(GR);
+const LAB={'Desayuno':'Desayuno','Colación 1':'Medio día','Comida':'Comida','Colación 2':'Media tarde','Cena':'Cena'};
+const EMO={'Desayuno':'🌅','Colación 1':'🌤️','Comida':'☀️','Colación 2':'⛅','Cena':'🌙'};
+const HR0={'Desayuno':'08:00','Colación 1':'11:00','Comida':'14:00','Colación 2':'17:00','Cena':'20:00'};
+const RK={'Desayuno':'des','Colación 1':'cm','Comida':'alm','Colación 2':'cv','Cena':'cen'};
+const RANGES=[];for(let a=1200;a<3000;a+=100)RANGES.push(a);
+const T5=n=>Math.round(n*2)/2;
+const RCOL={Aumentar:'#1f9d5a',Incluir:'#2563eb',Ajustar:'#0e7490',Moderar:'#d98a14',Limitar:'#c8432f',Vigilar:'#7c3aed'};
+Object.assign(DS,{tab:'dieta',mode:'home',meal:'Desayuno',pan:null,rg:null,fq:'',fg:'',rq:'',menu:false,kb:true,modal:null,mq:''});
+
+const dmOf=c=>{const d=c.dm=c.dm||{};['hr','off','tip','tag','nota','rec'].forEach(k=>d[k]=d[k]||{});return d};
+const hasDiet=c=>!!(c&&((c.dm&&c.dm.nombre)||(c.dieta||[]).some(d=>foodOf(d.k))));
+const rnd5=()=>Array.from({length:5},()=>'abcdefghijklmnopqrstuvwxyz'[Math.random()*26|0]).join('');
+const catLib=()=>(DB.cat=DB.cat||[]);
+function hrOf(s){const t=String(s||'').toLowerCase(),m=t.match(/(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?/);if(!m)return'';let h=+m[1];const mi=+(m[2]||0);if(h>23||mi>59)return'';
+ if(/p\.?\s?m/.test(t)&&h<12)h+=12;if(/a\.?\s?m/.test(t)&&h===12)h=0;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')}
+function hcText(p,rx){const o=[];try{getHC().secs.forEach(s=>s.f.forEach(f=>{if(rx.test(nrm2(f.l))){const v=(p.hcd||{})[f.id];if(v!=null&&String(v).trim())o.push(String(v).trim())}}))}catch(e){}return o.join(', ')}
+const noneTxt=s=>/^\s*(no|ninguno|ninguna|nada|n\/a|-)\s*\.?\s*$/i.test(s||'');
+/* ---- Lo que la historia clínica y el registro aportan ---- */
+function perfil(p){const I=p.hci||{};
+ const alerg=[I.alerg==='Sí'?I['alerg.c']:'',hcText(p,/alergi/)].filter(x=>x&&!noneTxt(x)).join(', ');
+ const intol=[I['int.lac']?'lactosa':'',I['int.glu']?'gluten':'',I['int.o']||''].filter(x=>x&&!noneTxt(x)).join(', ');
+ const nolike=hcText(p,/no le gust|aversion|rechaz|no consume|no come/),like=hcText(p,/preferid|favorit/);
+ const off={'Colación 1':!!I['off.cm'],'Colación 2':!!I['off.cv']},hr={};
+ MK.forEach(m=>{const h=hrOf(I['rc.'+RK[m]+'.hr']);if(h)hr[m]=h});
+ return{alerg,intol,nolike:noneTxt(nolike)?'':nolike,like:noneTxt(like)?'':like,off,hr,pat:(p.pat||[]).slice()}}
+function flags(p){let rc=null;try{rc=NCA.recs(p,NCA.pedNow(p),NCA.r24(p))}catch(e){}
+ const A=g=>{const r=rc&&rc.list.find(x=>x.g===g);return r?r.a:null};
+ return{rc,minor:!!(rc&&rc.ctx&&rc.ctx.minor),verAum:A('Verduras')==='Aumentar',legInc:['Incluir','Aumentar'].includes(A('Leguminosas')),azLim:A('Azúcares y dulces')==='Limitar',
+  exceso:!!(rc&&rc.ctx&&rc.ctx.exceso),aoaMod:A('AOA')==='Moderar',aoaAum:A('AOA')==='Aumentar',cerMod:['Moderar','Ajustar'].includes(A('Cereales y tubérculos'))}}
+function mkAvoid(txt){const t=nrm2(txt||''),R=[],dairy=f=>/^Leche/.test(f.g)||/queso|yogurt|leche|crema|mantequilla|requeson|cottage|panela|oaxaca|manchego/.test(nrm2(f.n));
+ const t2=t.replace(/deslactos\w*/g,'').replace(/lactos\w*/g,''),milkAll=/leche|lacteo|queso|yogur|aplv/.test(t2),lac=/lactos/.test(t);
+ if(milkAll)R.push(dairy);else if(lac)R.push(f=>dairy(f)&&!/deslactos/.test(nrm2(f.n)));
+ if(/gluten|trigo|celiac/.test(t))R.push(f=>/harina|bolillo|^pan |pan de|galleta|pasta|hot cake|concha|avena|cebada|centeno|hojuelas/.test(nrm2(f.n)));
+ if(/marisc/.test(t))R.push(f=>/camaron/.test(nrm2(f.n)));
+ if(/pescado/.test(t))R.push(f=>/pescado|salmon|sardina|atun/.test(nrm2(f.n)));
+ if(/frutos secos|oleaginos|nuez|nuec|almendra|cacahuate|mani\b/.test(t))R.push(f=>f.g==='Grasas con proteína');
+ if(/soya|soja/.test(t))R.push(f=>/tofu/.test(nrm2(f.n)));
+ t.split(/[,;\n\/]|\sy\s|\so\s/).map(s=>s.trim()).filter(s=>s.length>=4).forEach(tok=>{const st=tok.replace(/(es|s)$/,'');
+  if(st.length>=4&&!/^(ning|no |sin |lacto|gluten|marisc|alerg|intol)/.test(tok))R.push(f=>nrm2(f.n).includes(st))});
+ return f=>R.some(fn=>fn(f))}
+function mkLike(txt){const k=nrm2(txt||'').split(/[,;\n\/]|\sy\s/).map(s=>s.trim().replace(/(es|s)$/,'')).filter(s=>s.length>=4);return f=>k.some(s=>nrm2(f.n).includes(s))}
+const isOff=(dm,pf,m)=>dm.off[m]!==undefined?!!dm.off[m]:!!pf.off[m];
+const evDef=pf=>[pf.alerg,pf.intol,pf.nolike].filter(Boolean).join(', ');
+const actOf=(p,c)=>{const dm=dmOf(c),pf=perfil(p);return MK.filter(m=>!isOff(dm,pf,m))};
+function ctx(p,c){const dm=dmOf(c),pf=perfil(p),e=en(c,p),mt=metaOf(c,e),ev=dm.ev!==undefined?dm.ev:evDef(pf);
+ return{dm,pf,e,mt,ev,F:flags(p),avoid:mkAvoid(ev),like:mkLike(pf.like),act:actOf(p,c)}}
+/* ---- Cálculo del día (equivalentes) a partir de kcal y % de macros de la meta ---- */
+function solve(K,mt,F,has){const s=(mt.hc+mt.l+mt.p)||100,H=mt.hc/s,L=mt.l/s,P=mt.p/s;
+ const V=Math.min(6,(K<1700?4:5)+(F.verAum?1:0)),Fr=K<1500?2:K<2000?3:4,Lg=F.legInc&&K>=1500?2:1,Lq=has('Leche descremada')?(K<1500?1:2):0,Az=(K>=2400&&!F.azLim&&has('Azúcares sin grasa'))?1:0;
+ let C=Math.max(3,T5((K*H/4-(4*V+15*Fr+20*Lg+12*Lq+10*Az))/15));
+ let A=Math.max(3,T5((K*P/4-(2*V+8*Lg+9*Lq+2*C))/7));
+ let G=Math.max(2,T5((K*L/9-(Lg+2*Lq+2.5*A))/5));
+ const kc=()=>25*V+60*Fr+70*C+120*Lg+95*Lq+40*Az+55*A+45*G;
+ for(let i=0;i<40;i++){const d=K-kc();if(Math.abs(d)<=40)break;
+  if(d>0){if(i%3===2)G+=.5;else C+=.5}else{if(C>3&&i%3!==2)C-=.5;else if(G>2)G-=.5;else if(A>3)A-=.5;else break}}
+ const am=F.aoaMod?A:T5(A/2),gc=T5(G*.3),o={'Verduras':V,'Frutas':Fr,'Cereales sin grasa':C,'Leguminosas':Lg,'Leche descremada':Lq,'AOA muy bajo aporte de grasa':am,'AOA bajo aporte de grasa':A-am,'Grasas sin proteína':G-gc,'Grasas con proteína':gc,'Azúcares sin grasa':Az};
+ Object.keys(o).forEach(k=>{if(!(o[k]>0))delete o[k]});return o}
+const WT={'Verduras':[0,.1,.45,.1,.35],'Frutas':[.3,.25,.2,.25,0],'Cereales sin grasa':[.25,.05,.4,.05,.25],'Leguminosas':[0,0,.75,0,.25],'Leche descremada':[.5,.2,0,.3,0],
+ 'AOA muy bajo aporte de grasa':[.2,0,.5,0,.3],'AOA bajo aporte de grasa':[.2,0,.5,0,.3],'Grasas sin proteína':[.25,.05,.4,.05,.25],'Grasas con proteína':[.1,.4,0,.5,0],'Azúcares sin grasa':[.5,0,.5,0,0]};
+function split(tot,w){const u=Math.round(tot*2),s=w.reduce((a,b)=>a+b,0);if(!s)return w.map(()=>0);
+ const raw=w.map(x=>x/s*u),fl=raw.map(Math.floor);let left=u-fl.reduce((a,b)=>a+b,0);
+ raw.map((r,i)=>[r-fl[i],i,w[i]]).sort((a,b)=>b[0]-a[0]||b[2]-a[2]).forEach(([,i])=>{if(left>0&&w[i]>0){fl[i]++;left--}});
+ if(left>0){fl[w.indexOf(Math.max(...w))]+=left}return fl.map(x=>x/2)}
+function adjW(w,off){w=w.slice();[[1,0,2],[3,2,4]].forEach(([i,a,b])=>{if(off[MK[i]]){const x=w[i];w[i]=0;w[a]+=x/2;w[b]+=x/2}});return w}
+function targets(X){const has=g=>FOODS.some(f=>f.g===g&&!X.avoid(f)),day=solve(X.mt.k,X.mt,X.F,has),off={};MK.forEach(m=>off[m]=!X.act.includes(m));
+ const tg={};MK.forEach(m=>tg[m]={});
+ Object.keys(day).forEach(g=>{const s=split(day[g],adjW(WT[g],off));MK.forEach((m,i)=>{if(s[i]>0)tg[m][g]=s[i]})});return tg}
+/* ---- Elección de alimentos por tiempo de comida ---- */
+const gk=g=>/^Cereales/.test(g)?'cer':/^AOA/.test(g)?'aoa':/^Grasas/.test(g)?'gra':/^Leche/.test(g)?'lac':/^Az/.test(g)?'az':g==='Verduras'?'ver':g==='Frutas'?'fru':g==='Leguminosas'?'leg':'x';
+const PF={d:{cer:/avena|pan de caja|tortilla de ma|hojuelas|camote/,aoa:/clara|cottage|panela|requeson|jamon/,ver:/jitomate|espinaca|nopal|champi|calabacita|pimiento|apio|zanahoria|ejote/,gra:/aguacate|oliva|almendra|nuez|cacahuate/},
+ s:{cer:/palomitas|galleta|hojuelas|elote|tortilla/,aoa:/cottage|panela|atun|jamon de pavo|clara/,ver:/pepino|jicama|zanahoria|apio|jitomate/,gra:/aguacate|aceitunas|almendra|nuez|pistache|cacahuate|semillas|pepitas/},
+ c:{cer:/arroz|tortilla|pasta|papa|camote|elote/,aoa:/pechuga|muslo|bistec|pescado|salmon|atun|camaron|lomo|tofu|pavo/,gra:/aguacate|oliva|canola/},
+ n:{cer:/tortilla|pan|papa|arroz|camote/,aoa:/pechuga|pavo|atun|pescado|panela|requeson|clara|huevo|cottage|jamon/,gra:/aguacate|oliva|canola/}};
+const mtype=m=>m==='Desayuno'?'d':m==='Comida'?'c':m==='Cena'?'n':'s';
+function pick(g,meal,used,X,ex){let pool=FOODS.filter(f=>f.g===g&&!X.avoid(f));
+ if(!pool.length&&g==='Grasas con proteína')return pick('Grasas sin proteína',meal,used,X,ex);
+ if(!pool.length&&/^AOA/.test(g))pool=FOODS.filter(f=>/^AOA (muy bajo|bajo)/.test(f.g)&&!X.avoid(f));
+ if(!pool.length)return null;
+ if(ex&&pool.some(f=>!ex.has(f.id)))pool=pool.filter(f=>!ex.has(f.id));
+ const rx=(PF[mtype(meal)]||{})[gk(g)],pf=rx?pool.filter(f=>rx.test(nrm2(f.n))):[],base=pf.length?pf:pool,
+  w=base.map(f=>(X.pf.like&&X.like(f)?4:1)*(used.has(f.id)?.25:1)),tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot;
+ for(let i=0;i<base.length;i++){r-=w[i];if(r<=0)return base[i]}return base[base.length-1]}
+function mergeSmall(tg){tg=Object.assign({},tg);
+ [['AOA muy bajo aporte de grasa','AOA bajo aporte de grasa',2],['Grasas sin proteína','Grasas con proteína',1]].forEach(([a,b,lim])=>{const x=tg[a]||0,y=tg[b]||0;
+  if(x&&y&&x+y<=lim){if(x>=y){tg[a]=x+y;delete tg[b]}else{tg[b]=x+y;delete tg[a]}}});return tg}
+function genMeal(c,meal,used,X){const tg=mergeSmall((X.dm.tg||{})[meal]||{}),items=[],ex=new Set();
+ GK.forEach(g=>{const n=tg[g];if(!n)return;const h=T5(Math.ceil(n)/2),parts=((n>=2&&(g==='Verduras'||g==='Frutas'))||(n>=3&&gk(g)==='cer'))?[h,n-h]:[n];
+  parts.forEach(q=>{if(q<=0)return;const f=pick(g,meal,used,X,ex);if(!f)return;used.add(f.id);ex.add(f.id);const it=items.find(x=>x.k===f.id);if(it)it.n+=q;else items.push({k:f.id,n:q,t:meal})})});
+ c.dieta=(c.dieta||[]).filter(d=>d.t!==meal).concat(items);return items.length}
+function genDay(c,X){X.dm.tg=targets(X);const used=new Set();c.dieta=(c.dieta||[]).filter(d=>!MK.includes(d.t));X.act.forEach(m=>genMeal(c,m,used,X));
+ MK.filter(m=>!X.act.includes(m)).forEach(m=>{c.dieta=c.dieta.filter(d=>d.t!==m)})}
+/* ---- Tips, hashtags y recetas ---- */
+function tipFor(p,X,m){const pat=nrm2((p.pat||[]).join(' ')+' '+(p.hist||'')),T={'Desayuno':'Incluye una fuente de proteína en el desayuno para mayor saciedad durante la mañana.','Colación 1':'Prefiere fruta entera o verdura cruda; evita jugos y productos ultraprocesados.','Comida':'Llena la mitad del plato con verduras y acompaña con agua simple.','Colación 2':'Una fruta con oleaginosas o yogur natural ayuda a llegar a la cena con menos hambre.','Cena':'Cena ligera, 2–3 horas antes de dormir.'};
+ let t=T[m];if(/diabet|resistencia|prediab/.test(pat)&&m!=='Cena')t+=' Combina los hidratos con proteína y fibra para evitar picos de glucosa.';
+ if(/hipertens|\bhta\b/.test(pat))t+=' Cocina sin sal añadida; usa hierbas y limón.';
+ if(/gastritis|reflujo|colitis/.test(pat))t+=' Come despacio y en porciones pequeñas.';
+ if(X.pf.intol&&/lactos/.test(nrm2(X.pf.intol)))t+=' Elige lácteos deslactosados.';return t}
+function tagSug(p,X){const pat=nrm2((X.pf.pat||[]).join(' ')),o=[],a=nrm2(X.ev);
+ if(/diabet|resistencia|prediab/.test(pat))o.push('#diabetes');if(/hipertens|hta/.test(pat))o.push('#bajoEnSodio','#hipertension');if(/dislip|colesterol|trigliceridos/.test(pat))o.push('#cuidaTuCorazón');
+ if(/gluten|celiac/.test(a))o.push('#sinGluten');if(/lactos/.test(a))o.push('#sinLactosa');if(X.F.exceso||X.F.cerMod)o.push('#controlDePorciones');o.push('#altoEnFibra','#rápido','#económico');return[...new Set(o)]}
+const EQR=[[/aoa.*muy bajo/,'AOA muy bajo aporte de grasa'],[/aoa.*moderad/,'AOA moderado aporte de grasa'],[/aoa.*alto/,'AOA alto aporte de grasa'],[/aoa|proteina animal|carne|pollo|pescado|huevo/,'AOA bajo aporte de grasa'],[/cereal.*con grasa/,'Cereales con grasa'],[/cereal|tuberculo|pan|tortilla|arroz/,'Cereales sin grasa'],[/verdura/,'Verduras'],[/fruta/,'Frutas'],[/leguminosa|frijol|lenteja/,'Leguminosas'],[/leche.*entera/,'Leche entera'],[/leche.*semi/,'Leche semidescremada'],[/leche|lacteo|yogur/,'Leche descremada'],[/grasa.*prote/,'Grasas con proteína'],[/grasa|aceite|aguacate/,'Grasas sin proteína'],[/azucar.*grasa/,'Azúcares con grasa'],[/azucar/,'Azúcares sin grasa']];
+function parseEq(s){const o=[];String(s||'').replace(/½/g,'0.5').replace(/¼/g,'0.25').replace(/¾/g,'0.75').split(/[,;+\n]|\sy\s/).forEach(part=>{const t=nrm2(part).trim();if(!t)return;
+  const m=t.match(/^(\d+(?:[.,]\d+)?|\.\d+)\s*/),n=m?parseFloat(m[1].replace(',','.')):1,rest=m?t.slice(m[0].length):t,r=EQR.find(x=>x[0].test(rest));if(r&&n>0)o.push({k:'G|'+r[1],n})});return o}
+/* ---- Datos del tiempo de comida ---- */
+const rowsOf=(c,m)=>(c.dieta||[]).map((d,i)=>({d,i,f:foodOf(d.k)})).filter(x=>x.f&&x.d.t===m);
+const mealK=(c,m)=>rowsOf(c,m).reduce((s,x)=>s+x.f.kcal*(+x.d.n||0),0);
+const hrVal=(X,m)=>X.dm.hr[m]||X.pf.hr[m]||HR0[m];
+/* ---- Dibujo ---- */
+function tabsHTML(p){const cnt={dieta:(n=>n===1?'1 dieta':n+' dietas')((p.cons||[]).filter(hasDiet).length),menus:lib('menus').length+' en biblioteca',recetas:lib('recetas').length+' guardadas'};
+ return `<div class="dtabs">${DTABS.map(([id,n,e,a,b])=>`<button class="dtab${DS.tab===id?' on':''}" data-act="tab" data-id="${id}" style="--a:${a};--b:${b}"><span class="de">${e}</span><span>${n}</span><small>${cnt[id]}</small></button>`).join('')}</div>`}
+function kbox(p,c){const t=planT(c),mt=metaOf(c,en(c,p)),k=t.kcal;
+ if(!DS.kb)return `<button class="ddkbm" data-act="kbopen" title="Ver calorías">🔥 ${fx(k,0)} cal</button>`;
+ const R=26,C=2*Math.PI*R,parts=k>0?[[4*t.hc/k,'#2563eb'],[9*t.l/k,'#d98a14'],[4*t.p/k,'#1f9d5a']]:[];let off=0;
+ const ring=`<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--bd)" stroke-width="9"/>${parts.map(([f,col])=>{const len=Math.max(0,f)*C,s=`<circle cx="32" cy="32" r="${R}" fill="none" stroke="${col}" stroke-width="9" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 32 32)"/>`;off+=len;return s}).join('')}</svg>`;
+ return `<button class="ddx" data-act="kbclose" aria-label="Minimizar">⊗</button>${ring}<div><div class="cal">${fx(k,0)} cal</div><div class="sub">Meta ${fx(mt.k,0)} · ${pill(mt.k?k/mt.k*100:null)}</div>
+ <div class="sub"><i style="background:#2563eb"></i>HC ${fx(t.hc,0)} g <i style="background:#d98a14"></i>L ${fx(t.l,0)} g <i style="background:#1f9d5a"></i>P ${fx(t.p,0)} g</div></div>`}
+function homeH(p,c){const X=ctx(p,c),cs=csort(p).reverse(),K=X.mt.k,rg=DS.rg??Math.max(1200,Math.min(2900,Math.floor(K/100)*100)),lc=lastC(p);
+ const dd=cs.filter(hasDiet),eg=X.e,imc=imcOf(c),sx=X.mt.hc+X.mt.l+X.mt.p;
+ const row=(l,v)=>`<tr><td style="width:190px;color:var(--mut)">${l}<td>${v||'<span class="note" style="margin:0">Sin dato</span>'}`;
+ const rcl=X.F.rc?X.F.rc.list.slice(0,8).map(r=>`<span class="ach" style="background:${RCOL[r.a]};color:#fff;border-radius:99px;padding:1px 9px;font-size:12px;margin:2px;display:inline-block">${r.a}: ${esc(r.g)}</span>`).join(''):'';
+ return `<div class="card dsec dd" style="--a:#0891b2;--b:#2563eb"><div class="ddh"><h2>🍽️ Dietas automáticas</h2></div>
+ <p style="text-align:center;font-size:16px;margin:0 0 18px">Selecciona el rango de calorías para tu dieta</p>
+ <div class="ddgen"><label for="dd-rg" style="margin:0">Rango</label><select id="dd-rg">${RANGES.map(a=>`<option value="${a}"${a===rg?' selected':''}>${a} - ${a+100}</option>`).join('')}</select><button class="gen" data-act="gen">Generar</button></div>
+ <p class="note" style="text-align:center">${eg&&eg.tot?`Rango sugerido por la meta del paciente (${fx(K,0)} kcal, de su peso, talla y actividad).`:`Sin peso/talla en la consulta: se usa ${fx(K,0)} kcal como referencia. Captura las mediciones en <a href="#cons">Consulta</a>.`}${K>=3000||K<1200?' La meta queda fuera de este rango: ajusta con criterio clínico.':''}</p>
+ ${X.F.minor?box('Paciente menor de edad: el requerimiento depende de edad y crecimiento. Valida las calorías (y evita dietas restrictivas) con el pediatra.',1):''}</div>
+ <div class="card"><h2>Se toma de la historia clínica y del registro del paciente</h2><div class="wrap"><table class="ddinfo"><tbody>
+ ${row('Paciente',esc(pn(p))+' · '+edTxt(edad(p.nac,c.fecha))+' · '+(p.sexo==='M'?'Hombre':'Mujer'))}
+ ${row('Consulta vinculada',`<select id="dd-cons" style="max-width:320px">${cs.map(x=>`<option value="${x.id}"${x.id===c.id?' selected':''}>${esc(x.fecha)}${x.peso?' · '+esc(x.peso)+' kg':''}${hasDiet(x)?' · con dieta':''}</option>`).join('')}</select>`)}
+ ${row('Medidas',num(c.peso)&&num(c.est)?`${esc(c.peso)} kg · ${esc(c.est)} cm · IMC ${fx(imc,1)}`:'')}
+ ${row('Gasto energético',eg&&eg.tot?`GET ${fx(eg.get,0)} kcal · con ETA ${fx(eg.tot,0)} kcal`:'')}
+ ${row('Patologías',esc(X.pf.pat.join(', ')))}
+ ${row('Alergias e intolerancias',esc([X.pf.alerg,X.pf.intol].filter(Boolean).join(' · ')))}
+ ${row('No le gusta / preferidos',esc([X.pf.nolike&&'No: '+X.pf.nolike,X.pf.like&&'Sí: '+X.pf.like].filter(Boolean).join(' · ')))}
+ ${row('Colaciones',MK.filter(m=>/Colación/.test(m)).map(m=>`${LAB[m]}: ${isOff(X.dm,X.pf,m)?'quitada':'activa'}`).join(' · '))}
+ ${row('Recomendaciones de la historia',rcl)}
+ </tbody></table></div>
+ <div class="grid" style="margin-top:12px"><div style="grid-column:span 2"><label for="dd-ev">Alimentos a evitar en la propuesta (editable)</label><textarea id="dd-ev" placeholder="Ej. camarón, nuez, lactosa">${esc(X.ev)}</textarea></div>
+ <div><label>Reparto de energía de la meta (% HC · lípidos · proteínas)</label><div class="gap"><input id="dd-hc" type="number" min="0" max="100" value="${X.mt.hc}" style="width:70px" aria-label="Hidratos %"><input id="dd-l" type="number" min="0" max="100" value="${X.mt.l}" style="width:70px" aria-label="Lípidos %"><input id="dd-p" type="number" min="0" max="100" value="${X.mt.p}" style="width:70px" aria-label="Proteínas %"><span id="dd-sum" class="note" style="margin:0">${sx===100?'= 100 %':'Suma '+sx+' %'}</span></div></div></div>
+ <p class="note">Edita la historia clínica en <a href="#hc">Historia clínica</a> o los datos en <a href="#pac">Pacientes</a>: la propuesta siempre lee lo más reciente. Es una propuesta de apoyo; revísala y ajústala con tu criterio.</p></div>
+ <div class="card"><h2>Dietas de ${esc(p.nombre)}</h2><div class="wrap"><table><tr><th>Dieta<th>Consulta<th class="n">Rango<th class="n">Plan (kcal)<th class="n">% de adecuación<th></tr>
+ ${dd.map(x=>{const t=planT(x),m=metaOf(x,en(x,p)),d=dmOf(x);return `<tr><td><b>${esc(d.nombre||'Plan de la consulta')}</b><td>${fd(x.fecha)}<td class="n">${d.rango?d.rango[0]+'–'+d.rango[1]:'—'}<td class="n">${fx(t.kcal,0)}<td class="n">${pill(m.k?t.kcal/m.k*100:null)}<td class="n"><button class="s pr" data-act="open" data-id="${x.id}">Abrir</button> <button class="s d" data-act="delplan" data-id="${x.id}">✕</button>`}).join('')||'<tr><td colspan="6">Aún no hay dietas. Elige un rango y presiona Generar.'}</table></div><p class="note">Adecuación: ${adqLegend()}</p></div>`}
+function foodListHTML(X){const q=nrm2(DS.fq),L=FOODS.filter(f=>(!DS.fg||f.g===DS.fg)&&nrm2(f.n+' '+f.g).includes(q)).slice(0,40);
+ return L.map(f=>`<tr><td>${esc(f.n)} <small style="color:var(--mut)">(${esc(f.po)})</small>${X.avoid(f)?' <span class="pill" style="background:var(--bad)">⚠ evitar</span>':''}<td><small>${esc(f.g)}</small><td class="n">${fx(f.kcal,0)}<td class="n"><button class="s pr" data-act="fadd" data-id="${esc(f.id)}" aria-label="Agregar ${esc(f.n)}">＋</button>`).join('')||'<tr><td colspan="4">Sin resultados.'}
+function recListHTML(){const q=nrm2(DS.rq),L=lib('recetas').filter(r=>nrm2(r.nombre+' '+(r.cat||'')+' '+(r.ing||'')).includes(q));
+ return L.map(r=>`<tr><td><b>${esc(r.nombre)}</b><div class="note" style="margin:0">${esc(r.cat)||'—'}${r.kcal!=null?' · '+fx(r.kcal,0)+' kcal/porción':''}${r.eq?' · Eq: '+esc(r.eq):' · sin equivalentes'}</div><td class="n"><button class="s pr" data-act="radd" data-id="${r.id}">Agregar</button>`).join('')||`<tr><td colspan="2">${lib('recetas').length?'Sin resultados.':'Aún no hay recetas. Créalas en la pestaña Recetas.'}`}
+function panelHTML(p,c,X,m){const dm=X.dm;
+ if(DS.pan==='tags'){const tg=dm.tag[m]||[];return `<div class="ddpan"><label for="dd-tagin">Hashtags de ${LAB[m]}</label><input id="dd-tagin" placeholder="Escribe un hashtag y presiona Enter"><div style="margin-top:8px">${tg.map((t,i)=>`<span class="chip on">${esc(t)} <a href="#" data-act="tagrm" data-id="${i}" style="color:#fff;text-decoration:none" aria-label="Quitar">✕</a></span>`).join('')||'<span class="note">Sin hashtags.</span>'}</div>
+  <p class="note" style="margin:8px 0 2px">Sugeridos por la historia clínica:</p>${tagSug(p,X).filter(t=>!tg.includes(t)).map(t=>`<span class="chip" data-act="tagsug" data-id="${esc(t)}">${esc(t)}</span>`).join('')}</div>`}
+ if(DS.pan==='foods')return `<div class="ddpan"><div class="gap"><input id="dd-fq" type="search" placeholder="Buscar alimento…" value="${esc(DS.fq)}" style="flex:1;min-width:180px"><select id="dd-fg" style="max-width:240px"><option value="">Todos los grupos</option>${GK.map(g=>`<option${g===DS.fg?' selected':''}>${esc(g)}</option>`).join('')}</select></div><div class="wrap" style="max-height:300px;overflow:auto"><table id="ddfl">${foodListHTML(X)}</table></div></div>`;
+ if(DS.pan==='recs')return `<div class="ddpan"><input id="dd-rq" type="search" placeholder="Buscar receta o ingrediente…" value="${esc(DS.rq)}"><div class="wrap" style="max-height:300px;overflow:auto;margin-top:8px"><table id="ddrl">${recListHTML()}</table></div></div>`;
+ if(DS.pan==='time')return `<div class="ddpan"><div class="wrap"><table><tr><th>Tiempo<th>Incluir<th>Hora</tr>${MK.map(x=>`<tr><td>${EMO[x]} ${LAB[x]}<td>${/Colación/.test(x)?`<input type="checkbox" data-on="${esc(x)}" ${isOff(dm,X.pf,x)?'':'checked'} style="width:auto" aria-label="Incluir ${LAB[x]}">`:'Siempre'}<td><input type="time" data-hr="${esc(x)}" value="${esc(hrVal(X,x))}" style="width:auto"></tr>`).join('')}</table></div><p class="note">Las colaciones y las horas se toman de la historia clínica (recordatorio de 24 h) cuando existen.</p></div>`;
+ return ''}
+function editH(p,c){const X=ctx(p,c),dm=X.dm;if(!X.act.includes(DS.meal))DS.meal=X.act[0];const m=DS.meal,rows=rowsOf(c,m),tg=mergeSmall((dm.tg||{})[m]||{}),mk=mealK(c,m);
+ const tabs=X.act.map(x=>`<button class="ddtab${x===m?' on':''}" data-act="meal" data-id="${esc(x)}">${EMO[x]} ${LAB[x]}${mealK(c,x)?` <small>${fx(mealK(c,x),0)} cal</small>`:''}</button>`).join('');
+ const act=`<div class="ddcards"><button class="ddcard" data-act="genmeal"><span style="font-size:30px">🪄</span><div><b>Generación automática</b><span>Crea automáticamente una propuesta equilibrada para <b>${LAB[m]}</b>${Object.keys(tg).length?'':' (usa la meta de la consulta)'}.</span></div></button>
+ <button class="ddcard" data-act="catalog"><span style="font-size:30px">📂</span><div><b>Cargar de mi catálogo</b><span>Reutiliza una configuración guardada para ahorrar tiempo.</span></div></button></div>`;
+ const tbl=rows.length?`<div class="wrap"><table><tr><th>Alimento<th>Grupo<th class="n">Eq<th class="n">kcal<th class="n">P (g)<th class="n">L (g)<th class="n">HC (g)<th></tr>${rows.map(({d,i,f})=>{const n=+d.n||0;return `<tr data-i="${i}"><td>${esc(f.n)} <small style="color:var(--mut)">(${esc(f.po)})</small>${X.avoid(f)?' <span class="pill" style="background:var(--bad)" title="Coincide con alergias/alimentos a evitar">⚠</span>':''}<td><small>${esc(f.g)}</small><td class="n"><input data-q="${i}" type="number" min="0" step="0.5" value="${esc(d.n)}" style="width:76px" aria-label="Equivalentes de ${esc(f.n)}"><td class="n kc">${fx(f.kcal*n,0)}<td class="n pp">${fx(f.p*n)}<td class="n ll">${fx(f.l*n)}<td class="n hh">${fx(f.hc*n)}<td><button class="s d" data-act="del" data-id="${i}" aria-label="Quitar">✕</button>`}).join('')}
+  <tr class="h"><td>Total de ${LAB[m]}<td><td class="n"><td class="n" id="ddtk">${fx(mk,0)}<td class="n" colspan="4"></tr></table></div>
+  <div class="gap" style="margin-top:8px"><button class="s g" data-act="genmeal">🪄 Regenerar este tiempo</button><button class="s g" data-act="catalog">📂 Mi catálogo</button></div>`:act;
+ const eqc=Object.keys(tg).length?`<p class="note" style="margin:8px 0">Equivalentes objetivo del tiempo: ${Object.keys(tg).map(g=>{const real=rows.filter(x=>x.f.g===g).reduce((s,x)=>s+(+x.d.n||0),0),ok=real>=tg[g]-.01;return `<span class="pill" style="background:${ok?'var(--ok)':'var(--warn)'}">${esc(g)} ${qn(real)}/${qn(tg[g])}</span>`}).join(' ')}</p>`:'';
+ const rcs=(dm.rec[m]||[]).map((r,i)=>`<span class="chip on">👩‍🍳 ${esc(r.name)} ×${qn(r.por)} <a href="#" data-act="rrm" data-id="${i}" style="color:#fff;text-decoration:none" aria-label="Quitar receta">✕</a></span>`).join(' ');
+ const nota=dm.nota[m]?`<div class="msg" style="margin:8px 0">📝 <b>Menú de la biblioteca</b> <a href="#" data-act="notarm">quitar</a><br>${esc(dm.nota[m]).replace(/\n/g,'<br>')}</div>`:'';
+ const hs=(dm.tag[m]||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+ const foot=[['tags','#','Hashtags'],['foods','🍎','Alimentos'],['recs','🍴','Recetas'],['time','🕐','Tiempo de comida']].map(([id,e,l])=>`<button class="${DS.pan===id?'on':''}" data-act="pan" data-id="${id}"><span>${e} ${l}</span><span>${DS.pan===id?'⌄':'›'}</span></button>`).join('');
+ const rg=dm.rango?`${dm.rango[0]}–${dm.rango[1]} kcal`:'';
+ return `<div class="card dsec dd" style="--a:#0891b2;--b:#2563eb"><div class="gap" style="margin-bottom:10px"><button class="s g" data-act="back">← Dietas</button><span class="note" style="margin:0;flex:1">${rg?'Rango '+rg+' · ':''}Meta ${fx(X.mt.k,0)} kcal · ${esc(pn(p))}</span><button class="s pr" data-act="genday">✨ Generar todo el día</button></div>
+ <input class="ddname" id="dd-name" value="${esc(dm.nombre||'Dieta')}" aria-label="Nombre de la dieta">
+ <div class="ddtabs" id="ddtabs">${tabs}</div>
+ <div class="ddbar"><span style="font-size:20px">${EMO[m]}</span><b>${LAB[m]}</b><input type="time" id="dd-hr" value="${esc(hrVal(X,m))}" aria-label="Hora de ${LAB[m]}"><span style="position:relative"><button class="s g" data-act="menu" aria-label="Más opciones">☰</button>${DS.menu?`<div class="ddpop"><button data-act="genday">✨ Generar todo el día</button><button data-act="savecat">💾 Guardar este tiempo en mi catálogo</button><button data-act="clrmeal">🧹 Limpiar este tiempo</button></div>`:''}</span></div>
+ ${tbl}${eqc}${rcs?`<p>${rcs}</p>`:''}${nota}
+ <div class="gap" style="margin-top:12px"><textarea id="dd-tip" rows="2" placeholder="Tip para ${LAB[m]}" style="flex:1;min-width:220px;font-style:italic">${esc(dm.tip[m]||'')}</textarea><button class="s g" data-act="tip" title="Sugerir un tip según la historia clínica">💡 Sugerir</button></div>
+ ${hs?`<p style="margin:8px 0">${hs}</p>`:''}
+ <div class="ddfoot">${foot}</div>${panelHTML(p,c,X,m)}</div>`}
+function catalogModal(p,c,X){const m=DS.meal,L=catLib().filter(x=>!DS.mq||nrm2(x.nombre).includes(nrm2(DS.mq))),Mn=lib('menus').filter(x=>x.comidas&&x.comidas[m]);
+ return `<div class="ddmod" data-act="mclose"><div class="ddmb" role="dialog" aria-label="Mi catálogo"><div class="gap"><h2 style="margin:0;flex:1">📂 Mi catálogo · ${LAB[m]}</h2><button class="s g" data-act="mclose">Cerrar</button></div>
+ <input id="dd-mq" type="search" placeholder="Buscar…" value="${esc(DS.mq)}" style="margin:10px 0"><div class="wrap"><table>${L.map(x=>`<tr><td><b>${esc(x.nombre)}</b><div class="note" style="margin:0">${esc(LAB[x.meal]||x.meal)} · ${fx(x.kcal,0)} kcal · ${x.items.length} alimentos</div><td class="n"><button class="s pr" data-act="catload" data-id="${x.id}">Cargar</button> <button class="s d" data-act="catdel" data-id="${x.id}" aria-label="Eliminar">✕</button>`).join('')||'<tr><td>Aún no guardas configuraciones. Usa ☰ → “Guardar este tiempo en mi catálogo”.'}</table></div>
+ ${Mn.length?`<h2 style="margin:14px 0 6px">Menús de tu biblioteca con ${LAB[m]}</h2><div class="wrap"><table>${Mn.map(x=>`<tr><td><b>${esc(x.nombre)}</b><div class="note" style="margin:0">${esc(x.comidas[m]).replace(/\n/g,' · ').slice(0,140)}</div><td class="n"><button class="s g" data-act="catnote" data-id="${x.id}">Usar como nota</button>`).join('')}</table></div>`:''}</div></div>`}
+function refresh(p,c){const k=$('#ddkb');if(k)k.innerHTML=kbox(p,c);const t=$('#ddtabs');
+ if(t)t.innerHTML=actOf(p,c).map(x=>`<button class="ddtab${x===DS.meal?' on':''}" data-act="meal" data-id="${esc(x)}">${EMO[x]} ${LAB[x]}${mealK(c,x)?` <small>${fx(mealK(c,x),0)} cal</small>`:''}</button>`).join('');
+ const tk=$('#ddtk');if(tk)tk.textContent=fx(mealK(c,DS.meal),0)}
+const _old=V.dietas;
+V.dietas={t:'Dietas dinámicas',
+ h(){const p=cur();if(!p)return noP;if(DS.tab!=='dieta')return _old.h();ensureC(p);const c=curC();DB.csel[p.id]=c.id;
+  if(DS.mode==='edit'&&!hasDiet(c))DS.mode='home';
+  const body=DS.mode==='edit'?editH(p,c):homeH(p,c);
+  return phead(p)+tabsHTML(p)+body+(DS.mode==='edit'?`<div class="ddkb${DS.kb?'':' mini'}" id="ddkb" data-p="1">${kbox(p,c)}</div>`:'')+(DS.mode==='edit'?'<div style="height:120px"></div>':'')+(DS.modal==='cat'?catalogModal(p,c,ctx(p,c)):'')},
+ i(){const p=cur();if(!p)return;if(DS.tab!=='dieta')return _old.i();const c=curC(),v=$('#view');
+  const redo=()=>{save();render()};
+  const focusId=id=>setTimeout(()=>{const e=$(id);e&&e.focus()},0);
+  v.oninput=e=>{const t=e.target,dm=dmOf(c),X=()=>ctx(p,c);
+   if(t.id==='dd-name'){dm.nombre=t.value;save()}
+   else if(t.id==='dd-tip'){dm.tip[DS.meal]=t.value;save()}
+   else if(t.id==='dd-ev'){dm.ev=t.value;save()}
+   else if(t.id==='dd-hc'||t.id==='dd-l'||t.id==='dd-p'){c.meta=c.meta||{};c.meta[t.id==='dd-hc'?'hc':t.id==='dd-l'?'l':'p']=num(t.value);save();const s=(+$('#dd-hc').value||0)+(+$('#dd-l').value||0)+(+$('#dd-p').value||0);$('#dd-sum').textContent=s===100?'= 100 %':'Suma '+s+' %'}
+   else if(t.id==='dd-fq'){DS.fq=t.value;$('#ddfl').innerHTML=foodListHTML(X())}
+   else if(t.id==='dd-rq'){DS.rq=t.value;$('#ddrl').innerHTML=recListHTML()}
+   else if(t.id==='dd-mq'){DS.mq=t.value;const keep=t.selectionStart;DS.modal='cat';render();const n=$('#dd-mq');n&&(n.focus(),n.setSelectionRange(keep,keep))}
+   else if(t.dataset.q!==undefined){const d=c.dieta[+t.dataset.q],f=d&&foodOf(d.k);if(!f)return;d.n=t.value;save();const r=t.closest('tr'),n=+d.n||0;
+    r.querySelector('.kc').textContent=fx(f.kcal*n,0);r.querySelector('.pp').textContent=fx(f.p*n);r.querySelector('.ll').textContent=fx(f.l*n);r.querySelector('.hh').textContent=fx(f.hc*n);refresh(p,c)}};
+  v.onchange=e=>{const t=e.target,dm=dmOf(c),X=()=>ctx(p,c);
+   if(t.id==='dd-rg'){DS.rg=+t.value}
+   else if(t.id==='dd-cons'){DB.csel[p.id]=t.value;save();render()}
+   else if(t.id==='dd-hr'){dm.hr[DS.meal]=t.value;save()}
+   else if(t.id==='dd-fg'){DS.fg=t.value;$('#ddfl').innerHTML=foodListHTML(X())}
+   else if(t.dataset.hr){dm.hr[t.dataset.hr]=t.value;save();if(t.dataset.hr===DS.meal){const h=$('#dd-hr');h&&(h.value=t.value)}}
+   else if(t.dataset.on){dm.off[t.dataset.on]=!t.checked;if(!t.checked)c.dieta=(c.dieta||[]).filter(d=>d.t!==t.dataset.on);if(DS.meal===t.dataset.on)DS.meal='Desayuno';redo()}};
+  const ti=$('#dd-tagin');if(ti)ti.onkeydown=e=>{if(e.key==='Enter'&&ti.value.trim()){e.preventDefault();const dm=dmOf(c);let h=ti.value.trim().replace(/\s+/g,'');if(!h.startsWith('#'))h='#'+h;(dm.tag[DS.meal]=dm.tag[DS.meal]||[]);if(!dm.tag[DS.meal].includes(h))dm.tag[DS.meal].push(h);save();render();focusId('#dd-tagin')}};
+  v.onclick=e=>{const b=e.target.closest('[data-act]'),X=ctx(p,c),dm=X.dm,a=b&&b.dataset.act,id=b&&b.dataset.id,m=DS.meal;
+   if(DS.menu&&!(b&&b.closest('.ddpop'))&&a!=='menu'){DS.menu=false;if(!b){render();return}}
+   if(!b)return;if(b.tagName==='A')e.preventDefault();
+   if(a==='mclose'){if(e.target.closest('.ddmb')&&!e.target.closest('button'))return;DS.modal=null;DS.mq=''}
+   else if(a==='tab'){DS.tab=id;DS.pan=null;DS.menu=false;DS.edit=null;DS.view=null;DS.pend=null;DS.q=''}
+   else if(a==='gen'){const rg=+$('#dd-rg').value||DS.rg||1500;DS.rg=rg;
+    if((c.dieta||[]).some(d=>foodOf(d.k))&&!confirm('Esta consulta ya tiene un plan de '+fx(planT(c).kcal,0)+' kcal. ¿Reemplazarlo por una dieta nueva?'))return;
+    dm.nombre='Dieta '+rnd5();dm.rango=[rg,rg+100];dm.fecha=today();c.meta=c.meta||{};c.meta.k=rg+50;
+    if(dm.ev===undefined)dm.ev=evDef(X.pf);MK.forEach(x=>{if(dm.off[x]===undefined&&/Colación/.test(x))dm.off[x]=!!X.pf.off[x];if(!dm.hr[x]&&X.pf.hr[x])dm.hr[x]=X.pf.hr[x]});
+    dm.tip={};dm.tag={};dm.nota={};dm.rec={};c.dieta=[];
+    const X2=ctx(p,c);dm.tg=targets(X2);DS.mode='edit';DS.meal=X2.act[0];DS.pan=null;DS.menu=false}
+   else if(a==='open'){DB.csel[p.id]=id;DS.mode='edit';DS.pan=null;DS.menu=false;const x=p.cons.find(q=>q.id===id);DS.meal=ctx(p,x).act[0]}
+   else if(a==='delplan'){if(!confirm('¿Quitar la dieta de esa consulta? Se vacía su plan de alimentos.'))return;const x=p.cons.find(q=>q.id===id);x.dieta=[];delete x.dm}
+   else if(a==='back'){DS.mode='home';DS.pan=null;DS.menu=false}
+   else if(a==='meal'){DS.meal=id;DS.menu=false}
+   else if(a==='menu'){DS.menu=!DS.menu}
+   else if(a==='genday'){if((c.dieta||[]).some(d=>foodOf(d.k))&&!confirm('Se reemplazarán todos los tiempos de comida. ¿Continuar?'))return;DS.menu=false;genDay(c,ctx(p,c));toast('Propuesta del día generada')}
+   else if(a==='genmeal'){if(!dm.tg)dm.tg=targets(X);const used=new Set(c.dieta.filter(d=>d.t!==m).map(d=>d.k));if(!genMeal(c,m,used,X))toast('No hay alimentos disponibles para este tiempo con las restricciones de la historia clínica')}
+   else if(a==='clrmeal'){c.dieta=c.dieta.filter(d=>d.t!==m);dm.rec[m]=[];DS.menu=false}
+   else if(a==='savecat'){const rows=rowsOf(c,m);DS.menu=false;if(!rows.length){toast('Este tiempo no tiene alimentos');render();return}
+    const nm=prompt('Nombre para guardar este tiempo en tu catálogo:',LAB[m]+' · '+fx(mealK(c,m),0)+' kcal');if(!nm){render();return}
+    catLib().push({id:uid(),nombre:nm.trim(),meal:m,kcal:mealK(c,m),items:rows.map(x=>({k:x.d.k,n:x.d.n}))});toast('Guardado en tu catálogo')}
+   else if(a==='catalog'){DS.modal='cat'}
+   else if(a==='catload'){const x=catLib().find(q=>q.id===id);if(!x)return;if(rowsOf(c,m).length&&!confirm('Este tiempo ya tiene alimentos. ¿Reemplazarlos?'))return;
+    c.dieta=c.dieta.filter(d=>d.t!==m).concat(x.items.filter(i=>foodOf(i.k)).map(i=>({k:i.k,n:i.n,t:m})));DS.modal=null}
+   else if(a==='catdel'){if(!confirm('¿Eliminar del catálogo?'))return;DB.cat=catLib().filter(q=>q.id!==id)}
+   else if(a==='catnote'){const x=lib('menus').find(q=>q.id===id);dm.nota[m]=x.comidas[m];DS.modal=null}
+   else if(a==='notarm'){delete dm.nota[m]}
+   else if(a==='pan'){DS.pan=DS.pan===id?null:id}
+   else if(a==='fadd'){const f=FOODS.find(x=>x.id===id);if(!f)return;if(X.avoid(f)&&!confirm('«'+f.n+'» coincide con las alergias o alimentos a evitar de la historia clínica. ¿Agregarlo de todos modos?'))return;
+    const it=c.dieta.find(d=>d.k===f.id&&d.t===m);if(it)it.n=(+it.n||0)+1;else c.dieta.push({k:f.id,n:1,t:m});save();toast('Agregado a '+LAB[m]);render();return}
+   else if(a==='radd'){const r=lib('recetas').find(x=>x.id===id);if(!r)return;const por=num(prompt('¿Cuántas porciones de «'+r.nombre+'»?','1'));if(!por||por<=0)return;
+    const eq=parseEq(r.eq).map(q=>({k:q.k,n:q.n*por}));eq.forEach(q=>{const it=c.dieta.find(d=>d.k===q.k&&d.t===m);if(it)it.n=(+it.n||0)+q.n;else c.dieta.push({k:q.k,n:q.n,t:m})});
+    (dm.rec[m]=dm.rec[m]||[]).push({id:r.id,name:r.nombre,por,eq});if(!eq.length)toast('La receta no tiene equivalentes: agrégalos en la pestaña Recetas para contar sus calorías');else toast('Receta agregada a '+LAB[m])}
+   else if(a==='rrm'){const r=(dm.rec[m]||[])[+id];if(r){r.eq.forEach(q=>{const it=c.dieta.find(d=>d.k===q.k&&d.t===m);if(it){it.n=(+it.n||0)-q.n;if(it.n<=0)c.dieta.splice(c.dieta.indexOf(it),1)}});dm.rec[m].splice(+id,1)}}
+   else if(a==='tagrm'){(dm.tag[m]||[]).splice(+id,1)}
+   else if(a==='tagsug'){(dm.tag[m]=dm.tag[m]||[]).push(id)}
+   else if(a==='tip'){dm.tip[m]=tipFor(p,X,m)}
+   else if(a==='del'){c.dieta.splice(+id,1)}
+   else if(a==='kbclose'){DS.kb=false}else if(a==='kbopen'){DS.kb=true}
+   else return;
+   save();render()}}};
+/* Mantén el contador de calorías visible y con estilo */
+const st=document.createElement('style');st.textContent=`
+.dd .ddh{text-align:center;margin:8px 0 22px}.dd .ddh h2{font-size:28px;margin:0}
+.ddgen{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}.ddgen select{width:auto;min-width:180px;font-size:15px}
+button.gen{background:#2e9e3f;color:#fff;font-weight:700;padding:9px 20px;border-radius:6px;font-size:15px}
+.ddname{display:block;margin:0 auto 16px;max-width:440px;width:100%;text-align:center;font-size:16px;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px}
+.ddtabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.ddtab{background:transparent;color:var(--pri2);border:0;border-radius:10px 10px 0 0;padding:10px 18px;font-size:15px;font-weight:600;display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+.ddtab.on{background:var(--bg);color:var(--tx);box-shadow:0 -2px 8px #0001}.ddtab small{font-weight:400;color:var(--mut)}
+.ddbar{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--bd);margin-bottom:14px}.ddbar b{flex:1;font-size:15px}.ddbar input[type=time]{width:auto;min-width:130px}
+.ddpop{position:absolute;right:0;top:110%;z-index:30;background:var(--card);border:1px solid var(--bd);border-radius:10px;box-shadow:0 8px 24px #0004;display:flex;flex-direction:column;min-width:270px;padding:4px}
+.ddpop button{background:transparent;color:var(--tx);text-align:left;border:0;padding:9px 12px;border-radius:8px}.ddpop button:hover{background:var(--bg)}
+.ddcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;margin:6px 0 12px}
+.ddcard{display:flex;gap:14px;align-items:flex-start;text-align:left;padding:24px;border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);box-shadow:0 2px 10px #0001;cursor:pointer}
+.ddcard:hover{border-color:var(--pri);transform:translateY(-1px)}.ddcard b{display:block;font-size:18px;margin-bottom:4px}.ddcard span{font-size:12.5px;color:var(--mut);display:block}
+.ddfoot{display:flex;gap:12px;flex-wrap:wrap;margin-top:70px}.ddfoot button{flex:1 1 170px;display:flex;justify-content:space-between;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;font-weight:600}
+.ddfoot button.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.ddpan{margin-top:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+.ddkb{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 18px 12px;box-shadow:0 10px 30px #0004;min-width:290px}
+.ddkb .cal{font-size:30px;font-weight:700;color:var(--ok);line-height:1.1}.ddkb .sub{font-size:12px;color:var(--mut)}.ddkb .sub i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 4px 0 6px}
+.ddkb .ddx{position:absolute;top:2px;right:6px;background:transparent;border:0;color:var(--mut);font-size:18px;padding:2px 6px}
+.ddkb.mini{min-width:0;padding:0;border:0;background:transparent;box-shadow:none}.ddkbm{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:99px;padding:10px 16px;font-weight:700;box-shadow:0 6px 18px #0004}
+body:has(#asst:not([hidden])) .ddkb{right:400px}.ddinfo td{white-space:normal}
+.ddmod{position:fixed;inset:0;background:#0007;z-index:90;display:grid;place-items:center;padding:16px}.ddmb{background:var(--card);border-radius:14px;padding:18px;max-width:640px;width:100%;max-height:86vh;overflow:auto}
+@media(max-width:700px){.ddkb{left:8px;right:8px;bottom:8px;min-width:0}body:has(#asst:not([hidden])) .ddkb{right:8px;bottom:auto;top:64px}.ddfoot{margin-top:40px}}
+@media print{.ddkb,.ddkbm{display:none!important}}`;
+document.head.appendChild(st);
+window.DD={solve,targets,genDay,genMeal,parseEq,mkAvoid};
+})();
+
 
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
