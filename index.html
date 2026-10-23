@@ -1504,26 +1504,27 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false;const open=(
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
   case 'bq':o.push(`<table class="gr"><colgroup><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:20.8%"></colgroup>${b.head?'<tr><th>Indicador</th><th>Valor normal</th><th class="c">Consulta 1º</th><th class="c">Consulta 2º</th><th class="c">Consulta 3º</th></tr>':''}${b.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td style="white-space:pre-line">${esc(r[1])}</td>${r.slice(2).map(cl).join('')}</tr>`).join('')}</table>`);break;
-  case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:38.7%"><col style="width:37.5%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos</th><th>Cantidad/ Preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.72:.52}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td><td style="white-space:pre-wrap">${esc(r[3])}</td></tr>`).join('')}</table>`);break;
+  case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:38.7%"><col style="width:37.5%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos</th><th>Cantidad/ Preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.62:.46}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td><td style="white-space:pre-wrap">${esc(r[3])}</td></tr>`).join('')}</table>`);break;
   case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');break}
   case 'firma':o.push(`<div class="fm"><span class="uv">${esc(S_(b.text))||'&nbsp;'.repeat(30)}</span></div><p style="text-align:right"><b>Nombre y firma de la nutrióloga</b></p>`);break;
  }});close();o.push('</section>');return o.join('')}
 const pst=document.createElement('style');
-pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:.5in .6in}
+pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:.4in .6in}
 @media print{body.paper-print{display:block!important;background:#fff!important}body.paper-print>*:not(#hcpaper){display:none!important}
-body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos,'Aptos Display',Calibri,Carlito,Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-#hcpaper p,#hcpaper h4{margin:0;padding:0;font-size:12pt;line-height:1.2}#hcpaper p{margin-bottom:.03in}
-#hcpaper h4{font-weight:700;font-size:12.5pt;border-bottom:1.25pt solid #000;padding-bottom:1pt;margin-bottom:.04in}
-#hcpaper .pgp{display:flex;flex-direction:column;justify-content:space-between;min-height:9.7in;break-after:page}#hcpaper .pgp:last-child{break-after:auto}#hcpaper .pgp>*{flex:none}
+body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos,'Aptos Display',Calibri,Carlito,Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;width:100%;max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
+#hcpaper .pgp:nth-child(1){font-size:13pt}#hcpaper .pgp:nth-child(2){font-size:11.5pt}#hcpaper .pgp:nth-child(3){font-size:12pt}
+#hcpaper p,#hcpaper h4{margin:0;padding:0;font-size:inherit;line-height:1.2}#hcpaper p{margin-bottom:.03in}
+#hcpaper h4{font-weight:700;font-size:1.04em;border-bottom:1.25pt solid #000;padding-bottom:1pt;margin-bottom:.04in}
+#hcpaper .pgp{display:flex;flex-direction:column;justify-content:space-between;min-height:9.9in;break-after:page}#hcpaper .pgp:last-child{break-after:auto}#hcpaper .pgp>*{flex:none}
 #hcpaper .sc{break-inside:avoid}#hcpaper .pgp:nth-child(2) h4{margin-top:0}
-#hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:1.2pt 5px;font-size:12pt;text-align:left;vertical-align:top;font-weight:400;line-height:1.2;border:0}
-#hcpaper .hdw{padding-bottom:3pt;border-bottom:1.5pt solid #000}
+#hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:1.2pt 5px;font-size:inherit;text-align:left;vertical-align:top;font-weight:400;line-height:1.2;border:0}
+#hcpaper .hdw{font-size:12pt;padding-bottom:3pt;border-bottom:1.5pt solid #000}
 #hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.6in;width:auto;max-width:3.5in;display:block}
 #hcpaper .ht{text-align:center;font-weight:700;font-size:18pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt}
 #hcpaper .hm2{text-align:right;font-size:12pt;line-height:1.2}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
 #hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
 #hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}#hcpaper .hf td,#hcpaper .hf th{vertical-align:middle}
-#hcpaper .gr th,#hcpaper .gr td{border:1px solid #000;padding:.6pt 5px;font-size:11.5pt;line-height:1.15}#hcpaper .red{color:#c00000;font-weight:700}
+#hcpaper .gr th,#hcpaper .gr td{border:1px solid #000;padding:.3pt 5px;font-size:.96em;line-height:1.15}#hcpaper .red{color:#c00000;font-weight:700}
 #hcpaper .uv{text-decoration:underline;text-underline-offset:2px}#hcpaper .ub{display:inline-block;border-bottom:1px solid #000;height:1em}
 #hcpaper .op{white-space:nowrap;margin-right:.28em}
 #hcpaper .bx{display:inline-block;position:relative;box-sizing:border-box;width:.92em;height:.92em;border:1.1pt solid #000;vertical-align:-.12em}
