@@ -1397,7 +1397,7 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  const opts=(arr,cur)=>arr.map(x=>O(cur===x,x)),chk=(arr,pre)=>arr.map(([k,l])=>O(I[pre+'.'+k],l));
  const norm=a=>a.reduce((o,x)=>{if(Array.isArray(x)&&typeof x[0]==='string')o.push(x);else if(Array.isArray(x))o.push(...norm(x));return o},[]),L=(...parts)=>B.push({t:'p',parts:norm(parts)}),H=text=>B.push({t:'h',text});
  /* ===== HOJA 1 ===== */
- const HD=()=>B.push({t:'hdr',fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD();
+ const HD=m=>B.push({t:'hdr',meta:!!m,fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD(1);
  H('Ficha de Identificación');
  L(lb('Nombre:',pn(p),22),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',12),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9));
  L(lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),16));
@@ -1474,7 +1474,7 @@ function hdrX(b){const cell=(w,inner)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="
  lbl=(l,v)=>FR(l+' ')+(S_(v)?FR(S_(v),{u:1}):FR(NB.repeat(14),{u:1}));
  return `<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr>`+
   cell(5040,FP(imgRun('l1',.6)))+cell(5040,FP(imgRun('r1',.6),{al:'right'}))+'</w:tr></w:tbl>'+
-  FP(FR('Historia Clínica',{b:1,sz:36}),{al:'center',bf:80})+FP(lbl('Fecha:',b&&b.fecha)+FR('      ')+lbl('N.º de expediente:',b&&b.exp),{al:'right',bf:60,bb:1})+TINY}
+  FP(FR('Historia Clínica',{b:1,sz:36}),{al:'center',bf:80,bb:!(b&&b.meta)})+(b&&b.meta?FP(lbl('Fecha:',b.fecha)+FR('      ')+lbl('N.º de expediente:',b.exp),{al:'right',bf:60,bb:1}):'')+TINY}
 function paperDocx(p){const o=[];
  paperModel(p).forEach(b=>{switch(b.t){
   case 'hdr':o.push(hdrX(b));break;
@@ -1497,7 +1497,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false;const open=(
  cl=(x,i)=>x&&x.v!==undefined?`<td class="c${x.out?' red':''}">${esc(x.v)}</td>`:`<td class="c">${esc(x||'')}</td>`,
  im=(k)=>{const u=lgU(k);return u?`<img src="${u}" alt="">`:''};
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
-  case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">Historia Clínica</div><div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div></div>`);break;
+  case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">Historia Clínica</div>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();o.push('</section><section class="pgp">');break;
   case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4>${esc(b.text)}</h4>`);break;
