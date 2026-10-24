@@ -590,7 +590,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
  <p><button id="bsave">Guardar paciente</button> <button class="g" id="bcancel">Cancelar</button></p>`}</div>
  <div class="card wrap"><table><tr><th>Paciente<th>Edad<th>Sexo<th>Patologías<th class="n">Consultas<th></tr>
  ${DB.p.map(x=>`<tr><td>${avHTML(x,32)} ${esc(pn(x))}<td>${edTxt(edad(x.nac))}<td>${x.sexo==='M'?'Hombre':'Mujer'}<td>${esc((x.pat||[]).join(', '))||'—'}<td class="n">${(x.cons||[]).length}
- <td class="n"><button class="s g" data-a="hist" data-id="${x.id}">Historia</button> <button class="s g" data-a="sel" data-id="${x.id}">Consulta</button> <button class="s g" data-a="ed" data-id="${x.id}">Editar</button> <button class="s d" data-a="del" data-id="${x.id}">Borrar</button>`).join('')||'<tr><td colspan=6>Aún no hay pacientes.'}</table></div>`},
+ <td class="n"><button class="s g" data-a="hist" data-id="${x.id}">Historia</button> <button class="s g" data-a="sel" data-id="${x.id}">Consulta</button> <button class="s g" data-a="ed" data-id="${x.id}">Editar</button> <button class="s g" data-a="arch" data-id="${x.id}" title="Descargar expediente completo">Expediente</button> <button class="s d" data-a="del" data-id="${x.id}">Borrar</button>`).join('')||'<tr><td colspan=6>Aún no hay pacientes.'}</table></div>`},
  i(){const draw=()=>{const c=$('#chips');if(!c)return;c.innerHTML=[...new Set([...PAT,...chips])].map(x=>`<span class="chip${chips.includes(x)?' on':''}" data-c="${esc(x)}">${esc(x)}</span>`).join('')};
   draw();const go=()=>{$('#view').innerHTML=V.pac.h();V.pac.i()};
   $('#bnew')&&($('#bnew').onclick=()=>{editId='';chips=[];go()});
@@ -607,7 +607,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
    if(b.dataset.a==='ed'){editId=id;chips=[...(DB.p.find(x=>x.id===id).pat||[])];go()}
    if(b.dataset.a==='sel'){HS.draft=null;DB.sel=id;save();location.hash='cons'}
    if(b.dataset.a==='hist'){HS.draft=null;DB.sel=id;save();location.hash='hc'}
-   if(b.dataset.a==='del'&&confirm('¿Borrar este paciente y todas sus consultas?')){DB.p=DB.p.filter(x=>x.id!==id);if(DB.sel===id)DB.sel=null;save();fillSel();go()}}}};
+   if(b.dataset.a==='arch')archPat(id);else if(b.dataset.a==='del')delPat(id)}}};
 
 /* ---------- CONSULTA: historial + energía + pediatría + composición + plan ---------- */
 const dietRow=(d,i)=>{const f=foodOf(d.k);if(!f||d.t===UND)return'';const n=+d.n||0;
@@ -910,7 +910,7 @@ function modView(key){const M=MODS[key];return{t:M.t,
  i(){const p=cur();if(!p&&!M.newp)return;
   $('#view').onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,id=b.dataset.id;
    if(x==='new')MF={key,id:''};else if(x==='newpat')MF={key,id:'',np:1};else if(x==='edit')MF={key,id};else if(x==='cancel')MF=null;
-   else if(x==='del'){if(!confirm('¿Eliminar este registro?'))return;p.mod[key]=p.mod[key].filter(r=>r.id!==id);if(key==='notas'&&DB.ag)DB.ag=DB.ag.filter(a=>!(a.nid===id&&a.auto)&&!(a.src===id&&a.estado==='Pendiente'));save()}
+   else if(x==='del'){if(!confirm(key==='notas'?'Esta nota quedaría eliminada para siempre (las notas se conservan mientras el paciente siga en tu lista). ¿Eliminar SOLO esta nota?':'¿Eliminar este registro?'))return;p.mod[key]=p.mod[key].filter(r=>r.id!==id);if(key==='notas'&&DB.ag)DB.ag=DB.ag.filter(a=>!(a.nid===id&&a.auto)&&!(a.src===id&&a.estado==='Pendiente'));save()}
    else if(x==='print'){NP=id;render();setTimeout(()=>window.print(),450);return}
    else if(x==='save'||x==='saveprint'){const rec={};M.f.forEach(f=>{const v=$('#mf-'+f[0]).value.trim();rec[f[0]]=f[2]==='num'?num(v):v});
     if(!rec.date)return toast('Captura la fecha');
@@ -2538,6 +2538,22 @@ V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),srt=(a,b)=>(a.date+
     if(AG.f.id)Object.assign(L().find(z=>z.id===AG.f.id),rec);else L().push({id:uid(),...rec});
     save();AG.f=null;toast('Cita guardada');render()}}}};
 agMigrate();
+
+/* ---------- E. EXPEDIENTE ARCHIVADO: historia clínica + notas se conservan hasta borrar al paciente ---------- */
+function patFile(p){return{app:'NutriClin',tipo:'expediente',fecha:new Date().toISOString(),modo:MODE,paciente:p,agenda:agOf(p)}}
+function patHTML(p){const NF=MODS.notas.f,kv=(k,v)=>`<tr><th style="text-align:left;vertical-align:top;width:34%">${esc(k)}<td style="white-space:pre-wrap">${esc(v)}`,tb=a=>`<table border="1" cellpadding="4" style="border-collapse:collapse;width:100%;margin-bottom:14px">${a.join('')}</table>`;
+ const H=p.hci||{},hc=Object.entries(H).filter(([k,v])=>v!==''&&v!==false&&v!=null).map(([k,v])=>kv(k,v===true?'Sí':v));let hcd=[];
+ try{getHC().secs.forEach(s=>s.f.forEach(f=>{const v=(p.hcd||{})[f.id];if(v!=null&&String(v).trim())hcd.push(kv(f.l,v))}))}catch(e){}
+ const N=pNotes(p).reverse().map(r=>`<h3>Nota del ${fd(r.date)} ${esc(r.hora||'')}</h3>`+tb(NF.filter(f=>r[f[0]]!==''&&r[f[0]]!=null).map(f=>kv(f[1],r[f[0]]))));
+ const C=csort(p).map(c=>kv(fd(c.fecha),`Peso ${c.peso||'—'} kg · Est. ${c.est||'—'} cm · Cintura ${c.cin||'—'} · Abdominal ${c.abd||'—'} · % grasa ${c.graso||'—'}`));
+ return `<!doctype html><html lang="es"><meta charset="utf-8"><title>Expediente ${esc(pn(p))}</title><body style="font:14px system-ui;max-width:900px;margin:20px auto;padding:0 12px"><h1>Expediente de ${esc(pn(p))}</h1><p>Exp. ${esc(pExp(p))||'—'} · Nac. ${fd(p.nac)} · ${p.sexo==='M'?'Hombre':'Mujer'} · Tel. ${esc(p.tel||'—')}<br>Generado ${new Date().toLocaleString('es-MX')}</p>
+ <h2>Historia clínica</h2>${tb(hcd.concat(hc))}<h2>Mediciones</h2>${tb(C)}<h2>Notas subsecuentes (${N.length})</h2>${N.join('')}</body></html>`}
+function archPat(id,quiet){const p=DB.p.find(x=>x.id===id);if(!p)return;const n=(pn(p)||'paciente').replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'-'),d=today();
+ dlBlob(`expediente-${n}-${d}.json`,new Blob([JSON.stringify(patFile(p))],{type:'application/json'}));
+ setTimeout(()=>dlBlob(`expediente-${n}-${d}.html`,new Blob([patHTML(p)],{type:'text/html'})),400);if(!quiet)toast('Expediente descargado (.json para restaurar y .html para leer)')}
+function delPat(id){const p=DB.p.find(x=>x.id===id);if(!p)return;const nn=pNotes(p).length;
+ if(!confirm(`Vas a ELIMINAR a ${pn(p)}.\n\nSe borrará para siempre su historia clínica, ${nn} nota(s) subsecuente(s), sus consultas y sus citas.\n\nAntes se descargará una copia de su expediente. ¿Continuar?`))return;
+ archPat(id,true);DB.p=DB.p.filter(x=>x.id!==id);DB.ag=agList().filter(a=>a.pid!==id);if(DB.sel===id)DB.sel=null;save();fillSel();render();toast('Paciente eliminado · copia del expediente descargada')}
 
 paintBrand();fillSel();render();
 if(!sessionStorage.getItem('nc_ok'))showPicker();
