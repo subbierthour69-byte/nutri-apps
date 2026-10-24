@@ -1509,13 +1509,13 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false;const open=(
   case 'firma':o.push(`<div class="fm"><span class="uv">${esc(S_(b.text))||'&nbsp;'.repeat(30)}</span></div><p style="text-align:right"><b>Nombre y firma de la nutrióloga</b></p>`);break;
  }});close();o.push('</section>');return o.join('')}
 const pst=document.createElement('style');
-pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:.4in .6in}
+pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:0}
 @media print{body.paper-print{display:block!important;background:#fff!important}body.paper-print>*:not(#hcpaper){display:none!important}
 body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos,'Aptos Display',Calibri,Carlito,Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;width:100%;max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
 #hcpaper .pgp:nth-child(1){font-size:13pt}#hcpaper .pgp:nth-child(2){font-size:11.5pt}#hcpaper .pgp:nth-child(3){font-size:12pt}
 #hcpaper p,#hcpaper h4{margin:0;padding:0;font-size:inherit;line-height:1.2}#hcpaper p{margin-bottom:.03in}
 #hcpaper h4{font-weight:700;font-size:1.04em;border-bottom:1.25pt solid #000;padding-bottom:1pt;margin-bottom:.04in}
-#hcpaper .pgp{display:flex;flex-direction:column;justify-content:space-between;min-height:9.9in;break-after:page}#hcpaper .pgp:last-child{break-after:auto}#hcpaper .pgp>*{flex:none}
+#hcpaper .pgp{display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:.4in .6in;min-height:10.97in;break-after:page}#hcpaper .pgp:last-child{break-after:auto}#hcpaper .pgp>*{flex:none}
 #hcpaper .sc{break-inside:avoid}#hcpaper .pgp:nth-child(2) h4{margin-top:0}
 #hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:1.2pt 5px;font-size:inherit;text-align:left;vertical-align:top;font-weight:400;line-height:1.2;border:0}
 #hcpaper .hdw{font-size:12pt;padding-bottom:3pt;border-bottom:1.5pt solid #000}
