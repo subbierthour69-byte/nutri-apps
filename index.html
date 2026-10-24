@@ -1445,7 +1445,7 @@ V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
    · "Historial clínico (Word)": genera un .docx real (sin librerías) con datos generales,
      historia clínica, mediciones, consultas, planes y registros del expediente.
    ===================================================================== */
-const APP_VER='2.2';
+const APP_VER='2.3';
 (function(){
 /* ---------- PWA: service worker, instalación, estado de conexión ---------- */
 const PWA={sw:'none',ev:null,persist:null,reg:null};
@@ -1469,6 +1469,10 @@ async function refreshNow(){      // descarga la última versión del index y la
  try{const r=await fetch('index.html?v='+Date.now(),{cache:'reload'});if(!r.ok)throw 0;
   for(const k of(await caches.keys()).filter(k=>k.startsWith('nutriclin-'))){const c=await caches.open(k);await c.put('./index.html',r.clone())}
   toast('Versión actualizada: recargando…');setTimeout(()=>location.reload(),700)}catch{toast('No se pudo actualizar ahora')}}
+/* Al abrir la app con internet, compara la versión publicada con la guardada y, si cambió, se actualiza sola (una vez por sesión) */
+(async()=>{if(!navigator.onLine||!/^https?:$/.test(location.protocol)||sessionStorage.getItem('nc_autoupd'))return;
+ try{const r=await fetch('index.html?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text(),m=t.match(/const APP_VER='([^']+)'/);
+  if(m&&m[1]!==APP_VER){sessionStorage.setItem('nc_autoupd','1');sessionStorage.setItem('nc_skipw','1');refreshNow()}}catch{}})();
 const pwaCard=()=>{const ok=PWA.sw==='ok',p=cur();
  return `<div class="card"><h2>App sin internet · Word</h2>
  <p>Estado: ${ok?'<b style="color:var(--ok)">✔ lista para funcionar sin conexión</b>':PWA.sw==='pend'?'preparando archivos… recarga la página una vez':'<b style="color:var(--warn)">solo en línea: abre la página desde https:// (GitHub Pages) con internet una vez</b>'} · ${standalone()?'instalada como app':'abierta en el navegador'} · versión ${APP_VER}</p>
