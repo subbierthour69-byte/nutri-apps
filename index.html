@@ -282,8 +282,8 @@ setTheme(DB.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'li
 $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
-const NAV=[['Atención',[['hc','Historia clínica','list'],['pac','Pacientes','users'],['cons','Consulta','pulse'],['notas','Notas subsecuentes','repeat'],['agenda','Agenda','clock']]],['General',[['panel','Panel','panel']]],
- ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['smr','Calculadora R24 (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['dietas','Dietas dinámicas','diet'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
+const NAV=[['Atención',[['agenda','Agenda','clock'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['cons','Consulta','pulse'],['notas','Notas subsecuentes','repeat'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
+ ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['smr','Calculadora R24 (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
 $('#burger').innerHTML=ico('menu');
@@ -2399,7 +2399,7 @@ const CR=[['peso','Peso','kg',1],['talla','Talla','cm',1],['imc','IMC','kg/m²',
  ['glu','Glucosa','mg/dL',0],['hb','Hemoglobina','g/dL',1],['colt','Colesterol total','mg/dL',0],['hdl','HDL','mg/dL',0],['ldl','LDL','mg/dL',0],['tg','Triglicéridos','mg/dL',0],['urea','Urea','mg/dL',0],['cre','Creatinina','mg/dL',2]];
 const imcV=v=>v&&v.peso!=null&&v.talla?v.peso/((v.talla/100)**2):null;
 function asistHTML(p,date,editId,ref){const prev=ref&&ref.fecha||'';
- const c=agOf(p).filter(a=>!a.auto&&a.tipo!=='Primera vez'&&a.estado!=='Cancelada'&&a.src!==editId&&a.date<=date&&(a.date===date||!prev||a.date>prev)).sort((a,b)=>b.date.localeCompare(a.date)||(b.hora||'').localeCompare(a.hora||''))[0];
+ const c=agOf(p).filter(a=>!a.auto&&a.tipo!=='Primera vez'&&a.estado!=='Cancelada'&&a.estado!=='Reprogramada'&&a.src!==editId&&a.date<=date&&(a.date===date||!prev||a.date>prev)).sort((a,b)=>b.date.localeCompare(a.date)||(b.hora||'').localeCompare(a.hora||''))[0];
  const h=ref&&ref.kind==='primera'?'Segunda consulta · paciente de primera vez':'Asistencia a la cita',hr=c&&c.hora?' · '+esc(c.hora)+' hrs':'';let b;
  if(!c)b='Sin cita agendada después de la consulta anterior. Al guardar la nota se registra que <b>asistió hoy</b>. <a href="#agenda">Abrir agenda</a>';
  else if(c.estado==='Asistió')b=`✔ <b>Asistió</b> a su cita del ${fd(c.date)}${hr}.`;
@@ -2464,7 +2464,7 @@ function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fill
   cmpUpdate()}}
 
 /* ---------- D. AGENDA (ambos modos) ---------- */
-const AGE=['Pendiente','Asistió','No asistió','Cancelada'],AGC={'Pendiente':'var(--warn)','Asistió':'var(--ok)','No asistió':'var(--bad)','Cancelada':'var(--mut)'};
+const AGE=['Pendiente','Asistió','No asistió','Reprogramada','Cancelada'],AGC={'Pendiente':'var(--warn)','Asistió':'var(--ok)','No asistió':'var(--bad)','Reprogramada':'var(--pri2)','Cancelada':'var(--mut)'};
 const AG={v:'hoy',f:null,q:''};
 const agList=()=>(DB.ag=DB.ag||[]);
 const agOf=p=>agList().filter(a=>a.pid===p.id);
@@ -2483,49 +2483,68 @@ function agMigrate(){if(DB.agv)return;const L=agList();
 function agAfterNote(p,nid){const r=((p.mod||{}).notas||[]).find(x=>x.id===nid);if(!r||!r.date)return;const L=agList();agLink(p);
  let a=L.find(x=>x.nid===nid&&x.auto);
  if(a){a.date=r.date;a.hora=r.hora||a.hora}
- else{a=L.find(x=>x.pid===p.id&&x.date===r.date&&x.tipo!=='Primera vez'&&x.estado!=='Cancelada'&&x.src!==nid);
+ else{a=L.find(x=>x.pid===p.id&&x.date===r.date&&x.tipo!=='Primera vez'&&x.estado!=='Cancelada'&&x.estado!=='Reprogramada'&&x.src!==nid);
   if(a){a.estado='Asistió';a.hora=a.hora||r.hora||''}else L.push({id:uid(),pid:p.id,date:r.date,hora:r.hora||'',tipo:'Subsecuente',estado:'Asistió',auto:1,nid})}
  const q=L.find(x=>x.src===nid);
  if(r.prox){if(q){q.date=r.prox;q.pid=p.id}else L.push({id:uid(),pid:p.id,date:r.prox,hora:'',tipo:'Subsecuente',estado:'Pendiente',src:nid})}
  else if(q&&q.estado==='Pendiente')DB.ag=L.filter(x=>x!==q)}
-V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),srt=(a,b)=>(a.date+(a.hora||'')).localeCompare(b.date+(b.hora||''));
- const hoy=L.filter(a=>a.date===t&&a.estado!=='Cancelada').sort(srt),pen=L.filter(a=>a.estado==='Pendiente'&&a.date<t).sort(srt).reverse(),
-  prox=L.filter(a=>a.estado==='Pendiente'&&a.date>=t).sort(srt),sem=prox.filter(a=>dayDiff(t,a.date)<=7).length,
-  sch=L.filter(a=>!a.auto&&a.tipo!=='Primera vez'&&(a.estado==='Asistió'||a.estado==='No asistió')),ok=sch.filter(a=>a.estado==='Asistió').length,q=_nz(AG.q);
- let rows=AG.v==='hoy'?hoy:AG.v==='prox'?prox:AG.v==='pen'?pen:L.slice().sort(srt).reverse();
- if(q)rows=rows.filter(a=>_nz(agName(a)+' '+agExp(a)).includes(q));
+V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),pad=n=>String(n).padStart(2,'0'),hs=(a,b)=>(a.hora||'99:99').localeCompare(b.hora||'99:99');
+ if(!AG.d)AG.d=t;if(!AG.m)AG.m=AG.d.slice(0,7);
+ const[Y,M]=AG.m.split('-').map(Number),start=(new Date(Y,M-1,1).getDay()+6)%7,dim=new Date(Y,M,0).getDate(),by={};
+ L.forEach(a=>{if(a.estado==='Reprogramada'||a.estado==='Cancelada')return;(by[a.date]=by[a.date]||[]).push(a)});
+ const cells=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>`<div class="ch">${d}</div>`).join('')+'<div></div>'.repeat(start)+
+  Array.from({length:dim},(_,i)=>{const iso=`${Y}-${pad(M)}-${pad(i+1)}`,it=by[iso]||[];
+   return`<div class="cd${iso===t?' td':''}${iso===AG.d?' sel':''}" data-day="${iso}" tabindex="0"><b>${i+1}</b>${it.length?`<small>${it.length} cita${it.length>1?'s':''}</small><span class="dots">${it.slice(0,6).map(a=>`<i style="background:${AGC[a.estado]}"></i>`).join('')}</span>`:''}</div>`}).join('');
+ const day=L.filter(a=>a.date===AG.d).sort(hs),pen=L.filter(a=>a.estado==='Pendiente'&&a.date<t).sort((a,b)=>a.date.localeCompare(b.date)),
+  prox=L.filter(a=>a.estado==='Pendiente'&&a.date>=t&&dayDiff(t,a.date)<=7).length,hoyN=(by[t]||[]).length,
+  sch=L.filter(a=>!a.auto&&a.tipo!=='Primera vez'&&(a.estado==='Asistió'||a.estado==='No asistió')),ok=sch.filter(a=>a.estado==='Asistió').length;
  const kp=(n,l,c)=>`<div class="card kpi" style="margin:0${c?';color:'+c:''}">${n}<small>${l}</small></div>`;
- const chip=(k,l)=>`<span class="chip${AG.v===k?' on':''}" data-v="${k}">${l}</span>`;
+ const lugares=[...new Set(L.map(a=>a.lugar).filter(Boolean))];
  const F=AG.f,r=F?(F.id?L.find(x=>x.id===F.id)||{}:F.def||{}):null;
- const form=F?`<div class="card"><h2>${F.id?'Editar':'Nueva'} cita</h2><div class="grid">
+ const form=F?`<div class="card" style="background:var(--bg)"><h2>${F.id?'Editar':'Nueva'} cita</h2><div class="grid">
   <div style="grid-column:span 2"><label for="ag-p">Paciente</label><select id="ag-p"><option value="">— Paciente nuevo / no registrado —</option>${DB.p.map(p=>`<option value="${p.id}"${r.pid===p.id?' selected':''}>${esc(pn(p))}${pExp(p)?' · '+esc(pExp(p)):''}</option>`).join('')}</select></div>
   <div class="agn" style="${r.pid?'display:none':''}"><label for="ag-nom">Nombre (si no está registrado)</label><input id="ag-nom" value="${esc(r.nom||'')}"></div>
   <div class="agn" style="${r.pid?'display:none':''}"><label for="ag-exp">N.º de expediente</label><input id="ag-exp" value="${esc(r.exp||'')}"></div>
-  <div><label for="ag-date">Fecha</label><input id="ag-date" type="date" value="${esc(r.date||'')}"></div><div><label for="ag-hora">Hora</label><input id="ag-hora" type="time" value="${esc(r.hora||'')}"></div>
+  <div><label for="ag-date">Fecha</label><input id="ag-date" type="date" value="${esc(r.date||AG.d)}"></div><div><label for="ag-hora">Hora</label><input id="ag-hora" type="time" value="${esc(r.hora||'')}"></div>
+  <div><label for="ag-lugar">Lugar</label><input id="ag-lugar" list="ag-lg" value="${esc(r.lugar!=null?r.lugar:(DB.agLugar||''))}" autocomplete="off"><datalist id="ag-lg">${lugares.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
   <div><label for="ag-tipo">Tipo de consulta</label><select id="ag-tipo">${['Primera vez','Subsecuente'].map(x=>`<option${x===(r.tipo||'Subsecuente')?' selected':''}>${x}</option>`).join('')}</select></div>
   <div><label for="ag-est">Estado</label><select id="ag-est">${AGE.map(x=>`<option${x===(r.estado||'Pendiente')?' selected':''}>${x}</option>`).join('')}</select></div>
   <div style="grid-column:1/-1"><label for="ag-n">Nota</label><input id="ag-n" value="${esc(r.nota||'')}"></div></div>
   <p><button data-a="save">Guardar cita</button> <button class="g" data-a="cancel">Cancelar</button></p></div>`:'';
- const tr=a=>{const p=agPat(a),ph=p&&String(p.tel||'').replace(/\D/g,'');
-  return`<tr><td>${fd(a.date)}<div class="note" style="margin:0">${wd(a.date)}</div><td>${esc(a.hora||'—')}<td><b>${esc(agName(a))}</b>${p?'':' <span class="note">(no registrado)</span>'}${agExp(a)?`<div class="note" style="margin:0">Exp. ${esc(agExp(a))}</div>`:''}<td>${a.tipo}<td><span class="pill" style="background:${AGC[a.estado]}">${a.estado}</span><td>${esc(a.nota||'')}
-  <td class="n">${a.estado==='Pendiente'?`<button class="s" data-a="ok" data-id="${a.id}">✔ Asistió</button> <button class="s d" data-a="no" data-id="${a.id}">✖ No asistió</button> `:''}<button class="s g" data-a="open" data-id="${a.id}">${a.tipo==='Primera vez'?'Historia clínica':'Nueva nota'}</button> ${a.estado==='Pendiente'&&ph?`<button class="s g" data-a="wa" data-id="${a.id}">WhatsApp</button> `:''}<button class="s g" data-a="edit" data-id="${a.id}">Editar</button> <button class="s d" data-a="del" data-id="${a.id}">✕</button>`};
- return `<div class="grid" style="margin-bottom:12px">${kp(hoy.length,'Citas de hoy')}${kp(sem,'Próximos 7 días')}${kp(pen.length,'Por confirmar (ya pasaron)',pen.length?'var(--warn)':'')}${kp(sch.length?Math.round(ok/sch.length*100)+' %':'—','Asistencia a citas agendadas')}</div>
-  ${form||`<p class="gap"><button data-a="new">＋ Nueva cita</button><input id="ag-q" placeholder="Buscar por nombre o expediente…" value="${esc(AG.q)}" style="max-width:280px"></p>`}
-  <div style="margin-bottom:8px">${chip('hoy','Hoy ('+hoy.length+')')}${chip('prox','Próximas ('+prox.length+')')}${chip('pen','Por confirmar ('+pen.length+')')}${chip('todas','Historial ('+L.length+')')}</div>
-  <div class="card wrap"><table><tr><th>Fecha<th>Hora<th>Paciente<th>Tipo<th>Estado<th>Nota<th></tr>${rows.map(tr).join('')||`<tr><td colspan="7">${AG.v==='hoy'?'No hay citas para hoy.':AG.v==='pen'?'Nada por confirmar. ✔':'Sin citas.'}`}</table></div>
-  <p class="note">La agenda se llena sola: al guardar una nota se registra la asistencia de ese día y su “próxima cita” queda agendada. Aquí puedes marcar si el paciente asistió o no. Los datos viven en este dispositivo y entran en el respaldo.</p>`},
- i(){const v=$('#view'),L=()=>agList();
-  v.oninput=e=>{if(e.target.id==='ag-q'){AG.q=e.target.value;const pos=e.target.selectionStart;render();const n=$('#ag-q');if(n){n.focus();n.setSelectionRange(pos,pos)}}};
-  v.onchange=e=>{if(e.target.id==='ag-p')v.querySelectorAll('.agn').forEach(d=>d.style.display=e.target.value?'none':'')};
-  v.onclick=e=>{const c=e.target.closest('.chip[data-v]');if(c){AG.v=c.dataset.v;render();return}
+ const RP=AG.rp&&L.find(x=>x.id===AG.rp);
+ const rpan=RP?`<div class="card" style="background:var(--bg)"><h2>Cambiar la cita de ${esc(agName(RP))}</h2><div class="grid"><div><label for="ag-rdate">Nueva fecha</label><input id="ag-rdate" type="date" value="${esc(RP.date)}"></div><div><label for="ag-rhora">Nueva hora</label><input id="ag-rhora" type="time" value="${esc(RP.hora||'')}"></div></div>
+  <p class="note">La cita original queda como “Reprogramada” y se crea la nueva cita pendiente.</p><p><button data-a="rpsave">Guardar cambio</button> <button class="g" data-a="cancel">Cancelar</button></p></div>`:'';
+ const row=a=>{const p=agPat(a),ph=p&&String(p.tel||'').replace(/\D/g,''),pend=a.estado==='Pendiente';
+  return`<tr><td><input type="time" data-hr="${a.id}" value="${esc(a.hora||'')}" aria-label="Hora" style="width:112px"><td><b>${esc(agName(a))}</b>${p?'':' <span class="note">(no registrado)</span>'}${agExp(a)?`<div class="note" style="margin:0">Exp. ${esc(agExp(a))}</div>`:''}<td>${a.tipo}<td>${esc(a.lugar||'—')}
+   <td><span class="pill" style="background:${AGC[a.estado]}">${a.estado}</span>${a.movedTo?`<div class="note" style="margin:0">→ ${fd(a.movedTo)}</div>`:''}<td>${esc(a.nota||'')}
+   <td class="n">${a.estado!=='Reprogramada'?`<button class="s" data-a="ok" data-id="${a.id}">✔ Asistió</button> <button class="s d" data-a="no" data-id="${a.id}">✖ No vino</button> <button class="s g" data-a="mv" data-id="${a.id}">🔁 Cambió</button> `:''}<button class="s g" data-a="open" data-id="${a.id}">${a.tipo==='Primera vez'?'Historia clínica':'Nueva nota'}</button> ${pend&&ph?`<button class="s g" data-a="wa" data-id="${a.id}">WhatsApp</button> `:''}<button class="s g" data-a="edit" data-id="${a.id}">Editar</button> <button class="s d" data-a="del" data-id="${a.id}">✕</button>`};
+ const mes=new Date(Y,M-1,1).toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+ return `<div class="grid" style="margin-bottom:12px">${kp(hoyN,'Citas de hoy')}${kp(prox,'Pendientes próx. 7 días')}${kp(pen.length,'Por confirmar (ya pasaron)',pen.length?'var(--warn)':'')}${kp(sch.length?Math.round(ok/sch.length*100)+' %':'—','Asistencia a citas agendadas')}</div>
+  <div class="card"><div class="gap" style="margin-bottom:10px"><button class="s g" data-nav="prev" aria-label="Mes anterior">‹</button><h2 style="margin:0;flex:1;text-align:center;text-transform:capitalize">${mes}</h2><button class="s g" data-nav="next" aria-label="Mes siguiente">›</button><button class="s" data-nav="today">Hoy</button></div><div class="cal">${cells}</div>
+   <p class="note">Toca un día para ver o añadir sus citas. Los puntos indican el estado: <span class="pill" style="background:var(--warn)">pendiente</span> <span class="pill" style="background:var(--ok)">asistió</span> <span class="pill" style="background:var(--bad)">no vino</span></p></div>
+  <div class="card"><div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1;text-transform:capitalize">${wd(AG.d)} ${fd(AG.d)}</h2>${F||RP?'':'<button data-a="new">＋ Añadir cita</button>'}</div>${form}${rpan}
+   <div class="wrap"><table><tr><th>Hora<th>Paciente<th>Tipo<th>Lugar<th>Estado<th>Nota<th></tr>${day.map(row).join('')||'<tr><td colspan="7">No hay citas este día.'}</table></div></div>
+  ${pen.length?`<div class="card"><h2>Por confirmar (${pen.length})</h2><p class="note" style="margin-top:0">Citas que ya pasaron y no marcaste si el paciente asistió. Toca una para ir a ese día.</p><div class="gap">${pen.slice(0,12).map(a=>`<button class="s g" data-day="${a.date}">${fd(a.date)} · ${esc(agName(a))}</button>`).join('')}</div></div>`:''}
+  <p class="note">La agenda se llena sola: al guardar una nota se registra la asistencia de ese día y su “próxima cita” queda agendada. Puedes cambiar la hora directamente en la lista. Los datos viven en este dispositivo y entran en el respaldo.</p>`},
+ i(){const v=$('#view'),L=()=>agList(),go=d=>{AG.d=d;AG.m=d.slice(0,7);AG.f=null;AG.rp=null;render()};
+  v.onchange=e=>{const t=e.target;if(t.id==='ag-p')v.querySelectorAll('.agn').forEach(d=>d.style.display=t.value?'none':'');
+   else if(t.dataset&&t.dataset.hr){const a=L().find(z=>z.id===t.dataset.hr);if(a){a.hora=t.value;save();toast('Hora actualizada');render()}}};
+  v.onkeydown=e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.day)e.target.click()};
+  v.onclick=e=>{const dd=e.target.closest('[data-day]');if(dd){go(dd.dataset.day);return}
+   const nv=e.target.closest('[data-nav]');if(nv){const[y,m]=AG.m.split('-').map(Number),k=nv.dataset.nav;
+    if(k==='today'){go(today());return}const n=new Date(y,m-1+(k==='next'?1:-1),1);AG.m=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');render();return}
    const b=e.target.closest('[data-a]');if(!b)return;const x=b.dataset.a,a=b.dataset.id&&L().find(z=>z.id===b.dataset.id);
-   if(x==='new'){const p=cur();AG.f={id:'',def:{date:today(),pid:p?p.id:'',tipo:p&&firstVisit(p)?'Subsecuente':'Primera vez',estado:'Pendiente'}};render()}
-   else if(x==='cancel'){AG.f=null;render()}
-   else if(x==='edit'){AG.f={id:a.id};render()}
+   if(x==='new'){const p=cur();AG.rp=null;AG.f={id:'',def:{date:AG.d,pid:p?p.id:'',tipo:p&&firstVisit(p)?'Subsecuente':'Primera vez',estado:'Pendiente'}};render()}
+   else if(x==='cancel'){AG.f=null;AG.rp=null;render()}
+   else if(x==='edit'){AG.rp=null;AG.f={id:a.id};render()}
+   else if(x==='mv'){AG.f=null;AG.rp=a.id;render()}
+   else if(x==='rpsave'){const o=L().find(z=>z.id===AG.rp),nd=$('#ag-rdate').value;if(!o||!nd)return toast('Captura la nueva fecha');
+    L().push({id:uid(),pid:o.pid,nom:o.nom,exp:o.exp,date:nd,hora:$('#ag-rhora').value,lugar:o.lugar,tipo:o.tipo,estado:'Pendiente',nota:o.nota,mv:o.id});
+    o.estado='Reprogramada';o.movedTo=nd;save();AG.rp=null;toast('Cita cambiada al '+fd(nd));render()}
    else if(x==='del'){if(confirm('¿Eliminar esta cita?')){DB.ag=L().filter(z=>z!==a);save();render()}}
    else if(x==='ok'||x==='no'){a.estado=x==='ok'?'Asistió':'No asistió';save();toast('Marcada: '+a.estado);render()}
    else if(x==='wa'){const p=agPat(a);if(!p)return;let n=String(p.tel||'').replace(/\D/g,'');if(n.length===10)n='52'+n;
-    window.open('https://wa.me/'+n+'?text='+encodeURIComponent(`Hola ${p.nombre}, le recordamos su cita de nutrición el ${fd(a.date)}${a.hora?' a las '+a.hora+' hrs':''}. ¡La esperamos!`),'_blank')}
+    window.open('https://wa.me/'+n+'?text='+encodeURIComponent(`Hola ${p.nombre}, le recordamos su cita de nutrición el ${fd(a.date)}${a.hora?' a las '+a.hora+' hrs':''}${a.lugar?' en '+a.lugar:''}. ¡La esperamos!`),'_blank')}
    else if(x==='open'){const p=agPat(a);
     if(a.tipo==='Primera vez'){if(p){DB.sel=p.id;HS.draft=null}else{DB.sel=null;const d=newDraft();d.nombre=a.nom||'';d.hci={exp:a.exp||''};HS.draft=d}save();fillSel();location.hash='hc';return}
     HS.draft=null;if(p){DB.sel=p.id;MF={key:'notas',id:''}}else{DB.sel=null;MF={key:'notas',id:'',np:1}}save();fillSel();
@@ -2534,9 +2553,16 @@ V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),srt=(a,b)=>(a.date+
    else if(x==='save'){let pid=$('#ag-p').value;const nom=$('#ag-nom').value.trim(),exp=$('#ag-exp').value.trim(),date=$('#ag-date').value;
     if(!date)return toast('Captura la fecha');if(!pid&&!nom)return toast('Elige un paciente o escribe un nombre');
     if(!pid){const m=findPats(exp||nom).find(h=>h.s>=95);if(m)pid=m.p.id}
-    const rec={pid,nom:pid?'':nom,exp:pid?'':exp,date,hora:$('#ag-hora').value,tipo:$('#ag-tipo').value,estado:$('#ag-est').value,nota:$('#ag-n').value.trim()};
+    const lugar=$('#ag-lugar').value.trim(),rec={pid,nom:pid?'':nom,exp:pid?'':exp,date,hora:$('#ag-hora').value,lugar,tipo:$('#ag-tipo').value,estado:$('#ag-est').value,nota:$('#ag-n').value.trim()};
+    if(lugar)DB.agLugar=lugar;
     if(AG.f.id)Object.assign(L().find(z=>z.id===AG.f.id),rec);else L().push({id:uid(),...rec});
-    save();AG.f=null;toast('Cita guardada');render()}}}};
+    AG.d=date;AG.m=date.slice(0,7);save();AG.f=null;toast('Cita guardada');render()}}}};
+{const st=document.createElement('style');st.textContent=`.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal .ch{font-size:11px;color:var(--mut);text-align:center;font-weight:600}
+.cd{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:64px;padding:5px 7px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);cursor:pointer;min-width:0}
+.cd:hover{border-color:var(--pri)}.cd.td{border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri)}.cd.sel{background:var(--grad);color:#fff;border-color:transparent}
+.cd small{font-size:10px;opacity:.9}.cd .dots{display:flex;gap:3px;flex-wrap:wrap}.cd .dots i{width:8px;height:8px;border-radius:50%;display:block;box-shadow:0 0 0 1px #fff9}
+@media(max-width:560px){.cd{min-height:46px;padding:3px 4px}.cd small{display:none}}`;document.head.appendChild(st)}
+
 agMigrate();
 
 /* ---------- E. EXPEDIENTE ARCHIVADO: historia clínica + notas se conservan hasta borrar al paciente ---------- */
