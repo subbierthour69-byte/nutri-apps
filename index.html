@@ -282,7 +282,7 @@ setTheme(DB.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'li
 $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
-const NAV=[['Atención',[['agenda','Agenda','clock'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['cons','Consulta','pulse'],['notas','Notas subsecuentes','repeat'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
+const NAV=[['Atención',[['agenda','Agenda','clock'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['notas','Notas subsecuentes','repeat'],['cons','Consulta','pulse'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
  ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['smr','Calculadora R24 (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
@@ -1345,7 +1345,7 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  sec('Nota de primera vez',`<textarea class="free" data-i="nota1" rows="4" placeholder="Escribe aquí…" aria-label="Nota de primera vez">${esc(I.nota1)}</textarea>`)+
  sec('Diagnóstico PES',`<textarea class="free" data-i="nota" rows="3" placeholder="Escribe aquí…" aria-label="Diagnóstico PES">${esc(I.nota)}</textarea>`)+
  sec('Plan nutricional de trabajo',`<textarea class="free" data-i="plan" rows="3" placeholder="Escribe aquí…" aria-label="Plan nutricional de trabajo">${esc(I.plan)}</textarea>
-  <div class="sig"><input class="free" data-i="firma" value="${esc(I.firma||NUT_D().nut)}" aria-label="Nombre de la nutrióloga"><div class="sigl">Nombre y firma de la nutrióloga</div><div style="margin-top:6px;font-weight:600">CP: <input class="free" data-i="cp" value="${esc(I.cp||NUT_D().cp)}" aria-label="Cédula profesional" style="width:150px;display:inline-block;text-align:left"></div></div>`)}
+  <div class="sig"><input class="free" data-i="firma" value="${esc(I.firma||NUT_D().nut)}" aria-label="Nombre de la nutrióloga"><div class="sigl">Nombre y firma de la nutrióloga</div><div style="margin-top:6px;font-weight:600">CP: <input class="free" data-i="cp" value="${esc(I.cp||NUT_D().cp)}" aria-label="Cédula profesional" style="width:150px;display:inline-block;text-align:left"></div></div>`)+(HS.draft===p?'':`<div class="card noprint" style="text-align:center"><button data-x="newhc">＋ Crear nueva historia clínica</button></div>`)}
 function instI(){const p=hcPat();if(!p)return;const I=p.hci=p.hci||{},v=$('#view');
  const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)};
  const grow=t=>{t.style.height='auto';t.style.height=Math.max(t.scrollHeight,40)+'px'};v.querySelectorAll('textarea.free').forEach(grow);
@@ -1476,7 +1476,7 @@ V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
    · "Historial clínico (Word)": genera un .docx real (sin librerías) con datos generales,
      historia clínica, mediciones, consultas, planes y registros del expediente.
    ===================================================================== */
-const APP_VER='2.5';
+const APP_VER='2.7';
 (function(){
 /* ---------- PWA: service worker, instalación, estado de conexión ---------- */
 const PWA={sw:'none',ev:null,persist:null,reg:null};
@@ -2448,7 +2448,7 @@ function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fill
 {const _nh=V.notas.h,_ni=V.notas.i;
  V.notas.h=function(){const html=_nh.apply(this,arguments);
   if(MF&&MF.key==='notas')return html.replace(/<div class="card"><h2>(Nuevo|Editar) registro/,'<div class="card noprint" id="cmp"></div>$&');
-  return `<div class="card noprint"><label for="acq">Buscar paciente por expediente o nombre y abrir su nota subsecuente</label><input id="acq" autocomplete="off" placeholder="Ej. 12345 o Ana López"><div id="acr"></div></div>`+html};
+  return html};
  V.notas.i=function(){_ni.apply(this,arguments);const v=$('#view'),oc=v.onclick;
   v.onclick=e=>{const b=e.target.closest('[data-use],[data-agset],[data-take]');
    if(b){const d=b.dataset;
@@ -2459,7 +2459,6 @@ function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fill
     return}
    if(oc)oc(e)};
   v.oninput=e=>{const t=e.target,id=t.id||'';
-   if(id==='acq'){$('#acr').innerHTML=t.value.trim()?hitsHTML(findPats(t.value)):'';return}
    if(!MF)return;
    if(MF.np&&id==='mf-pe'){const q=_nz(t.value),ex=DB.p.filter(p=>_nz(pExp(p))===q),lg=DB.p.filter(p=>{const x=_nz(pExp(p));return x!==q&&x.startsWith(q)});
     if(q&&ex.length===1&&!lg.length){acApply(ex[0].id);return}}
@@ -2467,6 +2466,21 @@ function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fill
    if(id.startsWith('mf-'))cmpUpdate()};
   v.onchange=e=>{const t=e.target;if(MF&&MF.np&&t.id==='mf-pn'){const q=_nz(t.value),ex=DB.p.filter(p=>_nz(pn(p))===q);if(q&&ex.length===1)acApply(ex[0].id)}};
   cmpUpdate()}}
+
+/* ---------- Buscador de expedientes en Pacientes (selecciona al paciente para todo el sistema) ---------- */
+{const _ph=V.pac.h,_pi=V.pac.i;
+ const pqHTML=q=>{if(!q.trim())return'';const h=findPats(q);if(!h.length)return'<p class="note">Sin coincidencias en los pacientes registrados.</p>';
+  return `<div class="wrap" style="margin-top:8px"><table>${h.map(x=>`<tr><td><b>${esc(pn(x.p))}</b>${pExp(x.p)?' · Exp. '+esc(pExp(x.p)):''}${x.p.nac?' · '+edTxt(edad(x.p.nac)):''}<td class="n"><button class="s g" data-pq="hc|${x.p.id}">Historia</button> <button class="s g" data-pq="notas|${x.p.id}">Notas subsecuentes</button> <button class="s g" data-pq="cons|${x.p.id}">Consulta</button> <button class="s" data-pq="sel|${x.p.id}">Seleccionar</button>`).join('')}</table></div>`};
+ V.pac.h=function(){const html=_ph.apply(this,arguments);if(editId!==null&&editId!==undefined)return html;
+  return `<div class="card noprint"><label for="pacq">Buscar paciente por expediente o nombre</label><input id="pacq" autocomplete="off" placeholder="Ej. 12345 o Ana López"><div id="pacr"></div></div>`+html};
+ V.pac.i=function(){_pi.apply(this,arguments);const v=$('#view'),oc=v.onclick,q=$('#pacq');
+  if(q)q.oninput=()=>{$('#pacr').innerHTML=pqHTML(q.value)};
+  v.onclick=e=>{const b=e.target.closest('[data-pq]');
+   if(b){const[a,id]=b.dataset.pq.split('|');HS.draft=null;DB.sel=id;save();fillSel();
+    if(a==='sel'){toast('Paciente seleccionado: '+pn(DB.p.find(x=>x.id===id)));return}
+    if(a==='notas')MF={key:'notas',id:''};
+    location.hash=a;return}
+   if(oc)oc(e)}}}
 
 /* ---------- D. AGENDA (ambos modos) ---------- */
 const AGE=['Pendiente','Asistió','No asistió','Reprogramada','Cancelada'],AGC={'Pendiente':'var(--warn)','Asistió':'var(--ok)','No asistió':'var(--bad)','Reprogramada':'var(--pri2)','Cancelada':'var(--mut)'};
