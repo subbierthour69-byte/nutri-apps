@@ -1568,10 +1568,7 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 1 ===== */
  const HD=m=>B.push({t:'hdr',meta:!!m,fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD(1);
  H('Ficha de Identificación');
- L(lb('Nombre:',pn(p),22),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',12),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9));
- L(lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),16));
- L(lb('Estado civil:',I.ec,8),G,lb('Ocupación:',I.ocup,10),G,lb('Escolaridad:',I.esc,8),G,lb('Tel:',p.tel,12));
- L(lb('Nacionalidad:',I.nacion,10),G,lb('Correo:',p.mail,18));
+ B.push({t:'p',fic:1,parts:norm([lb('Nombre:',pn(p),24),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',14),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9),G,lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),20),G,lb('Estado civil:',I.ec,10),G,lb('Ocupación:',I.ocup,12),G,lb('Escolaridad:',I.esc,10),G,lb('Tel:',p.tel,12),G,lb('Nacionalidad:',I.nacion,12),G,lb('Correo:',p.mail,22)])});
  H('Antecedentes heredofamiliares');
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
@@ -1669,7 +1666,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1;const b
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
   case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">Historia Clínica</div>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
-  case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
+  case 'p':if(b.fic){const gs=[[]];b.parts.forEach(x=>{if(x[0]==='t'&&/^\s+$/.test(x[1]))gs.push([]);else gs[gs.length-1].push(x)});o.push('<p class="fic2">'+gs.filter(g=>g.length).map(g=>'<span class="fg">'+partsH(g)+'</span>').join('')+'</p>');break}o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4>${esc(b.text)}</h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
@@ -1691,6 +1688,7 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .hdw{font-size:10.5pt;padding-bottom:3pt;border-bottom:0}
 #hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.42in;width:auto;max-width:3in;display:block}#hcpaper .hd2>div:last-child img{height:.3in}
 #hcpaper .ht{text-align:center;font-weight:700;font-size:16pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt;position:relative;top:.30in}
+#hcpaper p.fic2{line-height:1.55;margin-bottom:.03in}#hcpaper .fic2 .fg{display:inline-block;white-space:nowrap;margin-right:.22in}
 #hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2;position:relative;top:.40in}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
 #hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
 #hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}#hcpaper .hf td,#hcpaper .hf th{vertical-align:middle}
