@@ -144,7 +144,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .sig{max-width:380px;margin:22px 0 0 auto;text-align:center}.sig input.free{text-align:center;min-height:0}
 .sigl{border-top:1px solid var(--tx);margin-top:2px;padding-top:3px;font-size:12px;font-weight:600}
 .ftw.sm{display:inline-block;max-width:100%}.ft.sm{width:auto}.ft.sm td,.ft.sm th{padding:2px 8px;font-size:12px}.ft.sm input:not([type=checkbox]){width:56px!important;text-align:center;font-size:12px;padding:2px 4px}
-.ft.an td,.ft.an th{padding:2px 8px}.ft.an td+td,.ft.an th+th,.ft.sm td+td,.ft.sm th+th{text-align:center}.ft.an input:not([type=checkbox]){width:88px!important}.ft.an input.dt{width:96px!important}
+.ft.an .pcd{font-size:10px;color:var(--mut);line-height:1.1}.ft.an td,.ft.an th{padding:2px 8px}.ft.an td+td,.ft.an th+th,.ft.sm td+td,.ft.sm th+th{text-align:center}.ft.an input:not([type=checkbox]){width:88px!important}.ft.an input.dt{width:96px!important}
 .ft.rec td{border-bottom:1px solid #9fb0ab}.ft.rec td+td,.ft.rec th+th{border-left:1px solid #9fb0ab}
 @media print{
  @page{size:letter;margin:7mm 8mm}
@@ -1269,7 +1269,7 @@ function hcRegister(p){if(HS.draft!==p||!(p.nombre||'').trim()||!p.nac)return;
  const b=$('#newpbanner');if(b)b.remove();const an=$('#antro');if(an)an.innerHTML=antroBlock(p);
  toast('Paciente registrado automáticamente: '+pn(p))}
 function hcPInput(e){const t=e.target,d=t.dataset;if(d.p===undefined)return false;const p=hcPat();if(!p)return true;p[d.p]=t.value;if(d.p==='nombre')p.apellidos='';
- if(d.p==='nac'){const el=$('#hc-edad');if(el)el.value=edTxt(edad(p.nac))}
+ if(d.p==='nac'){const el=$('#hc-edad');if(el)el.value=edTxt(edad(p.nac));if(e.type==='change'){const an=$('#antro');if(an)an.innerHTML=antroBlock(p)}}
  hcRegister(p);if(e.type==='change')fillSel();if(DB.p.includes(p))save();return true}
 const draftBanner=p=>HS.draft===p?'<div class="msg noprint" id="newpbanner" style="margin:8px 0">Paciente nuevo: se registrará automáticamente al capturar <b>nombre</b> y <b>fecha de nacimiento</b>.</div>':'';
 function identCard(p){return `<div class="card">${draftBanner(p)}<div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Datos del paciente</h2><button class="g s noprint" data-x="newhc">＋ Nueva historia clínica</button></div>
@@ -1277,11 +1277,13 @@ function identCard(p){return `<div class="card">${draftBanner(p)}<div class="gap
  <div><label>Fecha de nacimiento</label><input data-p="nac" type="date" value="${esc(p.nac)}"></div><div><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
  <div><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
  <div><label>Teléfono</label><input data-p="tel" type="tel" value="${esc(p.tel)}"></div></div></div>`}
+const pcHTML=(c,p)=>{const r=window.NCA&&NCA.pcOf?NCA.pcOf(c,p):null;return r?esc(r.t)+(r.dx?`<div class="pcd">${esc(r.dx)}</div>`:''):''};
 function antroBlock(p){
+ const e0=edad(p.nac),minor=!!(e0&&e0.a<18);
  const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
- const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+ const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minor?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
 return `<div class="ftw sm"><table class="ft sm an"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
-  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map((c,i)=>!c?(i===cols.indexOf(null)&&k!=='_imc'&&k!=='_cl'?`<td><input data-nx="${k}" type="${ty||'number'}" step="0.1" placeholder="${k==='peso'?'Anotar peso':''}" aria-label="${l} (nueva consulta)">`:'<td>'):k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
+  ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map((c,i)=>!c?(i===cols.indexOf(null)&&k!=='_imc'&&k!=='_cl'&&k!=='_pc'?`<td><input data-nx="${k}" type="${ty||'number'}" step="0.1" placeholder="${k==='peso'?'Anotar peso':''}" aria-label="${l} (nueva consulta)">`:'<td>'):k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_pc'?`<td data-pc="${c.id}">${pcHTML(c,p)}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
    `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
   <div class="gap noprint" style="margin-top:8px"><button class="s" data-x="nc">＋ Agregar consulta</button>${cs.length>4||pg>0?`<button class="s g" data-x="pgp"${pg?'':' disabled'}>‹ Anteriores</button><button class="s g" data-x="pgn"${(pg+1)*4<cs.length?'':' disabled'}>Siguientes ›</button>`:''}
   <span class="note" style="margin:0">Estos datos son los mismos de la sección Consulta.</span></div>`;
@@ -1347,7 +1349,7 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  sec('Plan nutricional de trabajo',`<textarea class="free" data-i="plan" rows="3" placeholder="Escribe aquí…" aria-label="Plan nutricional de trabajo">${esc(I.plan)}</textarea>
   <div class="sig"><input class="free" data-i="firma" value="${esc(I.firma||NUT_D().nut)}" aria-label="Nombre de la nutrióloga"><div class="sigl">Nombre y firma de la nutrióloga</div><div style="margin-top:6px;font-weight:600">CP: <input class="free" data-i="cp" value="${esc(I.cp||NUT_D().cp)}" aria-label="Cédula profesional" style="width:150px;display:inline-block;text-align:left"></div></div>`)+(HS.draft===p?'':`<div class="card noprint" style="text-align:center"><button data-x="newhc">＋ Crear nueva historia clínica</button></div>`)}
 function instI(){const p=hcPat();if(!p)return;const I=p.hci=p.hci||{},v=$('#view');
- const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p)};
+ const refresh=c=>{const a=$(`[data-imc="${c.id}"]`),b=$(`[data-cl="${c.id}"]`),q=$(`[data-pc="${c.id}"]`);if(a)a.textContent=imcOf(c)==null?'':fx(imcOf(c));if(b)b.textContent=clasifIMC(c,p);if(q)q.innerHTML=pcHTML(c,p)};
  const grow=t=>{t.style.height='auto';t.style.height=Math.max(t.scrollHeight,40)+'px'};v.querySelectorAll('textarea.free').forEach(grow);
  v.oninput=v.onchange=e=>{const t=e.target,d=t.dataset,ch=e.type==='change';
   if(d.lg!==undefined){if(!ch)return;const f=t.files[0];if(f)imgURL(f,900,false,.92,true).then(u=>{DB.logos=DB.logos||{};DB.logos[d.lg]=u;try{save()}catch{toast('Almacenamiento lleno')}render()}).catch(()=>toast('No se pudo leer la imagen'));return}
@@ -1476,7 +1478,7 @@ V.hc.i=function(){return MODE==='inst'?instI():_hcI()};
    · "Historial clínico (Word)": genera un .docx real (sin librerías) con datos generales,
      historia clínica, mediciones, consultas, planes y registros del expediente.
    ===================================================================== */
-const APP_VER='2.7';
+const APP_VER='2.9';
 (function(){
 /* ---------- PWA: service worker, instalación, estado de conexión ---------- */
 const PWA={sw:'none',ev:null,persist:null,reg:null};
@@ -1591,8 +1593,8 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 2 ===== */
  HD();
  H('Valoración antropométrica');
- const AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],['Clasif. IMC','_cl'],['C. Cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
- const cv=(c,k)=>c?(k==='fecha'?fd(c.fecha):k==='_imc'?(imcOf(c)?fx(imcOf(c)):''):k==='_cl'?(imcOf(c)?(clasifIMC(c,p)||''):''):S_(c[k])):'';
+ const e0=edad(p.nac),minorP=!!(e0&&e0.a<18),AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minorP?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. Cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+ const cv=(c,k)=>c?(k==='fecha'?fd(c.fecha):k==='_imc'?(imcOf(c)?fx(imcOf(c)):''):k==='_cl'?(imcOf(c)?(clasifIMC(c,p)||''):''):k==='_pc'?(window.NCA&&NCA.pcOf?((NCA.pcOf(c,p)||{}).t||''):''):S_(c[k])):'';
  const tabs=[];for(let pg=0;pg===0||pg*4<cs.length;pg++){const col=[0,1,2,3].map(i=>cs[pg*4+i]);tabs.push({head:['Parámetro',...col.map((_,i)=>'Consulta '+(pg*4+i+1)+'º')],rows:AR.map(([l,k])=>[l,...col.map(c=>cv(c,k))])})}
  B.push({t:'antro',tabs});
  H('Indicadores dietéticos');
@@ -1641,8 +1643,8 @@ function TFx(rows,o){const W=o.w,sum=W.reduce((a,b)=>a+b,0),bd=(o.borders==='h'?
 function hdrX(b){const cell=(w,inner)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>${inner}</w:tc>`,
  lbl=(l,v)=>FR(l+' ')+(S_(v)?FR(S_(v),{u:1}):FR(NB.repeat(14),{u:1}));
  return `<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr>`+
-  cell(5040,FP(imgRun('l1',.6)))+cell(5040,FP(imgRun('r1',.6),{al:'right'}))+'</w:tr></w:tbl>'+
-  FP(FR('Historia Clínica',{b:1,sz:36}),{al:'center',bf:80,bb:!(b&&b.meta)})+(b&&b.meta?FP(lbl('Fecha:',b.fecha)+FR('      ')+lbl('N.º de expediente:',b.exp),{al:'right',bf:60,bb:1}):'')+TINY}
+  cell(5040,FP(imgRun('l1',.42)))+cell(5040,FP(imgRun('r1',.3),{al:'right'}))+'</w:tr></w:tbl>'+
+  FP(FR('Historia Clínica',{b:1,sz:32}),{al:'center',bf:80})+(b&&b.meta?FP(lbl('Fecha:',b.fecha)+FR('      ')+lbl('N.º de expediente:',b.exp),{al:'right',bf:60}):'')+TINY}
 function paperDocx(p){const o=[];
  paperModel(p).forEach(b=>{switch(b.t){
   case 'hdr':o.push(hdrX(b));break;
@@ -1680,16 +1682,16 @@ const pst=document.createElement('style');
 pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:0}
 @media print{body.paper-print{display:block!important;background:#fff!important}body.paper-print>*:not(#hcpaper){display:none!important}
 body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos,'Aptos Display',Calibri,Carlito,Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;width:100%;max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
-#hcpaper .pgp:nth-child(1){font-size:13pt}#hcpaper .pgp:nth-child(2){font-size:11.5pt}#hcpaper .pgp:nth-child(3){font-size:12pt}
+#hcpaper .pgp:nth-child(1){font-size:11pt}#hcpaper .pgp:nth-child(2){font-size:10pt}#hcpaper .pgp:nth-child(3){font-size:10.5pt}
 #hcpaper p,#hcpaper h4{margin:0;padding:0;font-size:inherit;line-height:1.2}#hcpaper p{margin-bottom:.03in}
 #hcpaper h4{font-weight:700;font-size:1.04em;border-bottom:1.25pt solid #000;padding-bottom:1pt;margin-bottom:.04in}
 #hcpaper .pgp{display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:.4in .6in;min-height:10.97in;break-after:page}#hcpaper .pgp:last-child{break-after:auto}#hcpaper .pgp>*{flex:none}
 #hcpaper .sc{break-inside:avoid}#hcpaper .pgp:nth-child(2) h4{margin-top:0}
 #hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:1.2pt 5px;font-size:inherit;text-align:left;vertical-align:top;font-weight:400;line-height:1.2;border:0}
-#hcpaper .hdw{font-size:12pt;padding-bottom:3pt;border-bottom:1.5pt solid #000}
-#hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.6in;width:auto;max-width:3.5in;display:block}
-#hcpaper .ht{text-align:center;font-weight:700;font-size:18pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt}
-#hcpaper .hm2{text-align:right;font-size:12pt;line-height:1.2}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
+#hcpaper .hdw{font-size:10.5pt;padding-bottom:3pt;border-bottom:0}
+#hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.42in;width:auto;max-width:3in;display:block}#hcpaper .hd2>div:last-child img{height:.3in}
+#hcpaper .ht{text-align:center;font-weight:700;font-size:16pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt}
+#hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
 #hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
 #hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}#hcpaper .hf td,#hcpaper .hf th{vertical-align:middle}
 #hcpaper .gr th,#hcpaper .gr td{border:1px solid #000;padding:.3pt 5px;font-size:.96em;line-height:1.15}#hcpaper .red{color:#c00000;font-weight:700}
@@ -1697,7 +1699,7 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .op{white-space:nowrap;margin-right:.28em}
 #hcpaper .bx{display:inline-block;position:relative;box-sizing:border-box;width:.92em;height:.92em;border:1.1pt solid #000;vertical-align:-.12em}
 #hcpaper .bx.on::after{content:'';position:absolute;left:27%;top:-6%;width:30%;height:62%;border:solid #000;border-width:0 2pt 2pt 0;transform:rotate(45deg)}
-#hcpaper .ln{border-bottom:0;min-height:1.4em;line-height:1.4;white-space:pre-wrap}#hcpaper .pgp.pgp.sm1{font-size:10.5pt}#hcpaper .pgp.pgp.sm2{font-size:9.5pt}#hcpaper .fm{text-align:right;margin-top:.45in}}`;
+#hcpaper .ln{border-bottom:0;min-height:1.4em;line-height:1.4;white-space:pre-wrap}#hcpaper .pgp.pgp.sm1{font-size:10pt}#hcpaper .pgp.pgp.sm2{font-size:9pt}#hcpaper .fm{text-align:right;margin-top:.45in}}`;
 document.head.appendChild(pst);
 const hashR=()=>(location.hash||'#hc').slice(1);
 function paperFill(){if(hashR()==='notas'){const q=cur();if(!q)return false;let h0=$('#hcpaper');if(!h0){document.body.insertAdjacentHTML('beforeend','<div id="hcpaper"></div>');h0=$('#hcpaper')}const hx=notaHTML(q);if(h0.__nh!==hx||!h0.firstChild){h0.innerHTML=hx;h0.__nh=hx;h0.querySelectorAll('img').forEach(i=>i.decode&&i.decode().catch(()=>{}))}return true}
@@ -1808,6 +1810,12 @@ function lastMeas(p){const hs=csort(p).filter(c=>nn(c.est)).map(c=>({d:c.fecha,t
  csort(p).forEach(c=>{const w=nn(c.peso);if(!w)return;const t=nn(c.est);if(t)cand.push({w,t,fecha:c.fecha,src:'consulta'});else{const h=hAt(c.fecha);if(h)cand.push({w,t:h,fecha:c.fecha,src:'consulta (talla previa/inicial)'})}});
  ((p.mod&&p.mod.notas)||[]).forEach(r=>{const w=nn(r.peso);if(!w||!r.date)return;const h=hAt(r.date);if(h)cand.push({w,t:h,fecha:r.date,src:'nota subsecuente (talla previa/inicial)'})});
  cand.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.src==='consulta'?1:0)-(b.src==='consulta'?1:0));return cand[cand.length-1]||null}
+function pcOf(c,p){const w=nn(c.peso),t=nn(c.est);if(!w||!t||!p||!p.nac)return null;const e=edad(p.nac,c.fecha);if(!e||e.a>=18)return null;const r=pedRows(p,w,t,c.fecha);if(!r)return null;
+ const inf=e.dec<24,row=r.rows.find(x=>x.k===(inf?'wti':'bmi'));if(!row||row.pc==null)return null;return{t:'P'+pcs(row.pc)+(inf?' (P/E)':''),dx:row.dx||'',pc:row.pc}}
+function qSync(p,k,val){const cs=csort(p);let c=cs[cs.length-1];
+ if(!c){if(!String(val).trim())return;c=newCons(p);(p.cons=p.cons||[]).push(c)}
+ c[k]=val;HS.pg=Math.floor((csort(p).length-1)/4);hcRegister(p);if(DB.p.includes(p))save();
+ const an=$('#antro');if(an)an.innerHTML=antroBlock(p)}
 function pedNow(p){const e0=edad(p.nac);if(!e0||e0.a>=18)return null;const out={age:edTxt(e0),c:null,rows:[]},m=lastMeas(p);if(!m)return out;
  const r=pedRows(p,m.w,m.t,m.fecha);if(!r)return out;out.c={fecha:m.fecha,peso:m.w,est:m.t,src:m.src};out.ageC=r.ageC;out.rows=r.rows;return out}
 /* ---------- 2) Análisis rápido del R24 ---------- */
@@ -1920,7 +1928,7 @@ function quickRows(p){const w=nn(ASS.qw),t=nn(ASS.qh);if(!w||!t)return '<p class
  return `<table class="at">${r.rows.map(x=>x.na?`<tr><td>${short(x.lab)}<td colspan="2" class="am2">${x.na}</td></tr>`:`<tr><td>${short(x.lab)}<td class="n"><b>P${pcs(x.pc)}</b><td>${chip(x.dx,dxc(x.dx))}</td></tr>`).join('')}</table>`}
 function secPed(pd,p){if(!pd)return '';
  const head=`<p class="am">Menor de edad detectado: <b>${esc(pd.age)}</b></p>`;
- const quick=`<div class="aq"><b>Cálculo rápido</b> <span class="am2">(no se guarda)</span><div class="agrid"><input id="aq-w" type="number" step="0.1" inputmode="decimal" placeholder="Peso (kg)" value="${esc(ASS.qw||'')}"><input id="aq-h" type="number" step="0.1" inputmode="decimal" placeholder="Talla (cm)" value="${esc(ASS.qh||'')}"></div><div id="aqr">${quickRows(p)}</div></div>`;
+ const quick=`<div class="aq"><b>Cálculo rápido</b> <span class="am2">${route()==='hc'?'(el peso y la talla pasan a la Valoración antropométrica)':'(no se guarda)'}</span><div class="agrid"><input id="aq-w" type="number" step="0.1" inputmode="decimal" placeholder="Peso (kg)" value="${esc(ASS.qw||'')}"><input id="aq-h" type="number" step="0.1" inputmode="decimal" placeholder="Talla (cm)" value="${esc(ASS.qh||'')}"></div><div id="aqr">${quickRows(p)}</div></div>`;
  if(!pd.c)return head+`<div class="amsg">Captura <b>peso</b> y <b>talla</b> en la Valoración antropométrica (o una nota subsecuente con peso) para calcular el percentil; o usa el cálculo rápido.</div>`+quick;
  const big=pd.rows.map(r=>r.na?`<div class="abig na"><span>${short(r.lab)}</span><small>${r.na}</small></div>`:`<div class="abig"><span>${short(r.lab)}</span><b>P${pcs(r.pc)}</b>${chip(r.dx,dxc(r.dx))}</div>`).join('');
  const rows=pd.rows.filter(r=>!r.na).map(r=>`<tr><td>${short(r.lab)}<td class="n">${fx(r.val,1)} ${r.u}<td class="n">${fx(r.z,2)}<td class="n">P${pcs(r.pc)}</td></tr>`).join('');
@@ -1982,11 +1990,11 @@ a.addEventListener('pointerdown',e=>{const h=e.target.closest('#ahd');if(!h||e.t
  const r=a.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;h.setPointerCapture(e.pointerId);
  h.onpointermove=ev=>{ASS.pos={x:Math.max(0,Math.min(innerWidth-80,ev.clientX-dx)),y:Math.max(0,Math.min(innerHeight-40,ev.clientY-dy))};a.style.left=ASS.pos.x+'px';a.style.top=ASS.pos.y+'px';a.style.right='auto';a.style.bottom='auto'};
  h.onpointerup=()=>{h.onpointermove=null}});
-a.addEventListener('input',e=>{const t=e.target;if(t.id==='aq-w'||t.id==='aq-h'){if(t.id==='aq-w')ASS.qw=t.value;else ASS.qh=t.value;const d=build();const r=$('#aqr');if(d&&r)r.innerHTML=quickRows(d.p)}});
+a.addEventListener('input',e=>{const t=e.target;if(t.id==='aq-w'||t.id==='aq-h'){if(t.id==='aq-w')ASS.qw=t.value;else ASS.qh=t.value;const d=build();if(d&&route()==='hc')qSync(d.p,t.id==='aq-w'?'peso':'est',t.value);const r=$('#aqr');if(d&&r)r.innerHTML=quickRows(d.p)}});
 let tm=null;const sched=()=>{clearTimeout(tm);tm=setTimeout(paint,280)};
 document.addEventListener('input',sched);document.addEventListener('change',sched);
 const _render=render;render=function(){const x=_render.apply(this,arguments);paint();return x};
-window.NCA={pedNow,r24,recs,build,paint};
+window.NCA={pedNow,r24,recs,build,paint,pcOf};
 })();
 
 /* =====================================================================
@@ -2468,14 +2476,20 @@ function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fill
   cmpUpdate()}}
 
 /* ---------- Buscador de expedientes en Pacientes (selecciona al paciente para todo el sistema) ---------- */
+function verExp(id){const p=DB.p.find(x=>x.id===id);if(!p)return;const o=$('#verexp');if(o)o.remove();
+ document.body.insertAdjacentHTML('beforeend',`<div id="verexp" class="noprint" style="position:fixed;inset:0;z-index:200;background:#000b;display:flex;flex-direction:column;padding:10px"><div class="gap" style="background:var(--card);color:var(--tx);padding:8px 12px;border-radius:10px 10px 0 0"><b style="flex:1">Expediente · ${esc(pn(p))}</b><button class="s g" data-ve="print">🖨 Imprimir</button><button class="s g" data-ve="dl">⬇ Descargar</button><button class="s" data-ve="x">✕ Cerrar</button></div><iframe id="verexp-f" title="Expediente" style="flex:1;border:0;background:#fff;border-radius:0 0 10px 10px"></iframe></div>`);
+ $('#verexp-f').srcdoc=patHTML(p);
+ $('#verexp').onclick=e=>{const b=e.target.closest('[data-ve]');if(!b)return;const a=b.dataset.ve;if(a==='x')$('#verexp').remove();else if(a==='print'){const w=$('#verexp-f').contentWindow;w.focus();w.print()}else if(a==='dl')archPat(id)}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const o=$('#verexp');if(o)o.remove()}});
 {const _ph=V.pac.h,_pi=V.pac.i;
  const pqHTML=q=>{if(!q.trim())return'';const h=findPats(q);if(!h.length)return'<p class="note">Sin coincidencias en los pacientes registrados.</p>';
-  return `<div class="wrap" style="margin-top:8px"><table>${h.map(x=>`<tr><td><b>${esc(pn(x.p))}</b>${pExp(x.p)?' · Exp. '+esc(pExp(x.p)):''}${x.p.nac?' · '+edTxt(edad(x.p.nac)):''}<td class="n"><button class="s g" data-pq="hc|${x.p.id}">Historia</button> <button class="s g" data-pq="notas|${x.p.id}">Notas subsecuentes</button> <button class="s g" data-pq="cons|${x.p.id}">Consulta</button> <button class="s" data-pq="sel|${x.p.id}">Seleccionar</button>`).join('')}</table></div>`};
- V.pac.h=function(){const html=_ph.apply(this,arguments);if(editId!==null&&editId!==undefined)return html;
+  return `<div class="wrap" style="margin-top:8px"><table>${h.map(x=>`<tr><td><b>${esc(pn(x.p))}</b>${pExp(x.p)?' · Exp. '+esc(pExp(x.p)):''}${x.p.nac?' · '+edTxt(edad(x.p.nac)):''}<td class="n"><button class="s g" data-pq="hc|${x.p.id}">Historia</button> <button class="s g" data-pq="notas|${x.p.id}">Notas subsecuentes</button> <button class="s g" data-pq="cons|${x.p.id}">Consulta</button> <button class="s" data-pq="sel|${x.p.id}">Seleccionar</button> <button class="s g" data-ver="${x.p.id}">Ver expediente</button>`).join('')}</table></div>`};
+ V.pac.h=function(){const html=_ph.apply(this,arguments).replace(/<button class="s g" data-a="arch" data-id="([^"]+)" title="Descargar expediente completo">Expediente<\/button>/g,'<button class="s" data-ver="$1">Ver expediente</button> <button class="s g" data-a="arch" data-id="$1" title="Descargar expediente completo">Descargar</button>');if(editId!==null&&editId!==undefined)return html;
   return `<div class="card noprint"><label for="pacq">Buscar paciente por expediente o nombre</label><input id="pacq" autocomplete="off" placeholder="Ej. 12345 o Ana López"><div id="pacr"></div></div>`+html};
  V.pac.i=function(){_pi.apply(this,arguments);const v=$('#view'),oc=v.onclick,q=$('#pacq');
   if(q)q.oninput=()=>{$('#pacr').innerHTML=pqHTML(q.value)};
-  v.onclick=e=>{const b=e.target.closest('[data-pq]');
+  v.onclick=e=>{const vb=e.target.closest('[data-ver]');if(vb){verExp(vb.dataset.ver);return}
+   const b=e.target.closest('[data-pq]');
    if(b){const[a,id]=b.dataset.pq.split('|');HS.draft=null;DB.sel=id;save();fillSel();
     if(a==='sel'){toast('Paciente seleccionado: '+pn(DB.p.find(x=>x.id===id)));return}
     if(a==='notas')MF={key:'notas',id:''};
