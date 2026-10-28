@@ -16,6 +16,10 @@
   DESPLIEGUE: sube como index.html a un repo y activa Settings → Pages → main / root.
   DATOS: localStorage del navegador (locales y privados). Exporta respaldos en Ajustes.
   PEDIATRÍA: tablas L-M-S oficiales de la CDC (NCHS 2000) incluidas en este script.
+  NOVEDADES v2.6: sin cuadro "Sin paciente" arriba (cada sección pide elegir paciente con lista y buscador; el nombre activo se quita con ✕) · Historia clínica: "Guardar y siguiente paciente".
+  NOVEDADES v2.5: pacientes sin duplicar (agenda, historia clínica, notas y Pacientes; con botón para unir duplicados) · citas enlazadas por expediente/nombre · puntos del calendario en orden de horario · "asistió" en verde suave.
+  NOVEDADES v2.4: flecha de retroceso en todas las secciones · Guardar/Imprimir arriba a la derecha · Notas subsecuentes con IMC, edad,
+  diagnóstico por IMC y percentil (menores) automáticos · horario editable en el R24 · lista "Con paciente" · asistente que sale solo al detectar peso y talla.
   NOVEDADES v2.3: respaldo completo (ambos modos) + copias automáticas internas + lista CSV · AGENDA de citas (asistió / no asistió) ·
   comparación de cada nota subsecuente contra la consulta anterior (solo en pantalla, no se imprime) · autocompletado por expediente o nombre.
   NOVEDADES v2.2: app instalable SIN INTERNET (sw.js + manifest + iconos) · Historia clínica en formato oficial SANNAFARM
@@ -192,6 +196,17 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
 @media(max-width:820px){aside{position:fixed;left:-250px}aside.open{left:0}#burger{display:inline-flex}main{padding:14px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ===== v2.4 ===== */
+#back{display:inline-flex;font-size:18px;line-height:1;padding:6px 12px}
+.fbar{position:sticky;top:0;z-index:15;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);padding:8px 0 10px;margin:-4px 0 12px;border-bottom:1px solid var(--bd)}
+.fbar h2{margin:0;flex:1;min-width:160px;font-size:16px}
+.fbar .fbtn{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.seg{display:inline-flex;gap:6px;margin-bottom:12px}
+tr.clk{cursor:pointer}tr.clk:hover td{background:var(--bg)}
+.r24b{grid-column:1/-1}.r24b>label{font-weight:600;color:var(--tx);font-size:13px}.r24b .rr{display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:start}
+@media(max-width:600px){.r24b .rr{grid-template-columns:1fr}}
+input.ro{background:var(--bg);font-weight:700;cursor:default}
+@media print{#back,.fbar{display:none!important}}
 </style>
 </head>
 <body>
@@ -199,8 +214,9 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 <main>
   <div class="top">
     <button id="burger" class="g" aria-label="Menú"></button>
+    <button id="back" class="g" aria-label="Regresar" title="Regresar">←</button>
     <h1 id="title"></h1>
-    <span id="mpill"></span><span id="topav"></span><div style="min-width:210px"><select id="psel" aria-label="Paciente activo"></select></div>
+    <span id="mpill"></span><span id="topav"></span><button id="pchg" class="g" hidden title="Quitar paciente / elegir otro"></button>
     <button id="bkq" class="g" aria-label="Descargar respaldo" title="Descargar respaldo ahora">💾</button>
     <button id="theme" class="g" aria-label="Cambiar tema"></button>
   </div>
@@ -288,6 +304,14 @@ const NAV=[['Atención',[['agenda','Agenda','clock'],['pac','Pacientes','users']
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
 $('#burger').innerHTML=ico('menu');
 $('#burger').onclick=()=>$('#side').classList.toggle('open');
+/* Flecha de retroceso (en la barra superior de TODAS las secciones): cierra el formulario abierto o vuelve a la sección anterior */
+const NAVSTK=[];let _lastH=location.hash||'#hc',_bk=false;
+addEventListener('hashchange',()=>{if(_bk){_bk=false;_lastH=location.hash||'#hc';return}NAVSTK.push(_lastH);if(NAVSTK.length>40)NAVSTK.shift();_lastH=location.hash||'#hc'});
+$('#back').onclick=()=>{
+ if(typeof MF!=='undefined'&&MF){MF=null;render();return}
+ if(editId!==null&&editId!==undefined){editId=null;render();return}
+ const to=NAVSTK.pop()||'#panel';if(to===(location.hash||'#hc')){render();return}
+ _bk=true;location.hash=to;setTimeout(()=>{_bk=false},80);editId=null;render()};
 $('#nav').onclick=e=>{const a=e.target.closest('a');if(a){location.hash=a.dataset.v;$('#side').classList.remove('open')}};
 $('#nav').onkeydown=e=>{if(e.key==='Enter')e.target.click()};
 
@@ -565,7 +589,11 @@ const MIC=[['Vitaminas'],
 const V={};
 let editId=null,chips=[];
 const PAT=['Diabetes mellitus','Hipertensión','Dislipidemia','Obesidad','Hipotiroidismo','Gastritis / colitis','Enfermedad renal','Anemia'];
-const noP='<div class="msg">Primero registra o selecciona un paciente en <a href="#pac">Pacientes</a>.</div>';
+const noP='<div id="nopick"><div class="msg">Primero registra o selecciona un paciente en <a href="#pac">Pacientes</a>.</div></div>';
+function pickHTML(){if(!DB.p.length)return'<div class="msg">Aún no hay pacientes. Regístralos en <a href="#pac">Pacientes</a> o en <a href="#hc">Historia clínica</a>.</div>';
+ return `<div class="card"><h2>Elige un paciente</h2><input id="pickq" placeholder="Buscar por nombre o expediente" autocomplete="off" style="max-width:360px;margin-bottom:8px"><div class="gap" id="pickl">${DB.p.slice().sort((a,b)=>pn(a).localeCompare(pn(b))).map(p=>`<button class="g pk" data-pickp="${p.id}" data-q="${esc(_nz(pn(p)+' '+pExp(p)))}">${avHTML(p,22)} ${esc(pn(p))}${pExp(p)?' · Exp. '+esc(pExp(p)):''}${p.nac?' · '+edShort(edad(p.nac)):''}</button>`).join('')}</div></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pickp]');if(b){HS.draft=null;DB.sel=b.dataset.pickp;save();fillSel();render()}});
+document.addEventListener('input',e=>{if(e.target.id==='pickq'){const q=_nz(e.target.value);document.querySelectorAll('#pickl .pk').forEach(x=>{x.style.display=!q||x.dataset.q.includes(q)?'':'none'})}});
 const kpi=(l,v)=>`<div class="card kpi" style="margin:0">${v}<small>${l}</small></div>`;
 
 /* ---------- PANEL ---------- */
@@ -601,8 +629,10 @@ V.pac={t:'Pacientes e historia clínica',h(){
   $('#bsave')&&($('#bsave').onclick=()=>{const g=k=>$('#f-'+k).value.trim();
    if(!g('nombre')||!g('nac'))return toast('Captura al menos nombre y fecha de nacimiento');
    const d={nombre:g('nombre'),apellidos:g('apellidos'),nac:g('nac'),sexo:g('sexo'),est:g('est'),tel:g('tel'),mail:g('mail'),antec:g('antec'),hist:g('hist'),pat:[...chips],av:AVP};
-   if(editId)Object.assign(DB.p.find(x=>x.id===editId),d);else{d.id=uid();d.cons=[];DB.p.push(d);DB.sel=d.id}
-   save();editId=null;fillSel();go();toast('Paciente guardado')});
+   const dp=findDup(d.nombre+' '+d.apellidos,'',d.nac,editId||undefined);
+    if(dp&&dp.why==='nombre'&&!confirm('Ya existe un paciente llamado «'+pn(dp.p)+'». ¿Guardar de todos modos como otro paciente?\n\nAceptar = guardar · Cancelar = no duplicar'))return;
+    let sv;if(editId){sv=DB.p.find(x=>x.id===editId);Object.assign(sv,d)}else{d.id=uid();d.cons=[];DB.p.push(d);DB.sel=d.id;sv=d}
+    agLink(sv);save();editId=null;fillSel();go();toast('Paciente guardado')});
   $('#view').onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id;
    if(b.dataset.a==='ed'){editId=id;chips=[...(DB.p.find(x=>x.id===id).pat||[])];go()}
    if(b.dataset.a==='sel'){HS.draft=null;DB.sel=id;save();location.hash='cons'}
@@ -896,7 +926,10 @@ const MODS={
 };
 const phead=p=>`<div class="card gap"><div class="gap">${avHTML(p,40)}<div><b>${esc(pn(p))}</b><div class="note" style="margin:0">${edTxt(edad(p.nac))} · ${p.sexo==='M'?'Hombre':'Mujer'}</div></div></div></div>`;
 const cellHTML=(f,v)=>v===undefined||v===null||v===''?'<span style="color:var(--mut)">—</span>':f[2]==='date'?fd(v):f[2]==='num'?fx(v,2):f[2]==='area'?`<span title="${esc(v)}">${esc(String(v).length>60?String(v).slice(0,60)+'…':v)}</span>`:esc(v);
-function fieldHTML(f,v){const[k,l,t,o]=f,id='mf-'+k;
+function fieldHTML(f,v,rec){const[k,l,t,o]=f,id='mf-'+k;
+ if(o==='hid')return '';
+ if(t==='ro')return `<div><label for="${id}">${l}</label><input id="${id}" class="ro" readonly tabindex="-1" value="${esc(v)}" autocomplete="off"></div>`;
+ if(t==='area'&&f[4]){const hk=f[4];return `<div class="r24b"><label for="${id}">${l}</label><div class="rr"><div><label for="mf-${hk}" style="font-size:11px">Horario</label><input id="mf-${hk}" type="time" value="${esc((rec&&rec[hk])||'')}"></div><textarea id="${id}">${esc(v)}</textarea></div></div>`}
  if(t==='area')return `<div style="grid-column:1/-1"><label for="${id}">${l}</label><textarea id="${id}">${esc(v)}</textarea></div>`;
  if(t==='sel')return `<div><label for="${id}">${l}</label><select id="${id}">${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
  return `<div><label for="${id}">${l}</label><input id="${id}" type="${t==='num'?'number':t==='dl'?'text':t}" ${t==='num'?'step="any"':''} value="${esc(v)}" ${t==='dl'?`list="dl-${k}"`:''} autocomplete="off">${t==='dl'?`<datalist id="dl-${k}">${o.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`:''}</div>`}
@@ -905,17 +938,20 @@ function modView(key){const M=MODS[key];return{t:M.t,
  h(){let p=cur();if(MF&&MF.key!==key)MF=null;const npm=!!(M.newp&&MF&&MF.np);if(!p&&!npm)return noP+(M.newp?'<p><button data-x="newpat">+ Nota de paciente no registrado</button></p>':'');if(npm)p={id:'',nombre:'',mod:{}};
   const rows=[...((p.mod&&p.mod[key])||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id.localeCompare(a.id));
   const cols=M.tc?M.f.filter(f=>M.tc.includes(f[0])):M.f;const r=MF?(MF.id?rows.find(x=>x.id===MF.id)||{}:{date:today(),...(M.def?M.def(p):{})}):null;
-  return (npm?'':phead(p))+(npm?'':M.sum?M.sum(rows,p):'')+(MF?`<div class="card"><h2>${MF.id?'Editar':'Nuevo'} registro</h2>${npm?`<p class="note" style="margin-top:0">Para pacientes que ya tienen expediente en el trabajo pero aún no están en la app. Al guardar esta nota, el paciente se registra automáticamente con estos datos.</p><div class="grid">${fieldHTML(['pn','Nombre completo','text'],'')}${fieldHTML(['pe','N.º de expediente','text'],'')}${fieldHTML(['pnac','Fecha de nacimiento','date'],'')}${fieldHTML(['ps','Sexo','sel',['Mujer','Hombre']],'Mujer')}</div><h3 style="margin:14px 0 6px">Nota</h3>`:''}<div class="grid">${M.f.map(f=>fieldHTML(f,r[f[0]]??'')).join('')}</div><p><button data-x="save">Guardar</button> ${M.print?'<button data-x="saveprint">Guardar e imprimir</button> ':''}<button class="g" data-x="cancel">Cancelar</button></p></div>`:`<p><button data-x="new">+ Agregar registro</button>${M.newp?' <button class="g" data-x="newpat">+ Nota de paciente no registrado</button>':''}</p>`)+
+  const ttl=(M.nohead?(MF&&MF.id?'Editar nota':'Nueva nota'):(MF&&MF.id?'Editar':'Nuevo')+' registro')+(npm?' · paciente no registrado':(M.nohead&&p&&p.id?' · '+esc(pn(p))+(p.nac?' · '+edShort(edad(p.nac)):''):''));
+  return (npm||M.nohead?'':phead(p))+(npm||M.nohead?'':M.sum?M.sum(rows,p):'')+(MF?`<div class="fbar noprint"><h2>${ttl}</h2><span class="fbtn"><button data-x="save">Guardar</button>${M.print?'<button data-x="saveprint">Guardar e imprimir</button>':''}<button class="g" data-x="cancel">Cancelar</button></span></div><div class="card" id="mform">${npm?`<p class="note" style="margin-top:0">Para pacientes que ya tienen expediente en el trabajo pero aún no están en la app. Al guardar esta nota, el paciente se registra automáticamente con estos datos.</p><div class="grid">${fieldHTML(['pn','Nombre completo','text'],'')}${fieldHTML(['pe','N.º de expediente','text'],'')}${fieldHTML(['pnac','Fecha de nacimiento','date'],'')}${fieldHTML(['ps','Sexo','sel',['Mujer','Hombre']],'Mujer')}</div><h3 style="margin:14px 0 6px">Nota</h3>`:''}<div class="grid">${M.f.map(f=>fieldHTML(f,r[f[0]]??'',r)).join('')}</div></div>`:`<p><button data-x="new">+ Agregar registro</button>${M.newp?' <button class="g" data-x="newpat">+ Nota de paciente no registrado</button>':''}</p>`)+
    `<div class="card wrap"><table><tr>${cols.map(f=>`<th>${f[1]}`).join('')}<th></tr>${rows.map(r=>`<tr>${cols.map(f=>`<td>${cellHTML(f,r[f[0]])}`).join('')}<td class="n">${M.print?`<button class="s" data-x="print" data-id="${r.id}">Imprimir</button> `:''}<button class="s g" data-x="edit" data-id="${r.id}">Editar</button> <button class="s d" data-x="del" data-id="${r.id}">✕</button>`).join('')||`<tr><td colspan="${cols.length+1}">Aún no hay registros.`}</table></div>`},
  i(){const p=cur();if(!p&&!M.newp)return;
   $('#view').onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x,id=b.dataset.id;
    if(x==='new')MF={key,id:''};else if(x==='newpat')MF={key,id:'',np:1};else if(x==='edit')MF={key,id};else if(x==='cancel')MF=null;
    else if(x==='del'){if(!confirm(key==='notas'?'Esta nota quedaría eliminada para siempre (las notas se conservan mientras el paciente siga en tu lista). ¿Eliminar SOLO esta nota?':'¿Eliminar este registro?'))return;p.mod[key]=p.mod[key].filter(r=>r.id!==id);if(key==='notas'&&DB.ag)DB.ag=DB.ag.filter(a=>!(a.nid===id&&a.auto)&&!(a.src===id&&a.estado==='Pendiente'));save()}
    else if(x==='print'){NP=id;render();npPrint();return}
-   else if(x==='save'||x==='saveprint'){const rec={};M.f.forEach(f=>{const v=$('#mf-'+f[0]).value.trim();rec[f[0]]=f[2]==='num'?num(v):v});
+   else if(x==='save'||x==='saveprint'){const rec={};M.f.forEach(f=>{if(f[2]==='ro')return;const v=$('#mf-'+f[0]).value.trim();rec[f[0]]=f[2]==='num'?num(v):v});
     if(!rec.date)return toast('Captura la fecha');
     let tp=p,nuevo=false;if(MF.np){const nom=$('#mf-pn').value.trim();if(!nom)return toast('Captura el nombre del paciente');
-     tp={id:uid(),nombre:nom,apellidos:'',nac:$('#mf-pnac').value,sexo:$('#mf-ps').value==='Hombre'?'M':'F',est:'',tel:'',mail:'',antec:'',hist:'',pat:[],cons:[],hci:{exp:$('#mf-pe').value.trim()},mod:{}};DB.p.push(tp);DB.sel=tp.id;nuevo=true}
+     const nx=$('#mf-pe').value.trim(),dp=findDup(nom,nx,$('#mf-pnac').value);
+     if(dp&&dupAsk(dp,nom)){tp=dp.p;fillBlank(tp,{nac:$('#mf-pnac').value,hci:{exp:nx}});DB.sel=tp.id;toast('Ese paciente ya estaba registrado: la nota se guardó en su ficha')}
+     else{tp={id:uid(),nombre:nom,apellidos:'',nac:$('#mf-pnac').value,sexo:$('#mf-ps').value==='Hombre'?'M':'F',est:'',tel:'',mail:'',antec:'',hist:'',pat:[],cons:[],hci:{exp:nx},mod:{}};DB.p.push(tp);DB.sel=tp.id;nuevo=true}}
     tp.mod=tp.mod||{};const L=tp.mod[key]=tp.mod[key]||[];
     let sid=MF.id;if(sid)Object.assign(L.find(r=>r.id===sid),rec);else{sid=uid();L.push({id:sid,...rec})}
     if(M.print)DB.nut={nut:rec.nut,cp:rec.cp};
@@ -1265,7 +1301,9 @@ function hcLogo(k,l,w){const lg=DB.logos||{},u=(k in lg)?lg[k]:LOGO_DEF[k];
 const newDraft=()=>({id:uid(),nombre:'',apellidos:'',nac:'',sexo:'F',est:'',tel:'',mail:'',antec:'',hist:'',pat:[],cons:[],hci:{},hcd:{}});
 const hcPat=()=>HS.draft||cur();
 function hcRegister(p){if(HS.draft!==p||!(p.nombre||'').trim()||!p.nac)return;
- HS.draft=null;if(!p.cons.length)p.cons.push(newCons(p));DB.p.push(p);DB.sel=p.id;agFirst(p);save();fillSel();
+ const dp=findDup(pn(p),pExp(p),p.nac);
+ if(dp&&dupAsk(dp,pn(p))){const ex=dp.p;fillBlank(ex,p);HS.draft=null;DB.sel=ex.id;if(!ex.cons||!ex.cons.length)ex.cons=[newCons(ex)];agFirst(ex);agDedupe();save();fillSel();render();toast('Este paciente ya estaba registrado: se abrió su ficha (no se duplicó)');return}
+ HS.draft=null;if(!p.cons.length)p.cons.push(newCons(p));DB.p.push(p);DB.sel=p.id;agFirst(p);agDedupe();save();fillSel();
  const b=$('#newpbanner');if(b)b.remove();const an=$('#antro');if(an)an.innerHTML=antroBlock(p);
  toast('Paciente registrado automáticamente: '+pn(p))}
 function hcPInput(e){const t=e.target,d=t.dataset;if(d.p===undefined)return false;const p=hcPat();if(!p)return true;p[d.p]=t.value;if(d.p==='nombre')p.apellidos='';
@@ -1373,18 +1411,19 @@ function instI(){const p=hcPat();if(!p)return;const I=p.hci=p.hci||{},v=$('#view
   else if(x==='add')delete I['off.'+k];
   save();render()}}
 /* ---------- Notas de pacientes subsecuentes (por paciente, la más reciente primero) ---------- */
-MODS.notas={t:'Notas de pacientes subsecuentes',print:1,newp:1,
- f:[['date','Fecha','date'],['hora','Hora','time'],['ev','Evolución nutricional actual (síntomas y signos)','area'],
-  ['des','R24 hrs · Desayuno','area'],['com','R24 hrs · Comida','area'],['cen','R24 hrs · Cena','area'],['col','R24 hrs · Colación','area'],
-  ['peso','Peso actual (kg)','num'],['talla','Talla actual (cm)','num'],['pideal','Peso ideal (kg)','num'],['cin','C. cintura (cm)','num'],['abd','C. abdominal (cm)','num'],
+MODS.notas={t:'Notas de pacientes subsecuentes',print:1,newp:1,nohead:1,
+ f:[['date','Fecha','date'],['hora','Hora','time'],['edad','Edad (automática)','ro'],['ev','Evolución nutricional actual (síntomas y signos)','area'],
+  ['des','R24 hrs · Desayuno','area','','hdes'],['com','R24 hrs · Comida','area','','hcom'],['cen','R24 hrs · Cena','area','','hcen'],['col','R24 hrs · Colación','area','','hcol'],
+  ['hdes','Horario desayuno','time','hid'],['hcom','Horario comida','time','hid'],['hcen','Horario cena','time','hid'],['hcol','Horario colación','time','hid'],
+  ['peso','Peso actual (kg)','num'],['talla','Talla actual (cm)','num'],['pideal','Peso ideal (kg)','num'],['imc','IMC (automático)','ro'],['pct','Percentil (menores, automático)','ro'],['dxi','Diagnóstico por IMC (automático)','ro'],['cin','C. cintura (cm)','num'],['abd','C. abdominal (cm)','num'],
   ['bfecha','Fecha de los bioquímicos','date'],['glu','Glucosa sérica (mg/dL)','num'],['hb','Hemoglobina (g/dL)','num'],['colt','Colesterol total (mg/dL)','num'],['hdl','HDL (mg/dL)','num'],['ldl','LDL (mg/dL)','num'],['tg','Triglicéridos (mg/dL)','num'],['urea','Urea (mg/dL)','num'],['cre','Creatinina (mg/dL)','num'],
-  ['dx','Diagnóstico nutricional','area'],['pl','Plan / recomendaciones','area'],['pend','Pendientes','area'],['prox','Próxima cita','date'],
+  ['dx','Diagnóstico nutricional PES','area'],['pl','Plan / recomendaciones','area'],['pend','Pendientes','area'],['prox','Próxima cita','date'],
   ['nut','Nombre de la nutrióloga','text'],['cp','Cédula profesional (CP)','text']],
  tc:['date','peso','dx','pl','prox'],
  def:p=>{const n=DB.nut||{},d={hora:new Date().toTimeString().slice(0,5),talla:p.est||'',nut:n.nut||NP_DEF.nut,cp:n.cp||NP_DEF.cp};
   /* Autollenado: talla, peso ideal y últimos bioquímicos (con su fecha) tomados de la nota más reciente; si no hay, talla de la consulta */
   try{if(p.id){const L=pNotes(p),l=L[L.length-1];
-   if(l){['talla','pideal','bfecha','glu','hb','colt','hdl','ldl','tg','urea','cre'].forEach(k=>{if(l[k]!=null&&l[k]!=='')d[k]=l[k]})}
+   if(l){['talla','pideal','hdes','hcom','hcen','hcol','bfecha','glu','hb','colt','hdl','ldl','tg','urea','cre'].forEach(k=>{if(l[k]!=null&&l[k]!=='')d[k]=l[k]})}
    else{const c=csort(p).filter(x=>num(x.est)).pop();if(c)d.talla=c.est}}}catch(e){}
   return d},
  sum:(rows,p)=>`<p class="note" style="margin:0 0 10px">Notas de seguimiento de ${esc(pn(p))}. Cada nota queda con su fecha; la más reciente aparece primero. Usa <b>Imprimir</b> para sacar la nota en una hoja con el formato de notas de evolución y tratamiento nutricional.</p>`};
@@ -1403,27 +1442,28 @@ function notaHTML(p){
  dm=iso=>iso?iso.split('-').reverse().join(' / '):'&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;',
  H=p.hci||{},exp=H.exp||p.exp||'',
  pes=num(r.peso),tal=num(r.talla),imc=pes&&tal?Math.round(pes/((tal/100)**2)*10)/10:'',
+ o=imcDx(p,r.date,pes,tal),hr=v=>v?`<b>${e(v)} hrs</b>`:'',
  nut=r.nut||(DB.nut&&DB.nut.nut)||NP_DEF.nut,cp=r.cp||(DB.nut&&DB.nut.cp)||NP_DEF.cp,
  fh=(r.date?fd(r.date):'')+(r.hora?'  '+r.hora+' hrs':''),
- al=(l,v,un)=>`<div class="al"><span>${l} <b>${n(v)}</b></span><i>${un}</i></div>`,
+ al=(l,v,un)=>`<div class="al"><span>${l}</span><b>${n(v)}</b><i>${un}</i></div>`,
  BQ=[['GLUCOSA SERICA:','glu','70/100mg/dL'],['HEMOGLOBINA:','hb','♀:12–15 ♂:13–17g/dL'],['COLESTEROL TOTAL:','colt','&lt;200mg/dL'],['HDL (BUENO):','hdl','♀:50mg/dL ♂:40mg/dL'],['LDL (MALO):','ldl','&lt;100mg/dL'],['TRIGLICERIDOS:','tg','&lt;150mg/dL'],['UREA:','urea','15-40 mg/dL'],['CREATININA:','cre','♀:0.6-1.1mg/dL ♂:3.4- 7.0 mg/dL']],
  tx=(l,v,g,cls,mh)=>`<div class="r g ${cls||''}" style="flex:${g} 0 auto;min-height:${mh}in"><div class="lb">${l}</div><div class="tx">${n(v)}</div></div>`;
  const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26)),sz=load>36?' s2':load>23?' s1':'';
  return `<section class="pgp npg${sz}">
  <div class="nph"><div class="npl"><div class="nplg"><img src="${NP_LOGO.a}" alt="" decoding="sync"><img class="lb2" src="${NP_LOGO.b}" alt="" decoding="sync"></div><div class="npt1">NOTAS DE</div><div class="npt2">EVOLUCIÓN  Y TRATAMIENTO NUTRICIONAL</div></div>
-  <div class="npb"><div>NOMBRE: ${u(pn(p))}</div><div class="nprow"><span>EXPEDIENTE: ${u(exp)}</span><span>FECHA DE N: ${u(p.nac?p.nac.split('-').reverse().join('/'):'')}</span></div><div class="npdx">DIAGNOSTICO NUTRICIONAL: ${u(r.dx)}</div></div></div>
+  <div class="npb"><div class="npnm"><span>NOMBRE: ${u(pn(p))}</span><span>EDAD: ${u(o.e?edShort(o.e):'')}</span></div><div class="nprow"><span>EXPEDIENTE: ${u(exp)}</span><span>FECHA DE N: ${u(p.nac?p.nac.split('-').reverse().join('/'):'')}</span></div><div class="npdx">DIAGNOSTICO NUTRICIONAL: ${u(o.dx)}</div></div></div>
  <div class="npt">
   <div class="r r1"><div class="c1">FECHA / HORA: <b>${n(fh)}</b></div><div class="c2">NOTAS DE EVOLUCIÓN NUTRICIONAL Y TRATAMIENTO NUTRICIONAL</div></div>
   ${tx('EVOLUCIÓN NUTRICIONAL ACTUAL (SINTOMAS Y SIGNOS):',r.ev,2.4,'',.8)}
   <div class="r"><div class="ct">EVALUACIÓN DIETETICA R24 HRS</div></div>
-  <div class="r r4"><div>DESAYUNO:</div><div>COMIDA:</div><div>CENA:</div><div>COLACIÓN:</div></div>
+  <div class="r r4"><div>DESAYUNO: ${hr(r.hdes)}</div><div>COMIDA: ${hr(r.hcom)}</div><div>CENA: ${hr(r.hcen)}</div><div>COLACIÓN: ${hr(r.hcol)}</div></div>
   <div class="r r4 g4" style="flex:2.2 0 auto;min-height:.8in"><div class="tx">${n(r.des)}</div><div class="tx">${n(r.com)}</div><div class="tx">${n(r.cen)}</div><div class="tx">${n(r.col)}</div></div>
   <div class="r"><div class="ct">EVOLUCIÓN ACTUAL</div></div>
   <div class="r eg eh"><div>ANTROPOMETRIA</div><div>BIOQUIMICO <span class="bfe">Fecha: ${dm(r.bfecha)}</span></div></div>
-  <div class="r eg eb"><div class="ea">${al('PESO ACTUAL:',r.peso,'Kg')}${al('TALLA ACTUAL:',r.talla,'Cm')}${al('PESO IDEAL:',r.pideal,'Kg')}${al('IMC:',imc,'Kg/m2')}${al('C. CINTURA:',r.cin,'Cm')}${al('C. ABDOMINAL:',r.abd,'Cm')}</div>
+  <div class="r eg eb"><div class="ea">${al('PESO ACTUAL:',r.peso,'Kg')}${al('TALLA ACTUAL:',r.talla,'Cm')}${al('PESO IDEAL:',r.pideal,'Kg')}${al('IMC:',imc,'Kg/m2')}${o.minor&&o.pv?al('PERCENTIL:',o.pv,o.pu):''}${al('C. CINTURA:',r.cin,'Cm')}${al('C. ABDOMINAL:',r.abd,'Cm')}</div>
    <div class="eq">${BQ.map(([l,k,ref])=>`<div class="bq"><span>${l} <b>${n(r[k])}</b></span><span class="ref">${ref}</span></div>`).join('')}</div>
 </div>
-  ${tx('DIAGNOSTICO NUTRICIONAL:',r.dx,1,'bd',.4)}
+  ${tx('DIAGNOSTICO NUTRICIONAL PES:',r.dx,1,'bd',.4)}
   ${tx('PLAN / RECOMENDACIONES :',r.pl,2.4,'bd',.8)}
   ${tx('PENDIENTES:',r.pend,1,'bd',.4)}
  </div>
@@ -1441,6 +1481,7 @@ body.paper-print #hcpaper .npg .nplg img.lb2{height:.46in}
 body.paper-print #hcpaper .npg .npt1{font-size:12pt}body.paper-print #hcpaper .npg .npt2{font-size:9pt}
 body.paper-print #hcpaper .npg .npb{flex:0 0 3.05in;border:1.2pt solid #000;padding:.035in .08in;font-size:10pt;line-height:1.3;display:flex;flex-direction:column;justify-content:center}
 body.paper-print #hcpaper .npg .nprow{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:.12in}body.paper-print #hcpaper .npg .nprow>span{white-space:nowrap}
+body.paper-print #hcpaper .npg .npnm{display:flex;justify-content:space-between;align-items:baseline;column-gap:.12in}body.paper-print #hcpaper .npg .npnm>span:first-child{min-width:0}body.paper-print #hcpaper .npg .npnm>span:last-child{white-space:nowrap}
 body.paper-print #hcpaper .npg .npdx{max-height:2.85em;overflow:hidden}
 body.paper-print #hcpaper .npg .npt{flex:1 0 auto;display:flex;flex-direction:column;border:1.2pt solid #000}
 body.paper-print #hcpaper .npg .r{display:flex;border-top:1px solid #000;flex:none;min-width:0}
@@ -1459,7 +1500,7 @@ body.paper-print #hcpaper .npg .eh>div{padding:.025in .1in;border-left:1px solid
 body.paper-print #hcpaper .npg .bfe{margin-left:.25in}
 body.paper-print #hcpaper .npg .eb>div{border-left:1px solid #000;min-width:0}body.paper-print #hcpaper .npg .eb>div:first-child{border-left:0}
 body.paper-print #hcpaper .npg .ea{padding:.05in .1in}
-body.paper-print #hcpaper .npg .al{display:flex;justify-content:space-between;gap:.1in;line-height:1.5}body.paper-print #hcpaper .npg .al i{font-style:normal;padding-right:.15in}
+body.paper-print #hcpaper .npg .ea{display:grid;grid-template-columns:max-content max-content 1fr;column-gap:.07in;align-content:start;align-items:baseline}body.paper-print #hcpaper .npg .al{display:contents}body.paper-print #hcpaper .npg .al>span,body.paper-print #hcpaper .npg .al>b,body.paper-print #hcpaper .npg .al>i{line-height:1.5}body.paper-print #hcpaper .npg .al>b{min-width:.5in}body.paper-print #hcpaper .npg .al>i{font-style:normal}
 body.paper-print #hcpaper .npg .bq{display:grid;grid-template-columns:56% 44%;border-top:1px solid #000}body.paper-print #hcpaper .npg .bq:first-child{border-top:0}
 body.paper-print #hcpaper .npg .bq>span{padding:.015in .08in;font-size:10pt}body.paper-print #hcpaper .npg .bq>span.ref{border-left:1px solid #000;font-size:9.5pt}
 body.paper-print #hcpaper .npg .ec{padding:.05in .08in}body.paper-print #hcpaper .npg .ecl{font-size:7.5pt;line-height:1.2}body.paper-print #hcpaper .npg .ect{white-space:pre-wrap;margin-top:.04in;font-size:10pt;overflow:hidden}
@@ -1568,7 +1609,10 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 1 ===== */
  const HD=m=>B.push({t:'hdr',meta:!!m,fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD(1);
  H('Ficha de Identificación');
- B.push({t:'p',fic:1,parts:norm([lb('Nombre:',pn(p),24),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',14),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9),G,lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),20),G,lb('Estado civil:',I.ec,10),G,lb('Ocupación:',I.ocup,12),G,lb('Escolaridad:',I.esc,10),G,lb('Tel:',p.tel,12),G,lb('Nacionalidad:',I.nacion,12),G,lb('Correo:',p.mail,22)])});
+ L(lb('Nombre:',pn(p),22),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',12),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9));
+ L(lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),16));
+ L(lb('Estado civil:',I.ec,8),G,lb('Ocupación:',I.ocup,10),G,lb('Escolaridad:',I.esc,8),G,lb('Tel:',p.tel,12));
+ L(lb('Nacionalidad:',I.nacion,10),G,lb('Correo:',p.mail,18));
  H('Antecedentes heredofamiliares');
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
@@ -1666,7 +1710,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1;const b
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
   case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">Historia Clínica</div>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
-  case 'p':if(b.fic){const gs=[[]];b.parts.forEach(x=>{if(x[0]==='t'&&/^\s+$/.test(x[1]))gs.push([]);else gs[gs.length-1].push(x)});o.push('<p class="fic2">'+gs.filter(g=>g.length).map(g=>'<span class="fg">'+partsH(g)+'</span>').join('')+'</p>');break}o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
+  case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4>${esc(b.text)}</h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
@@ -1687,9 +1731,8 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper table{border-collapse:collapse;table-layout:fixed;width:100%;margin:0}#hcpaper td,#hcpaper th{padding:1.2pt 5px;font-size:inherit;text-align:left;vertical-align:top;font-weight:400;line-height:1.2;border:0}
 #hcpaper .hdw{font-size:10.5pt;padding-bottom:3pt;border-bottom:0}
 #hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.42in;width:auto;max-width:3in;display:block}#hcpaper .hd2>div:last-child img{height:.3in}
-#hcpaper .ht{text-align:center;font-weight:700;font-size:16pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt;position:relative;top:.30in}
-#hcpaper p.fic2{line-height:1.55;margin-bottom:.03in}#hcpaper .fic2 .fg{display:inline-block;white-space:nowrap;margin-right:.22in}
-#hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2;position:relative;top:.40in}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
+#hcpaper .ht{text-align:center;font-weight:700;font-size:16pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt}
+#hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
 #hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
 #hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}#hcpaper .hf td,#hcpaper .hf th{vertical-align:middle}
 #hcpaper .gr th,#hcpaper .gr td{border:1px solid #000;padding:.3pt 5px;font-size:.96em;line-height:1.15}#hcpaper .red{color:#c00000;font-weight:700}
@@ -1924,9 +1967,9 @@ const short=l=>l.replace(' para la edad','/edad');
 function quickRows(p){const w=nn(ASS.qw),t=nn(ASS.qh);if(!w||!t)return '<p class="am2">Escribe peso y talla para ver el percentil al instante.</p>';
  const r=pedRows(p,w,t,today());if(!r)return '';
  return `<table class="at">${r.rows.map(x=>x.na?`<tr><td>${short(x.lab)}<td colspan="2" class="am2">${x.na}</td></tr>`:`<tr><td>${short(x.lab)}<td class="n"><b>P${pcs(x.pc)}</b><td>${chip(x.dx,dxc(x.dx))}</td></tr>`).join('')}</table>`}
-function secPed(pd,p){if(!pd)return '';
+function secPed(pd,p,live){if(!pd)return '';
  const head=`<p class="am">Menor de edad detectado: <b>${esc(pd.age)}</b></p>`;
- const quick=`<div class="aq"><b>Cálculo rápido</b> <span class="am2">${route()==='hc'?'(el peso y la talla pasan a la Valoración antropométrica)':'(no se guarda)'}</span><div class="agrid"><input id="aq-w" type="number" step="0.1" inputmode="decimal" placeholder="Peso (kg)" value="${esc(ASS.qw||'')}"><input id="aq-h" type="number" step="0.1" inputmode="decimal" placeholder="Talla (cm)" value="${esc(ASS.qh||'')}"></div><div id="aqr">${quickRows(p)}</div></div>`;
+ const quick=live?'':`<div class="aq"><b>Cálculo rápido</b> <span class="am2">${route()==='hc'?'(el peso y la talla pasan a la Valoración antropométrica)':'(no se guarda)'}</span><div class="agrid"><input id="aq-w" type="number" step="0.1" inputmode="decimal" placeholder="Peso (kg)" value="${esc(ASS.qw||'')}"><input id="aq-h" type="number" step="0.1" inputmode="decimal" placeholder="Talla (cm)" value="${esc(ASS.qh||'')}"></div><div id="aqr">${quickRows(p)}</div></div>`;
  if(!pd.c)return head+`<div class="amsg">Captura <b>peso</b> y <b>talla</b> en la Valoración antropométrica (o una nota subsecuente con peso) para calcular el percentil; o usa el cálculo rápido.</div>`+quick;
  const big=pd.rows.map(r=>r.na?`<div class="abig na"><span>${short(r.lab)}</span><small>${r.na}</small></div>`:`<div class="abig"><span>${short(r.lab)}</span><b>P${pcs(r.pc)}</b>${chip(r.dx,dxc(r.dx))}</div>`).join('');
  const rows=pd.rows.filter(r=>!r.na).map(r=>`<tr><td>${short(r.lab)}<td class="n">${fx(r.val,1)} ${r.u}<td class="n">${fx(r.z,2)}<td class="n">P${pcs(r.pc)}</td></tr>`).join('');
@@ -1941,25 +1984,40 @@ function secRec(rc){if(!rc.list.length&&!rc.notes.length)return '<div class="ams
  return `<ul class="al">${rc.list.map(r=>`<li>${chip(r.a,COL[r.a])} <b>${esc(r.g)}</b><div class="am2">${r.w.map(esc).join(' · ')}</div></li>`).join('')}</ul>
   ${rc.notes.length?`<p class="am" style="margin-top:8px"><b>Otras indicaciones</b></p><ul class="al">${rc.notes.map(n=>`<li>• ${esc(n)}</li>`).join('')}</ul>`:''}
   <p class="am2">Sugerencias por reglas con los datos capturados; ajusta con tu criterio clínico (energía y porciones se definen en el plan).</p>`}
+/* ---- v2.4: percentil / IMC al instante con los datos que se están escribiendo ---- */
+function pcInfo(p,w,t,fecha){const e=p&&p.nac?edad(p.nac,fecha):null;if(!e||e.a>=18||!w||!t)return null;const r=pedRows(p,w,t,fecha);if(!r)return null;
+ const inf=e.dec<24,row=r.rows.find(x=>x.k===(inf?'wti':'bmi'));if(!row||row.pc==null)return null;const raw=row.dx||'';
+ return{v:'P'+pcs(row.pc),u:inf?'peso/edad':'IMC/edad',pc:row.pc,dx:raw,map:inf?(/Bajo/.test(raw)?'Bajo peso':/Alto/.test(raw)?'Peso elevado':'Normopeso'):(raw==='Normal'?'Normopeso':raw)}}
+function adultInfo(w,t){const h=t/100,imc=w/(h*h),cl=imc<18.5?['Bajo peso','#d98a14']:imc<25?['Normopeso','#1f9d5a']:imc<30?['Sobrepeso','#d98a14']:imc<35?['Obesidad grado I','#c8432f']:imc<40?['Obesidad grado II','#c8432f']:['Obesidad grado III','#c8432f'];
+ return{w,t,imc,cl:cl[0],col:cl[1],lo:18.5*h*h,hi:24.9*h*h}}
+function secAd(a){return `<p class="am">Adulto · peso y talla detectados</p><div class="abigs" style="grid-template-columns:1fr 1fr"><div class="abig"><span>IMC</span><b>${fx(a.imc,1)}</b><small>kg/m²</small></div><div class="abig"><span>Clasificación (OMS)</span>${chip(a.cl,a.col)}</div></div>
+ <p class="am2">Peso ${fx(a.w,1)} kg · Talla ${fx(a.t,1)} cm. Peso saludable para esta talla (IMC 18.5–24.9): ${fx(a.lo,1)}–${fx(a.hi,1)} kg.</p>
+ <p class="am2">OMS: &lt; 18.5 bajo peso · 18.5–24.9 normopeso · 25–29.9 sobrepeso · ≥ 30 obesidad. Apoyo clínico, no diagnóstico.</p>`}
+function liveCtx(){if(route()!=='notas'||typeof MF==='undefined'||!MF||MF.key!=='notas')return null;const g=k=>{const e=$('#mf-'+k);return e?e.value:''};
+ const p=MF.np?{id:'np',nac:g('pnac'),sexo:g('ps')==='Hombre'?'M':'F'}:cur();if(!p)return null;return{p,fecha:g('date')||today(),w:nn(g('peso')),t:nn(g('talla'))}}
+function buildLive(lv){if(!lv.w||!lv.t)return null;const key='n|'+(MF.id||'new')+'|'+(lv.p.id||''),e0=lv.p.nac?edad(lv.p.nac,lv.fecha):null,base={p:lv.p,live:1,key,an:null,rc:{list:[],notes:[]},form:true};
+ if(e0&&e0.a<18){const r=pedRows(lv.p,lv.w,lv.t,lv.fecha);if(!r)return null;return{...base,pd:{age:edTxt(e0),c:{fecha:lv.fecha,peso:lv.w,est:lv.t,src:'consulta'},ageC:r.ageC,rows:r.rows}}}
+ return{...base,pd:null,ad:adultInfo(lv.w,lv.t)}}
 const HIDE=['panel','aj','cat','mic'];
 function ctxP(){const r=route();
  if(r==='pac'&&typeof editId!=='undefined'&&editId!==null&&$('#f-nac')){const ex=DB.p.find(x=>x.id===editId)||{};
   return{p:{id:ex.id||'form-new',nombre:ex.nombre,nac:$('#f-nac').value,sexo:($('#f-sexo')||{}).value||ex.sexo||'F',cons:ex.cons||[],mod:ex.mod,est:ex.est},form:true}}
  if(r==='hc')return{p:hcPat()};if(HIDE.includes(r))return null;return{p:cur()}}
-function build(){const x=ctxP();if(!x||!x.p)return null;const p=x.p,I=p.hci||{},pd=pedNow(p);
+function build(){const lv=liveCtx();if(lv)return buildLive(lv);const x=ctxP();if(!x||!x.p)return null;const p=x.p,I=p.hci||{},pd=pedNow(p);
  if(x.form)return pd?{p,pd,an:null,rc:{list:[],notes:[]},form:true}:null;
- if(route()!=='hc'&&!pd)return null;                       // fuera de la Historia clínica solo aparece si hay un menor
- const an=r24(p),has=!!(p.nac||an||Object.keys(I).some(k=>/^(rc|bq|beb|sf|dg|hf)\./.test(k)&&I[k]));if(!has)return null;
- return{p,pd,an,rc:recs(p,pd,an)}}
+ let ad=null;if(!pd&&p.nac){const e0=edad(p.nac);if(e0&&e0.a>=18&&['hc','cons','med'].includes(route())){const m=lastMeas(p);if(m)ad=adultInfo(m.w,m.t)}}
+ if(route()!=='hc'&&!pd&&!ad)return null;                  // fuera de la Historia clínica aparece si hay un menor o peso y talla de un adulto
+ const an=r24(p),has=!!(p.nac||an||Object.keys(I).some(k=>/^(rc|bq|beb|sf|dg|hf)\./.test(k)&&I[k]));if(!has&&!ad)return null;
+ return{p,pd,ad,an,rc:recs(p,pd,an)}}
 function paint(){const a=$('#asst');if(!a)return;
  if(a.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;   // no interrumpir el cálculo rápido
  const d=build();if(!d){a.hidden=true;return}
  if(ASS.qp!==d.p.id){ASS.qp=d.p.id;ASS.qw='';ASS.qh=''}
- const tabs=[...(d.pd?[['ped','Percentil']]:[]),...(d.form?[]:[['r24','R24'],['rec','Recomendación']])];
+ const tabs=[...(d.pd?[['ped','Percentil']]:[]),...(d.ad?[['ad','IMC']]:[]),...(d.form?[]:[['r24','R24'],['rec','Recomendación']])];
  if(!tabs.some(t=>t[0]===ASS.tab))ASS.tab=tabs[0][0];
- if(d.pd&&!ASS.seen[d.p.id]){ASS.seen[d.p.id]=1;ASS.tab='ped';ASS.min=false}   // se abre solo al detectar un menor
- const body=ASS.tab==='ped'?secPed(d.pd,d.p):ASS.tab==='r24'?secR24(d.an):secRec(d.rc);
- const bm=d.pd&&d.pd.rows.find(r=>r.k==='bmi'&&r.pc!=null),sub=bm?'IMC/edad P'+pcs(bm.pc)+' · '+bm.dx:(d.pd?'Menor detectado':'');
+ {const sk=d.key||d.p.id;if((d.pd||d.ad)&&!ASS.seen[sk]){ASS.seen[sk]=1;ASS.tab=d.pd?'ped':'ad';ASS.min=false}}   // se abre solo al detectar peso y talla (menor o adulto)
+ const body=ASS.tab==='ped'?secPed(d.pd,d.p,d.live):ASS.tab==='ad'?secAd(d.ad):ASS.tab==='r24'?secR24(d.an):secRec(d.rc);
+ const bm=d.pd&&d.pd.rows.find(r=>r.k==='bmi'&&r.pc!=null),sub=bm?'IMC/edad P'+pcs(bm.pc)+' · '+bm.dx:(d.pd?'Menor detectado':(d.ad?'IMC '+fx(d.ad.imc,1)+' · '+d.ad.cl:''));
  a.hidden=false;a.classList.toggle('min',ASS.min);
  a.innerHTML=`<div class="ah" id="ahd"><span>🧠 Asistente clínico${sub?' · '+sub:''}</span><span style="flex:1"></span><button class="g s" data-am="min" aria-label="Minimizar">${ASS.min?'▢':'—'}</button></div>
   ${tabs.length>1?`<div class="atb">${tabs.map(([k,l])=>`<button class="${ASS.tab===k?'on':''}" data-at="${k}">${l}</button>`).join('')}</div>`:''}<div class="ab">${body}</div><div class="anp">No se imprime</div>`;
@@ -1992,7 +2050,7 @@ a.addEventListener('input',e=>{const t=e.target;if(t.id==='aq-w'||t.id==='aq-h')
 let tm=null;const sched=()=>{clearTimeout(tm);tm=setTimeout(paint,280)};
 document.addEventListener('input',sched);document.addEventListener('change',sched);
 const _render=render;render=function(){const x=_render.apply(this,arguments);paint();return x};
-window.NCA={pedNow,r24,recs,build,paint,pcOf};
+window.NCA={pedNow,r24,recs,build,paint,pcOf,pcInfo,resetLive:()=>{Object.keys(ASS.seen).forEach(k=>{if(k.startsWith('n|'))delete ASS.seen[k]})}};
 })();
 
 /* =====================================================================
@@ -2297,11 +2355,11 @@ window.DD={solve,targets,genDay,genMeal,parseEq,mkAvoid};
 /* =====================================================================
    9. ENRUTADOR Y ARRANQUE
    ===================================================================== */
-function fillSel(){paintTop();const s=$('#psel');s.innerHTML='<option value="">— Sin paciente —</option>'+DB.p.map(p=>`<option value="${p.id}"${p.id===DB.sel?' selected':''}>${esc(pn(p))}</option>`).join('')}
-$('#psel').onchange=e=>{HS.draft=null;DB.sel=e.target.value||null;save();paintTop();render()};
+function fillSel(){paintTop();const b=$('#pchg'),p=cur();if(!b)return;b.hidden=!p;b.innerHTML=p?'<b>'+esc(pn(p))+'</b> ✕':''}
+$('#pchg').onclick=()=>{HS.draft=null;DB.sel=null;if(typeof MF!=='undefined')MF=null;save();fillSel();render()};
 function render(){const id=(location.hash||'#hc').slice(1),v=V[id]||V.panel;
  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(V[id]?id:'panel')));
- const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();v.i&&v.i();enhanceDates(w);bkBanner(w)}
+ const w=$('#view');w.oninput=w.onchange=w.onclick=null;$('#title').textContent=v.t;w.innerHTML=v.h();{const nk=$('#nopick');if(nk)nk.innerHTML=pickHTML()}v.i&&v.i();enhanceDates(w);bkBanner(w)}
 window.addEventListener('hashchange',()=>{editId=null;render()});
 /* =====================================================================
    FECHAS ESCRITAS (sin calendario): todos los campos de fecha se teclean como dd/mm/aaaa.
@@ -2430,7 +2488,7 @@ function cmpUpdate(){const box=$('#cmp');if(!box)return;
  const nC=(ref?ref.nprev:0)+1;
  const sr=(l,t,k)=>t&&String(t).trim()?`<div style="margin:6px 0"><b>${l}:</b> ${esc(cut(t,320))}${k?` <button class="s g" data-take="${k}" style="margin-left:6px">Traer al campo</button>`:''}</div>`:'';
  let sum='',head;
- if(ref){const txt=sr('Evolución / motivo',ref.ev)+sr('R24 anterior',(ref.r24||[]).join(' · '))+sr('Diagnóstico nutricional',ref.dx,'dx')+sr('Plan / recomendaciones',ref.pl,'pl')+sr('Pendientes',ref.pend,'pend')+(ref.prox?`<div style="margin:6px 0"><b>Cita que se había programado:</b> ${fd(ref.prox)}</div>`:'');
+ if(ref){const txt=sr('Evolución / motivo',ref.ev)+sr('R24 anterior',(ref.r24||[]).join(' · '))+sr('Diagnóstico nutricional PES',ref.dx,'dx')+sr('Plan / recomendaciones',ref.pl,'pl')+sr('Pendientes',ref.pend,'pend')+(ref.prox?`<div style="margin:6px 0"><b>Cita que se había programado:</b> ${fd(ref.prox)}</div>`:'');
   sum=`<h3 style="margin:14px 0 4px;font-size:14px">Resumen de la consulta anterior</h3>${txt||'<p class="note">La consulta anterior no tiene texto capturado.</p>'}`;
   head=`<p class="note" style="margin:0 0 8px">Consulta n.º <b>${nC}</b> · se compara contra la <b>${ref.label}</b> del <b>${fd(ref.fecha)}</b>${ref.fecha&&date>=ref.fecha?` (hace ${dayDiff(ref.fecha,date)} días)`:''}.${ref.vacia?' La historia clínica aún no tiene datos capturados.':''}</p>`}
  else head='<p class="note" style="margin:0 0 8px">Es la <b>primera nota</b> de este paciente: no hay datos previos para comparar. Esta nota quedará como referencia para la siguiente.</p>';
@@ -2446,14 +2504,14 @@ const hitsHTML=h=>h.length?`<div class="gap" style="margin-top:8px">${h.map(x=>`
 function acBoxHTML(){const pe=($('#mf-pe')||{}).value||'',pm=($('#mf-pn')||{}).value||'';
  const hits=[...findPats(pe),...findPats(pm)].filter((h,i,a)=>a.findIndex(x=>x.p.id===h.p.id)===i).slice(0,6);
  return `<h2>Autocompletar paciente ya registrado</h2><p class="note" style="margin-top:0">Escribe el <b>expediente</b> o el <b>nombre</b> en los campos de abajo: si el paciente ya está registrado se llenan sus datos básicos y verás el resumen de su consulta anterior.</p>${(pe||pm)?hitsHTML(hits)+(hits.length?'':'<p class="note">Si no existe, al guardar se registrará como paciente nuevo.</p>'):''}`}
-function acApply(pid){const typed={};MODS.notas.f.forEach(f=>{if(f[2]==='date')return;const e=$('#mf-'+f[0]);if(e&&String(e.value).trim())typed[f[0]]=e.value});
+function acApply(pid){const typed={};MODS.notas.f.forEach(f=>{if(f[2]==='date'||f[2]==='ro')return;const e=$('#mf-'+f[0]);if(e&&String(e.value).trim())typed[f[0]]=e.value});
  HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fillSel();render();
  Object.entries(typed).forEach(([k,v])=>{const e=$('#mf-'+k);if(e)e.value=v});cmpUpdate();
  const p=DB.p.find(x=>x.id===pid);toast('Paciente encontrado: '+(p?pn(p):'')+' · datos autocompletados')}
 function acOpen(pid){HS.draft=null;DB.sel=pid;MF={key:'notas',id:''};save();fillSel();render()}
 {const _nh=V.notas.h,_ni=V.notas.i;
  V.notas.h=function(){const html=_nh.apply(this,arguments);
-  if(MF&&MF.key==='notas')return html.replace(/<div class="card"><h2>(Nuevo|Editar) registro/,'<div class="card noprint" id="cmp"></div>$&');
+  if(MF&&MF.key==='notas')return html.replace('<div class="card" id="mform">','<div class="card noprint" id="cmp"></div>$&');
   return html};
  V.notas.i=function(){_ni.apply(this,arguments);const v=$('#view'),oc=v.onclick;
   v.onclick=e=>{const b=e.target.closest('[data-use],[data-agset],[data-take]');
@@ -2483,10 +2541,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const o=$('#verexp'
  const pqHTML=q=>{if(!q.trim())return'';const h=findPats(q);if(!h.length)return'<p class="note">Sin coincidencias en los pacientes registrados.</p>';
   return `<div class="wrap" style="margin-top:8px"><table>${h.map(x=>`<tr><td><b>${esc(pn(x.p))}</b>${pExp(x.p)?' · Exp. '+esc(pExp(x.p)):''}${x.p.nac?' · '+edTxt(edad(x.p.nac)):''}<td class="n"><button class="s g" data-pq="hc|${x.p.id}">Historia</button> <button class="s g" data-pq="notas|${x.p.id}">Notas subsecuentes</button> <button class="s g" data-pq="cons|${x.p.id}">Consulta</button> <button class="s" data-pq="sel|${x.p.id}">Seleccionar</button> <button class="s g" data-ver="${x.p.id}">Ver expediente</button>`).join('')}</table></div>`};
  V.pac.h=function(){const html=_ph.apply(this,arguments).replace(/<button class="s g" data-a="arch" data-id="([^"]+)" title="Descargar expediente completo">Expediente<\/button>/g,'<button class="s" data-ver="$1">Ver expediente</button> <button class="s g" data-a="arch" data-id="$1" title="Descargar expediente completo">Descargar</button>');if(editId!==null&&editId!==undefined)return html;
-  return `<div class="card noprint"><label for="pacq">Buscar paciente por expediente o nombre</label><input id="pacq" autocomplete="off" placeholder="Ej. 12345 o Ana López"><div id="pacr"></div></div>`+html};
+  const DG=dupGroups(),dup=DG.length?`<div class="card noprint" style="border-color:var(--warn)"><h2>Posibles pacientes duplicados (${DG.length})</h2><p class="note" style="margin-top:0">Mismo expediente o mismo nombre y fecha de nacimiento. Al unirlos se conservan todas las consultas, notas y citas en una sola ficha.</p>${DG.map(g=>{const k=g.slice().sort((a,b)=>patSize(b)-patSize(a))[0];return g.filter(x=>x!==k).map(x=>`<div class="gap" style="margin:6px 0"><span><b>${esc(pn(k))}</b>${pExp(k)?' · Exp. '+esc(pExp(k)):''} ↔ ${esc(pn(x))}${pExp(x)?' · Exp. '+esc(pExp(x)):''}</span><button class="s" data-merge="${k.id}|${x.id}">Unir en una sola ficha</button></div>`).join('')}).join('')}</div>`:'';
+  return dup+`<div class="card noprint"><label for="pacq">Buscar paciente por expediente o nombre</label><input id="pacq" autocomplete="off" placeholder="Ej. 12345 o Ana López"><div id="pacr"></div></div>`+html};
  V.pac.i=function(){_pi.apply(this,arguments);const v=$('#view'),oc=v.onclick,q=$('#pacq');
   if(q)q.oninput=()=>{$('#pacr').innerHTML=pqHTML(q.value)};
-  v.onclick=e=>{const vb=e.target.closest('[data-ver]');if(vb){verExp(vb.dataset.ver);return}
+  v.onclick=e=>{const mg=e.target.closest('[data-merge]');if(mg){const[k,d]=mg.dataset.merge.split('|'),a=DB.p.find(x=>x.id===k),b=DB.p.find(x=>x.id===d);if(a&&b&&confirm('¿Unir «'+pn(b)+'» dentro de «'+pn(a)+'»?\n\nSe conservan todas las consultas, notas y citas. Esta acción no se puede deshacer (hay copia automática del día).')){mergePats(k,d);fillSel();render();toast('Pacientes unidos en una sola ficha')}return}
+   const vb=e.target.closest('[data-ver]');if(vb){verExp(vb.dataset.ver);return}
    const b=e.target.closest('[data-pq]');
    if(b){const[a,id]=b.dataset.pq.split('|');HS.draft=null;DB.sel=id;save();fillSel();
     if(a==='sel'){toast('Paciente seleccionado: '+pn(DB.p.find(x=>x.id===id)));return}
@@ -2495,15 +2555,41 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const o=$('#verexp'
    if(oc)oc(e)}}}
 
 /* ---------- D. AGENDA (ambos modos) ---------- */
-const AGE=['Pendiente','Asistió','No asistió','Reprogramada','Cancelada'],AGC={'Pendiente':'var(--warn)','Asistió':'var(--ok)','No asistió':'var(--bad)','Reprogramada':'var(--pri2)','Cancelada':'var(--mut)'};
+const AGE=['Pendiente','Asistió','No asistió','Reprogramada','Cancelada'],AGC={'Pendiente':'var(--warn)','Asistió':'#86d39b','No asistió':'var(--bad)','Reprogramada':'var(--pri2)','Cancelada':'var(--mut)'};
 const AG={v:'hoy',f:null,q:''};
 const agList=()=>(DB.ag=DB.ag||[]);
 const agOf=p=>agList().filter(a=>a.pid===p.id);
 const agPat=a=>a.pid?DB.p.find(x=>x.id===a.pid):null;
 const agName=a=>{const p=agPat(a);return p?pn(p):(a.nom||'—')};
 const agExp=a=>{const p=agPat(a);return p?pExp(p):(a.exp||'')};
-function agFirst(p){const L=agList();if(!L.some(a=>a.pid===p.id&&a.tipo==='Primera vez'))L.push({id:uid(),pid:p.id,date:(p.hci&&p.hci.fecha)||today(),hora:'',tipo:'Primera vez',estado:'Asistió',auto:1});agLink(p)}
-function agLink(p){agList().forEach(a=>{if(a.pid)return;const e=_nz(pExp(p));if((e&&_nz(a.exp)===e)||(a.nom&&_nz(a.nom)===_nz(pn(p))))a.pid=p.id})}
+/* ---------- v2.5: un paciente = una sola ficha (expediente o nombre+nacimiento) y todo enlazado con la agenda ---------- */
+const nameKey=x=>_nz(x).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).sort().join(' ');
+function findDup(nom,exp,nac,exceptId){const k=nameKey(nom),e=_nz(exp);let r=null;
+ for(const p of DB.p){if(p.id===exceptId)continue;const pe=_nz(pExp(p)),same=k&&nameKey(pn(p))===k&&(!nac||!p.nac||p.nac===nac);
+  if(same)return{p,why:'nombre'};if(e&&pe===e&&!r)r={p,why:'exp'}}
+ return r}
+function fillBlank(ex,d){['apellidos','nac','est','tel','mail','antec','hist'].forEach(k=>{if(!ex[k]&&d[k])ex[k]=d[k]});
+ if(d.sexo&&!ex.nac)ex.sexo=d.sexo;ex.pat=[...new Set([...(ex.pat||[]),...(d.pat||[])])];if(!ex.av&&d.av)ex.av=d.av;
+ ['hci','hcd'].forEach(h=>{if(d[h]){ex[h]=ex[h]||{};Object.keys(d[h]).forEach(k=>{if((ex[h][k]===undefined||ex[h][k]==='')&&d[h][k]!==undefined&&d[h][k]!=='')ex[h][k]=d[h][k]})}})}
+function dupAsk(d,nom){return d.why==='nombre'||confirm('Ya existe un paciente con el mismo expediente: '+pn(d.p)+'.\n\n¿Es la misma persona que «'+nom+'»? (Aceptar = usar la ficha existente · Cancelar = crear otra)')}
+function mergePats(keepId,dropId){const a=DB.p.find(x=>x.id===keepId),b=DB.p.find(x=>x.id===dropId);if(!a||!b||a===b)return;
+ fillBlank(a,b);a.cons=(a.cons||[]).concat(b.cons||[]);a.mod=a.mod||{};Object.keys(b.mod||{}).forEach(k=>{a.mod[k]=(a.mod[k]||[]).concat(b.mod[k])});
+ agList().forEach(x=>{if(x.pid===dropId)x.pid=keepId});(DB.menus||[]).forEach(m=>{if(m.asig&&m.asig[dropId]!==undefined){if(m.asig[keepId]===undefined)m.asig[keepId]=m.asig[dropId];delete m.asig[dropId]}});
+ if(DB.sel===dropId)DB.sel=keepId;delete DB.csel[dropId];DB.p=DB.p.filter(x=>x!==b);agDedupe();save()}
+function dupGroups(){const out=[],used=new Set();DB.p.forEach((p,i)=>{if(used.has(p.id))return;const g=[p];
+ DB.p.slice(i+1).forEach(q=>{if(used.has(q.id))return;const e=_nz(pExp(p)),same=nameKey(pn(p))&&nameKey(pn(p))===nameKey(pn(q))&&(!p.nac||!q.nac||p.nac===q.nac),ex=e&&e===_nz(pExp(q));if(same||ex){g.push(q);used.add(q.id)}});
+ if(g.length>1){used.add(p.id);out.push(g)}});return out}
+const patSize=p=>(p.cons||[]).length+pNotes(p).length+Object.keys(p.hci||{}).length;
+/* Si ya hay una "Primera vez" de ese paciente (manual o automática) no se crea otra; se enlazan las citas sueltas por expediente/nombre */
+function agDedupe(){const seen={};let ch=false;
+ agList().slice().forEach(a=>{if(!a.pid||a.tipo!=='Primera vez'||a.estado==='Cancelada'||a.estado==='Reprogramada')return;const o=seen[a.pid];if(!o){seen[a.pid]=a;return}
+  const keep=(o.auto&&!a.auto)?a:o,drop=keep===o?a:o;if(!keep.hora&&drop.hora)keep.hora=drop.hora;if(keep.estado==='Pendiente'&&drop.estado!=='Pendiente')keep.estado=drop.estado;
+  DB.ag=DB.ag.filter(x=>x!==drop);seen[a.pid]=keep;ch=true});if(ch)save()}
+function agFirst(p){agLink(p);const L=agList();
+ const ex=L.find(a=>a.pid===p.id&&a.tipo==='Primera vez'&&a.estado!=='Cancelada'&&a.estado!=='Reprogramada');
+ if(ex){if(ex.estado==='Pendiente'&&ex.date<=today())ex.estado='Asistió';agLink(p);return}
+ if(!L.some(a=>a.pid===p.id&&a.tipo==='Primera vez'))L.push({id:uid(),pid:p.id,date:(p.hci&&p.hci.fecha)||today(),hora:'',tipo:'Primera vez',estado:'Asistió',auto:1});agLink(p)}
+function agLink(p){agList().forEach(a=>{if(a.pid)return;const e=_nz(pExp(p)),k=nameKey(pn(p));if((e&&_nz(a.exp)===e)||(a.nom&&k&&nameKey(a.nom)===k))a.pid=p.id})}
 function agMigrate(){if(DB.agv)return;const L=agList();
  DB.p.forEach(p=>{const f=firstData(p);if(f&&f.fecha&&!L.some(a=>a.pid===p.id&&a.tipo==='Primera vez'))L.push({id:uid(),pid:p.id,date:f.fecha,hora:'',tipo:'Primera vez',estado:'Asistió',auto:1});
   const N=pNotes(p);N.forEach(r=>{if(!r.date)return;
@@ -2519,12 +2605,12 @@ function agAfterNote(p,nid){const r=((p.mod||{}).notas||[]).find(x=>x.id===nid);
  const q=L.find(x=>x.src===nid);
  if(r.prox){if(q){q.date=r.prox;q.pid=p.id}else L.push({id:uid(),pid:p.id,date:r.prox,hora:'',tipo:'Subsecuente',estado:'Pendiente',src:nid})}
  else if(q&&q.estado==='Pendiente')DB.ag=L.filter(x=>x!==q)}
-V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),pad=n=>String(n).padStart(2,'0'),hs=(a,b)=>(a.hora||'99:99').localeCompare(b.hora||'99:99');
+V.agenda={t:'Agenda de citas',h(){DB.p.forEach(agLink);agDedupe();const L=agList(),t=today(),pad=n=>String(n).padStart(2,'0'),hs=(a,b)=>(a.hora||'99:99').localeCompare(b.hora||'99:99');
  if(!AG.d)AG.d=t;if(!AG.m)AG.m=AG.d.slice(0,7);
  const[Y,M]=AG.m.split('-').map(Number),start=(new Date(Y,M-1,1).getDay()+6)%7,dim=new Date(Y,M,0).getDate(),by={};
  L.forEach(a=>{if(a.estado==='Reprogramada'||a.estado==='Cancelada')return;(by[a.date]=by[a.date]||[]).push(a)});
  const cells=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>`<div class="ch">${d}</div>`).join('')+'<div></div>'.repeat(start)+
-  Array.from({length:dim},(_,i)=>{const iso=`${Y}-${pad(M)}-${pad(i+1)}`,it=by[iso]||[];
+  Array.from({length:dim},(_,i)=>{const iso=`${Y}-${pad(M)}-${pad(i+1)}`,it=(by[iso]||[]).slice().sort(hs);
    return`<div class="cd${iso===t?' td':''}${iso===AG.d?' sel':''}" data-day="${iso}" tabindex="0"><b>${i+1}</b>${it.length?`<small>${it.length} cita${it.length>1?'s':''}</small><span class="dots">${it.slice(0,6).map(a=>`<i style="background:${AGC[a.estado]}"></i>`).join('')}</span>`:''}</div>`}).join('');
  const day=L.filter(a=>a.date===AG.d).sort(hs),pen=L.filter(a=>a.estado==='Pendiente'&&a.date<t).sort((a,b)=>a.date.localeCompare(b.date)),
   prox=L.filter(a=>a.estado==='Pendiente'&&a.date>=t&&dayDiff(t,a.date)<=7).length,hoyN=(by[t]||[]).length,
@@ -2547,12 +2633,12 @@ V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),pad=n=>String(n).pa
   <p class="note">La cita original queda como “Reprogramada” y se crea la nueva cita pendiente.</p><p><button data-a="rpsave">Guardar cambio</button> <button class="g" data-a="cancel">Cancelar</button></p></div>`:'';
  const row=a=>{const p=agPat(a),ph=p&&String(p.tel||'').replace(/\D/g,''),pend=a.estado==='Pendiente';
   return`<tr><td><input type="time" data-hr="${a.id}" value="${esc(a.hora||'')}" aria-label="Hora" style="width:112px"><td><b>${esc(agName(a))}</b>${p?'':' <span class="note">(no registrado)</span>'}${agExp(a)?`<div class="note" style="margin:0">Exp. ${esc(agExp(a))}</div>`:''}<td>${a.tipo}<td>${esc(a.lugar||'—')}
-   <td><span class="pill" style="background:${AGC[a.estado]}">${a.estado}</span>${a.movedTo?`<div class="note" style="margin:0">→ ${fd(a.movedTo)}</div>`:''}<td>${esc(a.nota||'')}
+   <td><span class="pill" style="background:${AGC[a.estado]}${a.estado==='Asistió'?';color:#14532d':''}">${a.estado}</span>${a.movedTo?`<div class="note" style="margin:0">→ ${fd(a.movedTo)}</div>`:''}<td>${esc(a.nota||'')}
    <td class="n">${a.estado!=='Reprogramada'?`<button class="s" data-a="ok" data-id="${a.id}">✔ Asistió</button> <button class="s d" data-a="no" data-id="${a.id}">✖ No vino</button> <button class="s g" data-a="mv" data-id="${a.id}">🔁 Cambió</button> `:''}<button class="s g" data-a="open" data-id="${a.id}">${a.tipo==='Primera vez'?'Historia clínica':'Nueva nota'}</button> ${pend&&ph?`<button class="s g" data-a="wa" data-id="${a.id}">WhatsApp</button> `:''}<button class="s g" data-a="edit" data-id="${a.id}">Editar</button> <button class="s d" data-a="del" data-id="${a.id}">✕</button>`};
  const mes=new Date(Y,M-1,1).toLocaleDateString('es-MX',{month:'long',year:'numeric'});
  return `<div class="grid" style="margin-bottom:12px">${kp(hoyN,'Citas de hoy')}${kp(prox,'Pendientes próx. 7 días')}${kp(pen.length,'Por confirmar (ya pasaron)',pen.length?'var(--warn)':'')}${kp(sch.length?Math.round(ok/sch.length*100)+' %':'—','Asistencia a citas agendadas')}</div>
   <div class="card"><div class="gap" style="margin-bottom:10px"><button class="s g" data-nav="prev" aria-label="Mes anterior">‹</button><h2 style="margin:0;flex:1;text-align:center;text-transform:capitalize">${mes}</h2><button class="s g" data-nav="next" aria-label="Mes siguiente">›</button><button class="s" data-nav="today">Hoy</button></div><div class="cal">${cells}</div>
-   <p class="note">Toca un día para ver o añadir sus citas. Los puntos indican el estado: <span class="pill" style="background:var(--warn)">pendiente</span> <span class="pill" style="background:var(--ok)">asistió</span> <span class="pill" style="background:var(--bad)">no vino</span></p></div>
+   <p class="note">Toca un día para ver o añadir sus citas. Los puntos indican el estado: <span class="pill" style="background:var(--warn)">pendiente</span> <span class="pill" style="background:#86d39b;color:#14532d">asistió</span> <span class="pill" style="background:var(--bad)">no vino</span></p></div>
   <div class="card"><div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1;text-transform:capitalize">${wd(AG.d)} ${fd(AG.d)}</h2>${F||RP?'':'<button data-a="new">＋ Añadir cita</button>'}</div>${form}${rpan}
    <div class="wrap"><table><tr><th>Hora<th>Paciente<th>Tipo<th>Lugar<th>Estado<th>Nota<th></tr>${day.map(row).join('')||'<tr><td colspan="7">No hay citas este día.'}</table></div></div>
   ${pen.length?`<div class="card"><h2>Por confirmar (${pen.length})</h2><p class="note" style="margin-top:0">Citas que ya pasaron y no marcaste si el paciente asistió. Toca una para ir a ese día.</p><div class="gap">${pen.slice(0,12).map(a=>`<button class="s g" data-day="${a.date}">${fd(a.date)} · ${esc(agName(a))}</button>`).join('')}</div></div>`:''}
@@ -2577,16 +2663,21 @@ V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),pad=n=>String(n).pa
    else if(x==='wa'){const p=agPat(a);if(!p)return;let n=String(p.tel||'').replace(/\D/g,'');if(n.length===10)n='52'+n;
     window.open('https://wa.me/'+n+'?text='+encodeURIComponent(`Hola ${p.nombre}, le recordamos su cita de nutrición el ${fd(a.date)}${a.hora?' a las '+a.hora+' hrs':''}${a.lugar?' en '+a.lugar:''}. ¡La esperamos!`),'_blank')}
    else if(x==='open'){const p=agPat(a);
-    if(a.tipo==='Primera vez'){if(p){DB.sel=p.id;HS.draft=null}else{DB.sel=null;const d=newDraft();d.nombre=a.nom||'';d.hci={exp:a.exp||''};HS.draft=d}save();fillSel();location.hash='hc';return}
+    if(a.tipo==='Primera vez'){if(p){DB.sel=p.id;HS.draft=null}else{const m=findDup(a.nom||'',a.exp||'','');if(m){a.pid=m.p.id;DB.sel=m.p.id;HS.draft=null}else{DB.sel=null;const d=newDraft();d.nombre=a.nom||'';d.hci={exp:a.exp||''};HS.draft=d}}save();fillSel();location.hash='hc';return}
     HS.draft=null;if(p){DB.sel=p.id;MF={key:'notas',id:''}}else{DB.sel=null;MF={key:'notas',id:'',np:1}}save();fillSel();
     if(location.hash==='#notas')render();else location.hash='notas';
     if(!p)setTimeout(()=>{const n=$('#mf-pn'),ex=$('#mf-pe');if(n)n.value=a.nom||'';if(ex)ex.value=a.exp||'';cmpUpdate()},60)}
    else if(x==='save'){let pid=$('#ag-p').value;const nom=$('#ag-nom').value.trim(),exp=$('#ag-exp').value.trim(),date=$('#ag-date').value;
     if(!date)return toast('Captura la fecha');if(!pid&&!nom)return toast('Elige un paciente o escribe un nombre');
-    if(!pid){const m=findPats(exp||nom).find(h=>h.s>=95);if(m)pid=m.p.id}
+    let enl=false;if(!pid){const m=findDup(nom,exp,'');if(m&&(m.why==='nombre'||confirm('Ya existe un paciente con ese expediente: '+pn(m.p)+'. ¿Es la misma persona?'))){pid=m.p.id;enl=true}}
     const lugar=$('#ag-lugar').value.trim(),rec={pid,nom:pid?'':nom,exp:pid?'':exp,date,hora:$('#ag-hora').value,lugar,tipo:$('#ag-tipo').value,estado:$('#ag-est').value,nota:$('#ag-n').value.trim()};
     if(lugar)DB.agLugar=lugar;
-    if(AG.f.id)Object.assign(L().find(z=>z.id===AG.f.id),rec);else L().push({id:uid(),...rec});
+    const pp=pid&&DB.p.find(z=>z.id===pid),self=AG.f.id&&L().find(z=>z.id===AG.f.id);
+    if(pp&&rec.tipo==='Primera vez'&&!(self&&self.tipo==='Primera vez')&&firstData(pp)){rec.tipo='Subsecuente';toast('Ya tiene historia clínica: la cita se guardó como Subsecuente')}
+    const kk=nameKey(rec.nom),ee=_nz(rec.exp),dupc=L().find(z=>z.id!==AG.f.id&&z.date===date&&z.tipo===rec.tipo&&z.estado!=='Cancelada'&&z.estado!=='Reprogramada'&&(pid?z.pid===pid:(!z.pid&&((kk&&nameKey(z.nom)===kk)||(ee&&_nz(z.exp)===ee))))&&(!z.hora||!rec.hora||z.hora===rec.hora));
+    if(dupc&&!AG.f.id){Object.assign(dupc,rec,{id:dupc.id,auto:undefined});toast('Esa cita ya existía: se actualizó (no se duplicó)')}
+    else if(AG.f.id)Object.assign(self,rec);else L().push({id:uid(),...rec});
+    if(enl)toast('Se enlazó con el paciente ya registrado');
     AG.d=date;AG.m=date.slice(0,7);save();AG.f=null;toast('Cita guardada');render()}}}};
 {const st=document.createElement('style');st.textContent=`.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal .ch{font-size:11px;color:var(--mut);text-align:center;font-weight:600}
 .cd{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:64px;padding:5px 7px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);cursor:pointer;min-width:0}
@@ -2594,7 +2685,18 @@ V.agenda={t:'Agenda de citas',h(){const L=agList(),t=today(),pad=n=>String(n).pa
 .cd small{font-size:10px;opacity:.9}.cd .dots{display:flex;gap:3px;flex-wrap:wrap}.cd .dots i{width:8px;height:8px;border-radius:50%;display:block;box-shadow:0 0 0 1px #fff9}
 @media(max-width:560px){.cd{min-height:46px;padding:3px 4px}.cd small{display:none}}`;document.head.appendChild(st)}
 
-agMigrate();
+agMigrate();DB.p.forEach(agLink);agDedupe();
+/* ---------- Historia clínica: guardar y pasar al siguiente paciente ---------- */
+{const _hh=V.hc.h;
+ V.hc.h=function(){const html=_hh.apply(this,arguments);if(HS.cfg)return html;const p=hcPat();
+  return `<div class="fbar noprint"><h2>${p&&(p.nombre||'').trim()?'Historia clínica · '+esc(pn(p)):'Nueva historia clínica'}</h2><span class="fbtn"><button data-hcnext="1">Guardar y siguiente paciente</button></span></div>`+html};
+ document.addEventListener('click',e=>{if(!e.target.closest('[data-hcnext]'))return;let p=hcPat();
+  if(p&&HS.draft===p){if(!(p.nombre||'').trim()||!p.nac)return toast('Para guardar captura el nombre y la fecha de nacimiento');hcRegister(p);p=cur()}
+  if(p&&DB.p.includes(p)){agFirst(p);agDedupe()}save();toast('Historia clínica guardada'+(p&&DB.p.includes(p)?': '+pn(p):''));
+  const t=today(),id=p&&p.id,nx=agList().filter(a=>a.tipo==='Primera vez'&&a.estado==='Pendiente'&&a.date===t&&(!a.pid||a.pid!==id)).sort((a,b)=>(a.hora||'99:99').localeCompare(b.hora||'99:99'))[0];
+  if(nx){const q=nx.pid&&DB.p.find(z=>z.id===nx.pid);if(q){HS.draft=null;DB.sel=q.id}else{const d=newDraft();d.nombre=nx.nom||'';d.hci={exp:nx.exp||''};HS.draft=d}toast('Siguiente paciente de la agenda: '+(q?pn(q):nx.nom||'sin nombre'))}
+  else HS.draft=newDraft();
+  fillSel();render();window.scrollTo(0,0)})}
 
 /* ---------- E. EXPEDIENTE ARCHIVADO: historia clínica + notas se conservan hasta borrar al paciente ---------- */
 function patFile(p){return{app:'NutriClin',tipo:'expediente',fecha:new Date().toISOString(),modo:MODE,paciente:p,agenda:agOf(p)}}
@@ -2611,6 +2713,56 @@ function archPat(id,quiet){const p=DB.p.find(x=>x.id===id);if(!p)return;const n=
 function delPat(id){const p=DB.p.find(x=>x.id===id);if(!p)return;const nn=pNotes(p).length;
  if(!confirm(`Vas a ELIMINAR a ${pn(p)}.\n\nSe borrará para siempre su historia clínica, ${nn} nota(s) subsecuente(s), sus consultas y sus citas.\n\nAntes se descargará una copia de su expediente. ¿Continuar?`))return;
  archPat(id,true);DB.p=DB.p.filter(x=>x.id!==id);DB.ag=agList().filter(a=>a.pid!==id);if(DB.sel===id)DB.sel=null;save();fillSel();render();toast('Paciente eliminado · copia del expediente descargada')}
+
+/* =====================================================================
+   11. v2.4 — NOTAS SUBSECUENTES: edad, IMC, diagnóstico por IMC y percentil automáticos · lista "Con paciente"
+   ===================================================================== */
+const nnv=v=>{const x=parseFloat(String(v??'').replace(',','.'));return Number.isFinite(x)&&x>0?x:null};
+function edShort(e){if(!e)return'';const y=e.a,m=e.m,pl=(n,a,b)=>n+' '+(n===1?a:b);
+ return y>=18?pl(y,'año','años'):y>=1?pl(y,'año','años')+(m?' '+pl(m,'mes','meses'):''):pl(e.tot,'mes','meses')}
+/* IMC, diagnóstico (adultos: OMS · menores: percentil CDC) y edad a la fecha de la nota */
+function imcDx(p,fecha,w,t){const e=p&&p.nac?edad(p.nac,fecha||undefined):null,o={e,imc:null,dx:'',pct:'',pv:'',pu:'',minor:!!(e&&e.a<18)};
+ if(!w||!t)return o;const raw=w/((t/100)**2);o.imc=Math.round(raw*10)/10;
+ if(o.minor){let pi=null;try{pi=NCA.pcInfo(p,w,t,fecha||today())}catch(x){}if(pi){o.pv=pi.v;o.pu=pi.u;o.pct=pi.v+' ('+pi.u+')';o.dx=pi.map}}
+ else o.dx=raw<18.5?'Bajo peso':raw<25?'Normopeso':raw<30?'Sobrepeso':'Obesidad';
+ return o}
+function notaAuto(){if(!MF||MF.key!=='notas')return;const g=k=>{const e=$('#mf-'+k);return e?e.value:''};
+ const p=MF.np?{id:'np',nac:g('pnac'),sexo:g('ps')==='Hombre'?'M':'F'}:cur();if(!p)return;
+ const o=imcDx(p,g('date')||today(),nnv(g('peso')),nnv(g('talla'))),set=(k,v)=>{const e=$('#mf-'+k);if(e&&e.value!==v)e.value=v};
+ set('edad',o.e?edShort(o.e):'');set('imc',o.imc!=null?String(o.imc):'');set('dxi',o.dx);set('pct',o.pct);
+ const pe=$('#mf-pct');if(pe&&pe.parentElement)pe.parentElement.style.display=o.minor?'':'none'}
+
+const NS={mode:'con',q:''};
+function notasRows(){const out=[];DB.p.forEach(p=>{const L=pNotes(p);if(!L.length)out.push({p,r:null});else L.forEach(r=>out.push({p,r}))});
+ const k=x=>x.r?(x.r.date||'')+' '+(x.r.hora||''):'';
+ return out.sort((a,b)=>(a.r?0:1)-(b.r?0:1)||k(b).localeCompare(k(a))||pn(a.p).localeCompare(pn(b.p)))}
+function notasRowsHTML(){const q=_nz(NS.q),L=notasRows().filter(x=>!q||_nz(pn(x.p)+' '+pExp(x.p)).includes(q));
+ if(!L.length)return `<tr><td colspan="10">${DB.p.length?'Sin coincidencias.':'Aún no hay pacientes registrados. Regístralos en <a href="#pac">Pacientes</a> o usa «Sin paciente».'}`;
+ return L.map(({p,r})=>{const nm=`<b>${esc(pn(p))}</b>${pExp(p)?`<div class="note" style="margin:0">Exp. ${esc(pExp(p))}</div>`:''}`;
+  if(!r)return `<tr class="clk" data-new="${p.id}"><td>${nm}<td colspan="8" style="color:var(--mut)">Sin notas · clic para crear la primera<td class="n"><button class="s" data-new="${p.id}">+ Nota</button>`;
+  const o=imcDx(p,r.date,num(r.peso),num(r.talla));
+  return `<tr class="clk" data-open="${p.id}|${r.id}"><td>${nm}<td>${fd(r.date)}<td>${esc(r.hora||'—')}<td>${o.e?edShort(o.e):'—'}<td class="n">${fx(num(r.peso))}<td class="n">${o.imc!=null?fx(o.imc,1):'—'}<td>${esc(o.dx||'—')}<td>${esc(cut(r.dx,48)||'—')}<td>${r.prox?fd(r.prox):'—'}<td class="n"><button class="s g" data-nprint="${p.id}|${r.id}">Imprimir</button> <button class="s d" data-ndel="${p.id}|${r.id}">✕</button>`}).join('')}
+function notasListHTML(){const con=NS.mode==='con',c=cur();
+ const seg=`<div class="seg"><button data-nm="con" class="${con?'':'g'}">Con paciente</button><button data-nm="sin" class="${con?'g':''}">Sin paciente</button></div>`;
+ if(!con)return seg+`<div class="card"><h2>Nota de paciente no registrado</h2><p class="note" style="margin-top:0">Para pacientes que ya tienen expediente en el trabajo pero aún no están en la app. Al guardar la nota, el paciente se registra automáticamente.</p><p><button data-x="newpat">+ Nota de paciente no registrado</button></p></div>`;
+ return seg+`<div class="card noprint"><div class="gap"><input id="nq" placeholder="Buscar por nombre o expediente" value="${esc(NS.q)}" style="max-width:360px" autocomplete="off">${c?`<button data-x="new">+ Nueva nota de ${esc(pn(c))}</button>`:''}</div><p class="note">Haz clic en una fila para abrir y editar la nota.</p></div>
+  <div class="card wrap"><table><tr><th>Paciente<th>Fecha<th>Hora<th>Edad<th class="n">Peso (kg)<th class="n">IMC<th>Diagnóstico (IMC)<th>Dx. nutricional PES<th>Próxima cita<th></tr><tbody id="ntb">${notasRowsHTML()}</tbody></table></div>`}
+function notasListI(){const v=$('#view');
+ v.onclick=e=>{
+  const nm=e.target.closest('[data-nm]');if(nm){NS.mode=nm.dataset.nm;render();return}
+  const x=e.target.closest('[data-x]');if(x){if(x.dataset.x==='newpat'){MF={key:'notas',id:'',np:1};render()}else if(x.dataset.x==='new'&&cur()){MF={key:'notas',id:''};render()}return}
+  const pr=e.target.closest('[data-nprint]');if(pr){const[pid,id]=pr.dataset.nprint.split('|');HS.draft=null;DB.sel=pid;save();fillSel();NP=id;render();npPrint();return}
+  const dl=e.target.closest('[data-ndel]');if(dl){const[pid,id]=dl.dataset.ndel.split('|'),p=DB.p.find(z=>z.id===pid);if(!p)return;
+   if(!confirm('Esta nota quedaría eliminada para siempre (las notas se conservan mientras el paciente siga en tu lista). ¿Eliminar SOLO esta nota?'))return;
+   p.mod.notas=(p.mod.notas||[]).filter(r=>r.id!==id);if(DB.ag)DB.ag=DB.ag.filter(a=>!(a.nid===id&&a.auto)&&!(a.src===id&&a.estado==='Pendiente'));save();render();return}
+  const nw=e.target.closest('[data-new]');if(nw){HS.draft=null;DB.sel=nw.dataset.new;MF={key:'notas',id:''};save();fillSel();render();return}
+  const op=e.target.closest('[data-open]');if(op){const[pid,id]=op.dataset.open.split('|');HS.draft=null;DB.sel=pid;MF={key:'notas',id};save();fillSel();render()}};
+ const q=$('#nq');if(q)q.oninput=()=>{NS.q=q.value;$('#ntb').innerHTML=notasRowsHTML()}}
+{const _h=V.notas.h,_i=V.notas.i;
+ V.notas.h=function(){if(MF&&MF.key==='notas'){try{NCA.resetLive()}catch(e){}return _h.apply(this,arguments)}return notasListHTML()};
+ V.notas.i=function(){if(MF&&MF.key==='notas'){_i.apply(this,arguments);const v=$('#view'),oi=v.oninput,oc=v.onchange;
+   v.oninput=e=>{if(oi)oi(e);notaAuto()};v.onchange=e=>{if(oc)oc(e);notaAuto()};notaAuto();return}
+  notasListI()}}
 
 paintBrand();fillSel();render();
 if(!sessionStorage.getItem('nc_ok'))showPicker();
