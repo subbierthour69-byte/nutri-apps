@@ -1306,7 +1306,7 @@ const SIGNOS=[['piel','Piel seca'],['cab','Cabello quebradizo / caída'],['una',
 const EMO=[['est','Estable'],['ans','Ansiedad'],['dep','Depresión'],['str','Estrés']];
 const DIG=[['nau','Náuseas'],['vom','Vómitos'],['dia','Diarrea'],['est','Estreñimiento'],['ref','Reflujo/acidez'],['dol','Dolor']];
 const BEB=[['cafe','Café'],['te','Té'],['jug','Jugos'],['ref','Refrescos'],['ene','Energéticos'],['otro','Otro']];
-const INTOL=[['nin','Ninguna'],['lac','Lactosa'],['glu','Glúten'],['otro','Otro']];
+const INTOL=[['nin','Ninguna'],['lac','Lactosa'],['glu','Gluten'],['otro','Otro']];
 /* Recordatorio de 24 h: [clave, nombre, ¿es colación? (se puede quitar)] */
 const REC=[['des','Desayuno',0],['alm','Almuerzo',0],['cen','Cena',0],['cm','Colación matutina',1],['cv','Colación vespertina',1]];
 /* Bioquímicos: [clave, nombre, texto de referencia, mín, máx, máx exclusivo?]  (hemoglobina según sexo) */
@@ -1635,7 +1635,7 @@ const S_=x=>x==null?'':String(x).trim();
 function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  const T_=s=>['t',s],U=(v,n)=>['u',S_(v),n],O=(sel,l)=>['o',l,!!sel],lb=(l,v,n)=>[T_(l+' '),U(v,n)],G=T_('   ');
  const opts=(arr,cur)=>arr.map(x=>O(cur===x,x)),chk=(arr,pre)=>arr.map(([k,l])=>O(I[pre+'.'+k],l));
- const norm=a=>a.reduce((o,x)=>{if(Array.isArray(x)&&typeof x[0]==='string')o.push(x);else if(Array.isArray(x))o.push(...norm(x));return o},[]),L=(...parts)=>B.push({t:'p',parts:norm(parts)}),H=text=>B.push({t:'h',text});
+ const norm=a=>a.reduce((o,x)=>{if(Array.isArray(x)&&typeof x[0]==='string')o.push(x);else if(Array.isArray(x))o.push(...norm(x));return o},[]),L=(...parts)=>B.push({t:'p',parts:norm(parts)}),H=text=>B.push({t:'h',text}),LG=(grid,...parts)=>B.push({t:'p',parts:norm(parts),grid}),YN=v=>{const x=S_(v).trim(),no=/^(no|ninguno|ninguna|0)$/i.test(x);return[O(!!x&&!no,'Sí'),O(no,'No')]},XT=(v,n)=>/^(s[ií]|no)$/i.test(S_(v).trim())?[]:[U(v,n)];
  /* ===== HOJA 1 ===== */
  const HD=m=>B.push({t:'hdr',meta:!!m,fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD(1);
  H('Ficha de Identificación');
@@ -1648,19 +1648,19 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
  L(lb('Patologías actuales del sistema digestivo:',I.pdig,18));
- L(['b','Signos físicos'],T_(' (marcar si hay):'));L(chk(SIGNOS,'sf'));
+ L(['b','Signos físicos'],T_(' (marcar si hay):'));LG('grid-template-columns:repeat(4,1fr)',chk(SIGNOS,'sf'));
  H('Estado emocional y conductual');
  L(T_('Nivel de energía: '),opts(['Bajo','Medio','Alto'],I.nrg));
  L(T_('Estado emocional percibido: '),chk(EMO,'emo'));
- H('Sistema digestivo (Seleccionar lo que el paciente refiere).');L(chk(DIG,'dg'));
- L(lb('Frecuencia y duración:',I['dg.f'],18));L(lb('Problemas de masticación:',I.mast,18));
+ H('Sistema digestivo (Seleccionar lo que el paciente refiere).');LG('grid-template-columns:repeat(6,auto);justify-content:space-between',chk(DIG,'dg'));
+ L(lb('Frecuencia y duración:',I['dg.f'],18));{const m=S_(I.mast).trim(),mn=!m||/^(ninguna?|no)$/i.test(m);L(T_('Problemas de masticación: '),O(m&&mn,'Ninguna'),O(m&&!mn,'Sí'),T_('¿Cuál? '),U(m&&!mn?m:'',18))}
  H('Indicadores de estilo de vida saludable');
- L(T_('¿Realiza alguna actividad física? '),O(I.af==='Sí','Sí'),O(I.af==='No','No'),T_('- Cual: '),U(I['af.c'],14));
+ L(T_('¿Realiza alguna actividad física? '),O(I.af==='Sí','Sí'),O(I.af==='No','No'),T_('¿Cuál? '),U(I['af.c'],18));
  L(lb('¿Con qué frecuencia y duración?:',I['af.f'],16));L(lb('¿Cuántas horas duerme en promedio por noche?:',I.sue,16));
- L(T_('¿Pasa mucho tiempo sentado durante el día? '),U(I.sent,6),T_(' horas: '),U(I['sent.h'],14));
- L(lb('Consumo de alcohol:',I.alc,8),G,lb('Frecuencia:',I['alc.f'],10),G,lb('Cantidad:',I['alc.c'],10));
- L(lb('Consumo de tabaco:',I.tab,8),G,lb('Frecuencia:',I['tab.f'],10),G,lb('Cantidad:',I['tab.c'],10));
- L(T_('Consumo de otras sustancias: '),O(I.sus==='Sí','Sí'),O(I.sus==='No','No'),T_('- Cual: '),U(I['sus.c'],8),G,lb('Frecuencia:',I['sus.f'],10));
+ L(T_('¿Pasa mucho tiempo sentado durante el día? '),O(I.sent==='Sí','Sí'),O(I.sent==='No','No'),T_('Horas: '),U(I['sent.h'],10));
+ L(T_('Consumo de alcohol: '),YN(I.alc),XT(I.alc,6),G,lb('Frecuencia:',I['alc.f'],10),G,lb('Cantidad:',I['alc.c'],10));
+ L(T_('Consumo de tabaco: '),YN(I.tab),XT(I.tab,6),G,lb('Frecuencia:',I['tab.f'],10),G,lb('Cantidad:',I['tab.c'],10));
+ L(T_('Consumo de otras sustancias: '),O(I.sus==='Sí','Sí'),O(I.sus==='No','No'),T_('¿Cuál? '),U(I['sus.c'],10),G,lb('Frecuencia:',I['sus.f'],10));
  B.push({t:'pb'});
  /* ===== HOJA 2 ===== */
  HD();
@@ -1673,15 +1673,15 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  L(lb('¿Cuánta agua toma al día? Vasos / L:',I.agua,12));
  L(T_('¿Con qué frecuencia? '),opts(['1 vez al día','2-3 veces al día','4-5 veces al día'],I.aguaf));
  L(T_('¿Qué bebidas consume habitualmente?'));
- L(chk(BEB,'beb'),I['beb.o']?[T_(' '),U(I['beb.o'],10)]:[]);
+ L(chk(BEB,'beb'),T_(': '),U(I['beb.o'],14));
  L(T_('¿Añade sal a alimentos ya preparados? '),O(I.sal==='Sí','Sí'),O(I.sal==='No','No'),T_('/ Tipo de sal: '),U(I['sal.t'],10));
- L(lb('¿Cuántas comidas realiza al día?',I.ncom,8),T_(' incluye colaciones: '),U(I.ncol,8));
+ L(lb('¿Cuántas comidas realiza al día?',I.ncom,8),T_(' Incluye colaciones: '),YN(I.ncol),XT(I.ncol,6));
  L(T_('Horarios aproximados:'));
  L(lb('Desayuno:',I['h.des'],6),G,lb('Almuerzo:',I['h.alm'],6),G,lb('Cena:',I['h.cen'],6),G,lb('Colaciones (S/A):',I['h.col'],8));
  L(lb('Alimentos que consume con mayor frecuencia:',I.afrec,14));
  L(lb('Alimentos que evita o pocos frecuentes:',I.aevita,14));
  L(T_('¿Tiene alergias alimentarias? '),O(I.alerg==='No','No'),O(I.alerg==='Sí','Sí'),T_('– ¿Cuáles? '),U(I['alerg.c'],10));
- L(T_('¿Tiene alguna intolerancia? '),chk(INTOL,'int'),I['int.o']?[T_(' Otro: '),U(I['int.o'],8)]:[]);
+ L(T_('¿Tiene alguna intolerancia? '),chk(INTOL,'int'),T_(': '),U(I['int.o'],14));
  L(T_('¿Quién prepara la comida? '),opts(['Usted','Familiar','Compra comida preparada'],I.prep));
  L(T_('¿Con qué frecuencia come fuera de casa? '),opts(['Nunca','1-2 /sem','Casi diario'],I.fuera));
  H('Indicadores bioquímicos');
@@ -1743,14 +1743,14 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1,hn=0;co
   case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();o.push(pf(sc));sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
   case 'fic':b.rows.forEach(r=>o.push('<div class="fr">'+r.map(([l,v,k,w])=>k==='s'?`<span class="ff">${esc(l)}&nbsp;<span class="op"><span class="bx${v==='M'?' on':''}"></span>&nbsp;Hombre</span><span class="op"><span class="bx${v==='F'?' on':''}"></span>&nbsp;Mujer</span></span>`:`<span class="ff" style="${k==='d'?'flex:none':'flex:'+(w||1)}">${esc(l)}<span class="fl"${k==='d'?' style="flex:none;width:1.15in;text-align:center"':''}>${esc(S_(v)||(k==='d'?'    /    /':''))||'&nbsp;'}</span></span>`).join('')+'</div>'));break;
-  case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
+  case 'p':o.push(`<p${b.al||b.grid?` style="${b.al?'text-align:'+b.al+';':''}${b.grid?'display:grid;row-gap:.05in;'+b.grid:''}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4><span class="hn">${String(++hn).padStart(2,'0')}</span><span>${esc(b.text.replace(/:$/,''))}</span></h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
   case 'bq':o.push(`<table class="gr"><colgroup><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:20.8%"></colgroup>${b.head?'<tr><th>Indicador</th><th>Valor normal</th><th class="c">Consulta 1º</th><th class="c">Consulta 2º</th><th class="c">Consulta 3º</th></tr>':''}${b.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td style="white-space:pre-line">${esc(r[1])}</td>${r.slice(2).map(cl).join('')}</tr>`).join('')}</table>`);break;
   case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:76.2%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos, cantidad y preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.55:.4}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td></tr>`).join('')}</table>`);break;
-  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');break}
-  case 'firma':o.push(`<div class="fm"><span class="uv">${esc(S_(b.text))||'&nbsp;'.repeat(30)}</span></div><p style="text-align:right;margin-bottom:0"><b>Nombre y firma de la nutrióloga</b></p><p style="text-align:right">CP: ${esc(S_(b.cp))}</p>`);break;
+  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);o.push('<div class="lbox">');ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');o.push('</div>');break}
+  case 'firma':o.push(`<div class="fmb"><div class="fm">${esc(S_(b.text))||'&nbsp;'}</div><div>Nombre y firma de la nutrióloga</div><div>CP: ${esc(S_(b.cp))}</div></div>`);break;
  }});close();o.push(pf(sc));o.push('</section>');return o.join('')}
 const pst=document.createElement('style');
 pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:0}
@@ -1781,6 +1781,10 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .ht span{display:block;font-size:.8em;letter-spacing:.1em}
 #hcpaper .hrl{display:block;width:.9in;height:1.5pt;background:#b79c7d;margin:.04in auto .05in}
 #hcpaper .hm2{margin-top:.02in}#hcpaper .gr th,#hcpaper .hf th{background:#e6ebe1}
+#hcpaper .hf{border:.75pt solid #000;border-radius:3pt}#hcpaper .hf th,#hcpaper .hf td{border:.5pt solid #000!important;vertical-align:middle}#hcpaper .hf td:last-child{min-width:.9in}
+#hcpaper .hf td.c{height:.2in}
+#hcpaper .lbox{border:.75pt solid #b9b9b9;border-radius:4pt;padding:.03in .12in;margin-bottom:.06in}#hcpaper .lbox .ln{border-bottom:0;min-height:1.55em;line-height:1.55}
+#hcpaper .fmb{width:2.7in;margin:.4in 0 0 auto;text-align:center;font-size:.95em;line-height:1.25}#hcpaper .fmb .fm{margin:0 0 2pt;border-bottom:.75pt solid #000;text-align:center;min-height:1.2em}
 #hcpaper .fr{display:flex;align-items:flex-end;gap:.22in;margin-bottom:.07in}#hcpaper .ff{display:flex;align-items:flex-end;min-width:0;white-space:nowrap}#hcpaper .ff .op{margin-left:.12in}
 #hcpaper .fl{flex:1;min-width:0;border-bottom:.75pt solid #000;margin-left:4pt;padding:0 3pt;min-height:1.1em;white-space:normal;line-height:1.1}
 #hcpaper .pft{display:flex;justify-content:space-between;font-size:8pt;color:#555;margin-top:.05in;border-top:.5pt solid #c9cfc3;padding-top:2pt}
