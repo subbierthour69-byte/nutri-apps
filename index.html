@@ -213,6 +213,31 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--bg)}
 @media(max-width:600px){.r24b .rr{grid-template-columns:1fr}}
 input.ro{background:var(--bg);font-weight:700;cursor:default}
 @media print{#back,.fbar{display:none!important}}
+/* ===== Historia clínica: diseño SANNAFARM (secciones numeradas, encabezado con hojas, 3 páginas) ===== */
+.hcc.hhead,.hcc.hs{background:#fbfaf6;border:1px solid #e4e0d4!important;border-radius:12px}
+.hhead,.phdr{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>"),linear-gradient(100deg,#dfe5d9 0,transparent 28%);background-repeat:no-repeat;background-position:right top,left top}
+.hhead .hdr,.phdr .hdr{display:flex;justify-content:space-between;align-items:center}
+.hcc h2.ht,.phdr .ht{font-family:Georgia,'Times New Roman',serif!important;text-transform:uppercase;letter-spacing:.07em;text-align:center;color:#3f4a42!important;font-weight:400;line-height:1.15;margin:4px 0 2px!important;white-space:normal;font-size:26pt!important}
+.hcc h2.ht span,.phdr .ht span{display:block;font-size:.8em;letter-spacing:.1em}
+.hrl{display:block;width:90px;height:2px;background:#b79c7d;margin:4px auto 6px}
+.hhead .hmeta{justify-content:flex-end;margin-top:2px;padding-top:0;border-top:0;gap:14px}.hhead .hbt{display:flex;gap:8px}
+.hcc.hs h2{display:flex;align-items:center;gap:8px;background:#d3dbcd;color:#3f4a42!important;border-radius:6px;padding:0 10px 0 0;margin:0 0 10px;text-transform:uppercase;font-family:Georgia,'Times New Roman',serif!important;font-weight:400;letter-spacing:.02em}
+.hcc.hs h2 .hn{background:#a98c6f;color:#fff;font-family:Aptos,Calibri,Arial,sans-serif;font-weight:700;padding:4px 10px;border-radius:6px 0 0 6px;font-size:.9em}
+.hcc.hs .ft th{background:#e6ebe1;color:#3f4a42}
+.phdr{display:none}
+@media print{
+ @page hc{size:letter;margin:7mm 8mm 13mm;@bottom-left{content:"SANNAFARM · Departamento de Nutrición";font-size:8pt;color:#555}@bottom-right{content:"Pág. " counter(page) " de " counter(pages);font-size:8pt;color:#555}}
+ .hcc{page:hc}
+ .hcc.hhead,.hcc.hs{border:0!important;background-color:transparent}
+ .hcc.hhead{padding:0 0 2px}.hhead .hdr .lgs,.phdr .hdr img{height:46px}.phdr .hdr img{width:auto}
+ .hcc h2.ht,.phdr .ht{font-size:19pt!important;color:#3f4a42!important;margin:0!important}
+ .hcc.hs{margin:0 0 5px;padding:0}
+ .hcc.hs h2{font-size:10pt!important;color:#3f4a42!important;margin:0 0 3px;background:#d3dbcd!important}
+ .hcc.hs h2 .hn{padding:1px 8px}
+ .hcc.hs .ft th{background:#e6ebe1!important}
+ .hhead .hmeta{margin:0 0 4px;padding:0;border:0;justify-content:flex-end}
+ .phdr{display:block;padding-bottom:2px}.pbk{break-before:page;page-break-before:always}
+}
 </style>
 </head>
 <body>
@@ -1338,7 +1363,8 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  const SZ={sue:'xs','sent.h':'xs',ncom:'xs',ncol:'xs',alc:'s','alc.f':'s','alc.c':'s',tab:'s','tab.f':'s','tab.c':'s','sus.f':'s',agua:'s','sal.t':'s','int.o':'s',pdig:'l','af.f':'l','dg.f':'l',mast:'l'};
  const ti=(k,ph='')=>`<input class="il ${SZ[k]||'m'}" type="text" data-i="${k}" value="${esc(I[k])}" placeholder="${esc(ph)}" aria-label="${esc(ph||k)}">`;
  const q=(l,inner)=>`<div class="q"><b>${l}</b>${inner}</div>`;
- const sec=(t,b)=>`<div class="card hcc" style="border-top:5px solid ${HI_COL}"><h2 style="color:${HI_COL};font-size:17px">${t}</h2>${b}</div>`;
+ let HN=0;const phd=()=>{const g=k=>{const lg=DB.logos||{},u=(k in lg)?lg[k]:LOGO_DEF[k];return u?`<img src="${u}" alt="">`:'<span></span>'};return `<div class="phdr"><div class="hdr">${g('l1')}${g('r1')}</div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i></div>`};
+ const sec=(t,b)=>{const n=++HN,pb=n===7||n===10;return `<div class="card hcc hs${pb?' pbk':''}">${pb?phd():''}<h2><span class="hn">${String(n).padStart(2,'0')}</span><span class="hts">${t}</span></h2>${b}</div>`};
  const SP=w=>typeof w==='string'?` style="grid-column:span ${w.slice(1)}"`:w?` style="width:${w}px"`:'';
  const T=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-i="${k}" type="${t}" value="${esc(I[k])}"></div>`;
  const P=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-p="${k}" type="${t}" value="${esc(p[k])}"></div>`;
@@ -1358,19 +1384,17 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  const hasCol=!(I['off.cm']&&I['off.cv']);
  const hf=`<div class="ftw"><table class="ft"><tr><th>Familiar${HF_COLS.map(c=>`<th style="text-align:center">${c[1]}`).join('')}<th>Otros</tr>
   ${FAMS.map((f,i)=>`<tr><td>${f}${HF_COLS.map(([k])=>`<td style="text-align:center"><input type="checkbox" data-ic="hf.${i}.${k}"${I[`hf.${i}.${k}`]?' checked':''} style="width:auto" aria-label="${f} ${k}">`).join('')}<td><input data-i="hf.${i}.otros" value="${esc(I[`hf.${i}.otros`])}" aria-label="Otros ${f}">`).join('')}</table></div>`;
- return `<div class="card hcc" style="border-top:5px solid ${HI_COL}"><div class="hdr"><div class="hl">${hcLogo('l1','Logo izquierdo',200)}</div><div class="hr">${hcLogo('r1','Logo derecho',135)}</div></div>
-  <h2 class="ht">Historia Clínica</h2>
-  <div class="hmeta">${T('fecha','Fecha','date',140)}${T('exp','N.º de expediente','text',170)}<button class="g noprint" data-x="print">🖨 Imprimir</button><button class="g noprint" data-x="newhc">＋ Nueva historia clínica</button></div>${draftBanner(p)}</div>`+
+ return `<div class="card hcc hhead"><div class="hdr"><div class="hl">${hcLogo('l1','Logo izquierdo',200)}</div><div class="hr">${hcLogo('r1','Logo derecho',135)}</div></div>
+  <h2 class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></h2><i class="hrl"></i>
+  <div class="hmeta">${T('fecha','Fecha','date',140)}${T('exp','N.º de expediente','text',170)}<span class="hbt"><button class="g noprint" data-x="print">🖨 Imprimir</button><button class="g noprint" data-x="newhc">＋ Nueva historia clínica</button></span></div>${draftBanner(p)}</div>`+
  sec('Ficha de Identificación',`<div class="fic"><div style="grid-column:span 8"><label>Nombre</label><input data-p="nombre" value="${esc(pn(p))}"></div><div style="grid-column:span 2"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
   <div style="grid-column:span 2"><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
   ${P('nac','Fecha de nacimiento','date','s2')}<div style="grid-column:span 4"><label>Patología de base</label><input data-pp="pat" value="${esc((p.pat||[]).join(', '))}"></div>
   ${T('ec','Estado civil','text','s3')}${T('ocup','Ocupación','text','s3')}${T('esc','Escolaridad','text','s3')}${P('tel','Tel.','tel','s2')}${T('nacion','Nacionalidad','text','s3')}${P('mail','Correo','email','s4')}</div>`)+
  sec('Antecedentes heredofamiliares',hf)+
- sec('Indicadores clínicos',`<div class="ic">`+q('Patologías actuales del sistema digestivo:',ti('pdig'))+
-  `<p style="margin:10px 0 2px"><b>Signos físicos</b> <span class="note">(marcar si hay)</span></p><div>${cx(SIGNOS,'sf')}</div>
-  <p style="margin:12px 0 2px"><b>Estado emocional y conductual</b></p>${q('Nivel de energía:',ox('nrg',['Bajo','Medio','Alto']))}${q('Estado emocional percibido:',cx(EMO,'emo'))}
-  <p style="margin:12px 0 2px"><b>Sistema digestivo</b> <span class="note">(seleccionar lo que el paciente refiere)</span></p><div>${cx(DIG,'dg')}</div>
-  ${q('Frecuencia y duración:',ti('dg.f'))}${q('Problemas de masticación:',ti('mast'))}`+`</div>`)+
+ sec('Indicadores clínicos',`<div class="ic">`+q('Patologías actuales del sistema digestivo:',ti('pdig'))+`<p style="margin:10px 0 2px"><b>Signos físicos</b> <span class="note">(marcar si hay)</span></p><div>${cx(SIGNOS,'sf')}</div></div>`)+
+ sec('Estado emocional y conductual',`<div class="ic">${q('Nivel de energía:',ox('nrg',['Bajo','Medio','Alto']))}${q('Estado emocional percibido:',cx(EMO,'emo'))}</div>`)+
+ sec('Sistema digestivo <span style="text-transform:none;font-size:.85em">(Seleccionar lo que el paciente refiere).</span>',`<div class="ic"><div>${cx(DIG,'dg')}</div>${q('Frecuencia y duración:',ti('dg.f'))}${q('Problemas de masticación:',ti('mast'))}</div>`)+
  sec('Indicadores de estilo de vida saludable',
   q('¿Realiza alguna actividad física?',ox('af',['Sí','No'])+ti('af.c','Cuál'))+q('¿Con qué frecuencia y duración?',ti('af.f'))+q('¿Cuántas horas duerme en promedio por noche?',ti('sue'))+
   q('¿Pasa mucho tiempo sentado durante el día?',ox('sent',['Sí','No'])+ti('sent.h','Horas'))+
