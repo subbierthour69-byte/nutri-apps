@@ -214,8 +214,8 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--bg)}
 input.ro{background:var(--bg);font-weight:700;cursor:default}
 @media print{#back,.fbar{display:none!important}}
 /* ===== Historia clínica: diseño SANNAFARM (secciones numeradas, encabezado con hojas, 3 páginas) ===== */
-.hcc.hhead,.hcc.hs{background:#fbfaf6;border:1px solid #e4e0d4!important;border-radius:12px}
-.hhead,.phdr{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>"),linear-gradient(100deg,#dfe5d9 0,transparent 28%);background-repeat:no-repeat;background-position:right top,left top}
+.hcc.hhead,.hcc.hs{background:#fff;border:1px solid #e4e0d4!important;border-radius:12px}
+.hhead,.phdr{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>");background-repeat:no-repeat;background-position:right top,left top}
 .hhead .hdr,.phdr .hdr{display:flex;justify-content:space-between;align-items:center}
 .hcc h2.ht,.phdr .ht{font-family:Georgia,'Times New Roman',serif!important;text-transform:uppercase;letter-spacing:.07em;text-align:center;color:#3f4a42!important;font-weight:400;line-height:1.15;margin:4px 0 2px!important;white-space:normal;font-size:26pt!important}
 .hcc h2.ht span,.phdr .ht span{display:block;font-size:.8em;letter-spacing:.1em}
@@ -1639,10 +1639,11 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 1 ===== */
  const HD=m=>B.push({t:'hdr',meta:!!m,fecha:fd(I.fecha||today()),exp:S_(I.exp)});HD(1);
  H('Ficha de Identificación');
- L(lb('Nombre:',pn(p),22),G,lb('Edad:',p.nac?edTxt(edad(p.nac)):'',12),G,lb('Sexo:',p.sexo?(p.sexo==='M'?'Hombre':'Mujer'):'',9));
- L(lb('Fecha de nacimiento:',p.nac?fd(p.nac):'',14),G,lb('Patología de base:',(p.pat||[]).join(', '),16));
- L(lb('Estado civil:',I.ec,8),G,lb('Ocupación:',I.ocup,10),G,lb('Escolaridad:',I.esc,8),G,lb('Tel:',p.tel,12));
- L(lb('Nacionalidad:',I.nacion,10),G,lb('Correo:',p.mail,18));
+ B.push({t:'fic',rows:[[['Nombre:',pn(p),'',1]],
+  [['Fecha de nacimiento:',p.nac?fd(p.nac):'','d'],['Edad:',p.nac?edTxt(edad(p.nac)):'','e',.45],['Sexo:',p.sexo,'s']],
+  [['Estado civil:',I.ec,'',1],['Ocupación:',I.ocup,'',1.3]],
+  [['Escolaridad:',I.esc,'',1],['Nacionalidad:',I.nacion,'',1.2]],
+  [['Correo:',p.mail,'',1.6],['Tel:',p.tel,'',1]]]});
  H('Antecedentes heredofamiliares');
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
@@ -1720,6 +1721,7 @@ function paperDocx(p){const o=[];
  paperModel(p).forEach(b=>{switch(b.t){
   case 'hdr':o.push(hdrX(b));break;
   case 'pb':o.push(PBK);break;
+  case 'fic':b.rows.forEach(r=>o.push(FP(partsX(r.flatMap(([l,v,k])=>k==='s'?[['t',l+' '],['o','Hombre',v==='M'],['o','Mujer',v==='F']]:[['t',l+' '],['u',v,k==='d'?10:16],['t','   ']])))));break;
   case 'p':o.push(FP(partsX(b.parts),{al:b.al}));break;
   case 'h':o.push(FP(FR(b.text,{b:1}),{keep:1}));break;
   case 'hf':{const sel=c=>c?{t:'☑',b:1,al:'center'}:{t:'☐',al:'center'};
@@ -1740,6 +1742,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1,hn=0;co
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
   case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();o.push(pf(sc));sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
+  case 'fic':b.rows.forEach(r=>o.push('<div class="fr">'+r.map(([l,v,k,w])=>k==='s'?`<span class="ff">${esc(l)}&nbsp;<span class="op"><span class="bx${v==='M'?' on':''}"></span>&nbsp;Hombre</span><span class="op"><span class="bx${v==='F'?' on':''}"></span>&nbsp;Mujer</span></span>`:`<span class="ff" style="${k==='d'?'flex:none':'flex:'+(w||1)}">${esc(l)}<span class="fl"${k==='d'?' style="flex:none;width:1.15in;text-align:center"':''}>${esc(S_(v)||(k==='d'?'    /    /':''))||'&nbsp;'}</span></span>`).join('')+'</div>'));break;
   case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4><span class="hn">${String(++hn).padStart(2,'0')}</span><span>${esc(b.text.replace(/:$/,''))}</span></h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
@@ -1773,11 +1776,13 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .ln{border-bottom:0;min-height:1.4em;line-height:1.4;white-space:pre-wrap}#hcpaper .pgp.pgp.sm1{font-size:10pt}#hcpaper .pgp.pgp.sm2{font-size:9pt}#hcpaper .fm{text-align:right;margin-top:.45in}
 #hcpaper .pgp:not(.npg) h4{display:flex;align-items:center;gap:6pt;background:#d3dbcd;border:0;border-radius:3pt;padding:0 6pt 0 0;margin:0 0 .05in;text-transform:uppercase;font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:1em;letter-spacing:.02em;color:#3f4a42}
 #hcpaper h4 .hn{background:#a98c6f;color:#fff;font-family:Aptos,Calibri,Arial,sans-serif;font-weight:700;padding:1.5pt 7pt;border-radius:3pt 0 0 3pt}
-#hcpaper .hdw{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>") right top/1.3in no-repeat,linear-gradient(100deg,#dfe5d9 0,transparent 28%)}
+#hcpaper .hdw{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>") right top/1.3in no-repeat}
 #hcpaper .hdw .ht{font-family:Georgia,'Times New Roman',serif;font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:19pt;color:#3f4a42;line-height:1.1;margin:.02in 0 0}
 #hcpaper .ht span{display:block;font-size:.8em;letter-spacing:.1em}
 #hcpaper .hrl{display:block;width:.9in;height:1.5pt;background:#b79c7d;margin:.04in auto .05in}
 #hcpaper .hm2{margin-top:.02in}#hcpaper .gr th,#hcpaper .hf th{background:#e6ebe1}
+#hcpaper .fr{display:flex;align-items:flex-end;gap:.22in;margin-bottom:.07in}#hcpaper .ff{display:flex;align-items:flex-end;min-width:0;white-space:nowrap}#hcpaper .ff .op{margin-left:.12in}
+#hcpaper .fl{flex:1;min-width:0;border-bottom:.75pt solid #000;margin-left:4pt;padding:0 3pt;min-height:1.1em;white-space:normal;line-height:1.1}
 #hcpaper .pft{display:flex;justify-content:space-between;font-size:8pt;color:#555;margin-top:.05in;border-top:.5pt solid #c9cfc3;padding-top:2pt}
 #hcpaper .pgp:not(.npg){padding-bottom:.3in}}`;
 document.head.appendChild(pst);
