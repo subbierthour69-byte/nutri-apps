@@ -16,6 +16,7 @@
   DESPLIEGUE: sube como index.html a un repo y activa Settings → Pages → main / root.
   DATOS: localStorage del navegador (locales y privados). Exporta respaldos en Ajustes.
   PEDIATRÍA: tablas L-M-S oficiales de la CDC (NCHS 2000) incluidas en este script.
+  NOVEDADES v2.7: Formato mensual "Actividades de medicina general por grupos de edad y sexo" (primera vez / subsecuente) que se llena solo desde la agenda · imprimir y CSV.
   NOVEDADES v2.6: sin cuadro "Sin paciente" arriba (cada sección pide elegir paciente con lista y buscador; el nombre activo se quita con ✕) · Historia clínica: "Guardar y siguiente paciente".
   NOVEDADES v2.5: pacientes sin duplicar (agenda, historia clínica, notas y Pacientes; con botón para unir duplicados) · citas enlazadas por expediente/nombre · puntos del calendario en orden de horario · "asistió" en verde suave.
   NOVEDADES v2.4: flecha de retroceso en todas las secciones · Guardar/Imprimir arriba a la derecha · Notas subsecuentes con IMC, edad,
@@ -131,7 +132,7 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .lgs img{height:100%;width:auto;display:block}
 .lgph{width:100%;height:100%;border:1.5px dashed var(--bd);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;text-align:center;color:var(--mut);line-height:1.2}.lgph small{font-size:10px;opacity:.8}
 .lx{position:absolute;top:-6px;right:-6px;padding:0 6px!important;font-size:11px}
-.hmeta{display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1px solid var(--bd);align-items:flex-end}
+.hmeta{display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap;margin-top:22px;padding-top:12px;border-top:1px solid var(--bd);align-items:flex-end}
 @media(max-width:1000px){.lgs{height:44px}}
 @media(max-width:700px){.hdr{grid-template-columns:1fr;justify-items:center}.hl,.hr{justify-content:center;flex-wrap:wrap}.hmeta{justify-content:center}}
 /* Tipo de letra Aptos y casillas con palomita (✓) al seleccionar */
@@ -196,7 +197,12 @@ button.pr{background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 @media(max-width:1100px){.eqwrap{grid-template-columns:1fr}}
 @media(max-width:820px){aside{position:fixed;left:-250px}aside.open{left:0}#burger{display:inline-flex}main{padding:14px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ===== Historia clínica en pantalla: Aptos (cuerpo) — títulos 16 pt · textos 14 pt ===== */
+@media screen{.hcc,.hcc input,.hcc select,.hcc textarea,.hcc button,.hcc label,.hcc td,.hcc th,.hcc .note,.hcc .ck{font-family:Aptos,'Aptos Display',Calibri,Carlito,'Segoe UI',Arial,sans-serif}
+.hcc{font-size:14pt}.hcc h2{font-size:16pt!important}.hcc label,.hcc .ck,.hcc .note{font-size:14pt}.hcc .ft th{font-size:16pt}.hcc .ft td{font-size:14pt}.hcc .note{font-size:12pt}
+.hcc .q input.il,.hcc input,.hcc select,.hcc textarea{font-size:14pt}.hcc .ft.sm td,.hcc .ft.sm th,.hcc .ft.sm input:not([type=checkbox]){font-size:13pt}}
 /* ===== v2.4 ===== */
+#pchg[hidden]{display:none!important}#pchg{white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
 #back{display:inline-flex;font-size:18px;line-height:1;padding:6px 12px}
 .fbar{position:sticky;top:0;z-index:15;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);padding:8px 0 10px;margin:-4px 0 12px;border-bottom:1px solid var(--bd)}
 .fbar h2{margin:0;flex:1;min-width:160px;font-size:16px}
@@ -298,7 +304,7 @@ setTheme(DB.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'li
 $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
-const NAV=[['Atención',[['agenda','Agenda','clock'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['notas','Notas subsecuentes','repeat'],['cons','Consulta','pulse'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
+const NAV=[['Atención',[['agenda','Agenda','clock'],['formato','Formato mensual','list'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['notas','Notas subsecuentes','repeat'],['cons','Consulta','pulse'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
  ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['smr','Calculadora R24 (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
@@ -1685,7 +1691,7 @@ function hdrX(b){const cell=(w,inner)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="
  lbl=(l,v)=>FR(l+' ')+(S_(v)?FR(S_(v),{u:1}):FR(NB.repeat(14),{u:1}));
  return `<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr>`+
   cell(5040,FP(imgRun('l1',.42)))+cell(5040,FP(imgRun('r1',.3),{al:'right'}))+'</w:tr></w:tbl>'+
-  FP(FR('Historia Clínica',{b:1,sz:32}),{al:'center',bf:80})+(b&&b.meta?FP(lbl('Fecha:',b.fecha)+FR('      ')+lbl('N.º de expediente:',b.exp),{al:'right',bf:60}):'')+TINY}
+  FP(FR('Historia Clínica',{b:1,sz:32}),{al:'center',bf:80})+(b&&b.meta?FP(lbl('Fecha:',b.fecha)+FR('      ')+lbl('N.º de expediente:',b.exp),{al:'right',bf:200}):'')+TINY}
 function paperDocx(p){const o=[];
  paperModel(p).forEach(b=>{switch(b.t){
   case 'hdr':o.push(hdrX(b));break;
@@ -1732,7 +1738,7 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .hdw{font-size:10.5pt;padding-bottom:3pt;border-bottom:0}
 #hcpaper .hd2{display:flex;justify-content:space-between;align-items:center;line-height:0}#hcpaper .hd2 img{height:.42in;width:auto;max-width:3in;display:block}#hcpaper .hd2>div:last-child img{height:.3in}
 #hcpaper .ht{text-align:center;font-weight:700;font-size:16pt;line-height:1.1;margin:.04in 0 .02in;letter-spacing:.3pt}
-#hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
+#hcpaper .hm2{text-align:right;font-size:10.5pt;line-height:1.2;margin-top:.14in}#hcpaper .hm2 .gp{display:inline-block;width:.45in}
 #hcpaper th{font-weight:700;color:#000}#hcpaper .c{text-align:center}#hcpaper .rl{text-align:right}
 #hcpaper .hf th,#hcpaper .hf td{border-bottom:1px solid #000}#hcpaper .hf tr:first-child th{border-top:1px solid #000}#hcpaper .hf td,#hcpaper .hf th{vertical-align:middle}
 #hcpaper .gr th,#hcpaper .gr td{border:1px solid #000;padding:.3pt 5px;font-size:.96em;line-height:1.15}#hcpaper .red{color:#c00000;font-weight:700}
@@ -1998,7 +2004,7 @@ function liveCtx(){if(route()!=='notas'||typeof MF==='undefined'||!MF||MF.key!==
 function buildLive(lv){if(!lv.w||!lv.t)return null;const key='n|'+(MF.id||'new')+'|'+(lv.p.id||''),e0=lv.p.nac?edad(lv.p.nac,lv.fecha):null,base={p:lv.p,live:1,key,an:null,rc:{list:[],notes:[]},form:true};
  if(e0&&e0.a<18){const r=pedRows(lv.p,lv.w,lv.t,lv.fecha);if(!r)return null;return{...base,pd:{age:edTxt(e0),c:{fecha:lv.fecha,peso:lv.w,est:lv.t,src:'consulta'},ageC:r.ageC,rows:r.rows}}}
  return{...base,pd:null,ad:adultInfo(lv.w,lv.t)}}
-const HIDE=['panel','aj','cat','mic'];
+const HIDE=['panel','aj','cat','mic','formato'];
 function ctxP(){const r=route();
  if(r==='pac'&&typeof editId!=='undefined'&&editId!==null&&$('#f-nac')){const ex=DB.p.find(x=>x.id===editId)||{};
   return{p:{id:ex.id||'form-new',nombre:ex.nombre,nac:$('#f-nac').value,sexo:($('#f-sexo')||{}).value||ex.sexo||'F',cons:ex.cons||[],mod:ex.mod,est:ex.est},form:true}}
@@ -2021,9 +2027,9 @@ function paint(){const a=$('#asst');if(!a)return;
  a.hidden=false;a.classList.toggle('min',ASS.min);
  a.innerHTML=`<div class="ah" id="ahd"><span>🧠 Asistente clínico${sub?' · '+sub:''}</span><span style="flex:1"></span><button class="g s" data-am="min" aria-label="Minimizar">${ASS.min?'▢':'—'}</button></div>
   ${tabs.length>1?`<div class="atb">${tabs.map(([k,l])=>`<button class="${ASS.tab===k?'on':''}" data-at="${k}">${l}</button>`).join('')}</div>`:''}<div class="ab">${body}</div><div class="anp">No se imprime</div>`;
- if(ASS.pos){a.style.left=ASS.pos.x+'px';a.style.top=ASS.pos.y+'px';a.style.right='auto';a.style.bottom='auto'}}
+}
 const st=document.createElement('style');st.textContent=`#asst{position:fixed;right:14px;bottom:14px;width:370px;max-width:calc(100vw - 16px);max-height:76vh;display:flex;flex-direction:column;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 34px #0005;z-index:70;font-size:13px}
-#asst[hidden]{display:none}#asst .ah{cursor:move;display:flex;gap:8px;align-items:center;padding:8px 10px;background:linear-gradient(135deg,#0e8f78,#2563eb);color:#fff;border-radius:11px 11px 0 0;font-weight:700;user-select:none;touch-action:none}
+#asst[hidden]{display:none}#asst .ah{cursor:default;display:flex;gap:8px;align-items:center;padding:8px 10px;background:linear-gradient(135deg,#0e8f78,#2563eb);color:#fff;border-radius:11px 11px 0 0;font-weight:700;user-select:none}
 #asst .ah button{background:#ffffff30;color:#fff;border:0;padding:2px 9px}#asst .atb{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--bd)}
 #asst .atb button{background:transparent;color:var(--tx);border:1px solid var(--bd);padding:3px 10px;font-size:12px}#asst .atb button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
 #asst .ab{overflow:auto;padding:9px 11px}#asst.min .atb,#asst.min .ab,#asst.min .anp{display:none}#asst.min{width:auto;max-width:300px}
@@ -2042,10 +2048,6 @@ document.body.insertAdjacentHTML('beforeend','<div id="asst" class="noprint" hid
 const a=$('#asst');
 a.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.at){ASS.tab=b.dataset.at;paint()}else if(b.dataset.am){ASS.min=!ASS.min;paint()}});
-a.addEventListener('pointerdown',e=>{const h=e.target.closest('#ahd');if(!h||e.target.closest('button')||innerWidth<=700)return;
- const r=a.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;h.setPointerCapture(e.pointerId);
- h.onpointermove=ev=>{ASS.pos={x:Math.max(0,Math.min(innerWidth-80,ev.clientX-dx)),y:Math.max(0,Math.min(innerHeight-40,ev.clientY-dy))};a.style.left=ASS.pos.x+'px';a.style.top=ASS.pos.y+'px';a.style.right='auto';a.style.bottom='auto'};
- h.onpointerup=()=>{h.onpointermove=null}});
 a.addEventListener('input',e=>{const t=e.target;if(t.id==='aq-w'||t.id==='aq-h'){if(t.id==='aq-w')ASS.qw=t.value;else ASS.qh=t.value;const d=build();if(d&&route()==='hc')qSync(d.p,t.id==='aq-w'?'peso':'est',t.value);const r=$('#aqr');if(d&&r)r.innerHTML=quickRows(d.p)}});
 let tm=null;const sched=()=>{clearTimeout(tm);tm=setTimeout(paint,280)};
 document.addEventListener('input',sched);document.addEventListener('change',sched);
@@ -2763,6 +2765,86 @@ function notasListI(){const v=$('#view');
  V.notas.i=function(){if(MF&&MF.key==='notas'){_i.apply(this,arguments);const v=$('#view'),oi=v.oninput,oc=v.onchange;
    v.oninput=e=>{if(oi)oi(e);notaAuto()};v.onchange=e=>{if(oc)oc(e);notaAuto()};notaAuto();return}
   notasListI()}}
+
+/* =====================================================================
+   12. v2.7 — FORMATO INTERMEDIO POR EDAD Y SEXO (SANNAFARM · Vida Nueva)
+   Cuenta cada cita de la AGENDA (primera vez / subsecuente) por grupo de edad y sexo del paciente, por día.
+   Por defecto cuenta las citas en estado "Asistió" (las notas, la historia clínica y los botones de la agenda la marcan solas).
+   ===================================================================== */
+const FMS={d:'',h:'',mes:'',anio:'',pend:false,all:false};
+const FM_AG=[['< DE 9',0,9],['10 A 14',10,14],['15 A 19',15,19],['20 A 29',20,29],['30 A 49',30,49],['50 A 59',50,59],['60 Y >',60,200]];
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fmInit(){if(FMS.d&&FMS.h)return;fmMes(0)}
+function fmMes(delta){const t=new Date(),y0=t.getFullYear(),m0=t.getMonth()+delta,a=new Date(y0,m0,1),b=new Date(y0,m0+1,0),P=n=>String(n).padStart(2,'0');
+ FMS.d=`${a.getFullYear()}-${P(a.getMonth()+1)}-01`;FMS.h=`${b.getFullYear()}-${P(b.getMonth()+1)}-${P(b.getDate())}`;FMS.mes='';FMS.anio=''}
+const fmMedico=()=>DB.fmMed!=null?DB.fmMed:((DB.nut&&DB.nut.nut)||NP_DEF.nut);
+function fmMesTxt(){if(FMS.mes)return FMS.mes;const a=+FMS.d.slice(5,7)-1,b=+FMS.h.slice(5,7)-1;return a===b?MESES[a]:MESES[a]+'-'+MESES[b]}
+const fmAnio=()=>FMS.anio||FMS.h.slice(0,4);
+function fmModel(){fmInit();const days={},det=[],skip={pend:0,sinPac:[],sinEdad:[]},st=FMS.pend?['Asistió','Pendiente']:['Asistió'],Z=()=>Array.from({length:7},()=>[0,0]);
+ agList().forEach(a=>{if(a.date<FMS.d||a.date>FMS.h)return;if(a.estado==='Pendiente'&&!FMS.pend){skip.pend++;return}if(!st.includes(a.estado))return;
+  const p=agPat(a);if(!p){skip.sinPac.push(a);return}const e=edad(p.nac,a.date);if(!e){skip.sinEdad.push(a);return}
+  const g=FM_AG.findIndex(x=>e.a>=x[1]&&e.a<=x[2]),sx=p.sexo==='M'?0:1,ty=a.tipo==='Primera vez'?0:1,d=days[a.date]=days[a.date]||{pv:Z(),sb:Z()};
+  (ty?d.sb:d.pv)[g][sx]++;det.push({a,p,e,sx,ty,g})});
+ let dates=Object.keys(days).sort();
+ if(FMS.all){dates=[];for(let t=new Date(FMS.d+'T12:00');t<=new Date(FMS.h+'T12:00');t.setDate(t.getDate()+1))dates.push(t.toISOString().slice(0,10))}
+ const sum=(arr,k)=>arr.reduce((s,x)=>s+x[k],0),rows=dates.map(dt=>{const d=days[dt]||{pv:Z(),sb:Z()},pm=sum(d.pv,0),pf=sum(d.pv,1),sm=sum(d.sb,0),sf=sum(d.sb,1);
+  return{dt,pv:d.pv,sb:d.sb,pm,pf,sm,sf,tm:pm+sm,tf:pf+sf,tt:pm+pf+sm+sf}});
+ const T={pv:Z(),sb:Z(),pm:0,pf:0,sm:0,sf:0,tm:0,tf:0,tt:0};
+ rows.forEach(r=>{for(let g=0;g<7;g++)for(let k=0;k<2;k++){T.pv[g][k]+=r.pv[g][k];T.sb[g][k]+=r.sb[g][k]}['pm','pf','sm','sf','tm','tf','tt'].forEach(k=>T[k]+=r[k])});
+ return{rows,T,det,skip}}
+const fmN=n=>n?String(n):'';
+function fmTable(m,pr){const sh=(dt)=>{const a=FMS.d.slice(5,7),b=FMS.h.slice(5,7);return a===b?dt.slice(8,10):dt.slice(8,10)+'/'+dt.slice(5,7)};
+ const age=(l,col)=>FM_AG.map(x=>`<th colspan="2" class="${col}">${x[0]}</th>`).join('')+`<th colspan="2" class="${col}">SUBTOTAL</th>`,mf=()=>FM_AG.map(()=>'<th>MAS</th><th>FEM</th>').join('')+'<th>MASC.</th><th>FEM.</th>';
+ const cells=(a)=>a.map(x=>`<td>${fmN(x[0])}</td><td>${fmN(x[1])}</td>`).join('');
+ return `<table class="fmt"><thead><tr><th rowspan="3" class="fd">FECHA</th><th colspan="16" class="pv">PRIMERA VEZ</th><th colspan="16" class="sb">SUBSECUENTE</th><th colspan="3" class="tt">TOTAL</th></tr>
+ <tr>${age('', 'pv')}${age('', 'sb')}<th rowspan="2" class="tt">MASC.</th><th rowspan="2" class="tt">FEM.</th><th rowspan="2" class="tt">TOTAL DE CONSULTAS</th></tr><tr>${mf()}${mf()}</tr></thead><tbody>
+ ${m.rows.map(r=>`<tr><td class="fd" title="${fd(r.dt)}">${sh(r.dt)}</td>${cells(r.pv)}<td class="st">${fmN(r.pm)}</td><td class="st">${fmN(r.pf)}</td>${cells(r.sb)}<td class="st">${fmN(r.sm)}</td><td class="st">${fmN(r.sf)}</td><td class="st">${fmN(r.tm)}</td><td class="st">${fmN(r.tf)}</td><td class="st">${fmN(r.tt)}</td></tr>`).join('')||`<tr><td colspan="36" class="emp">Sin consultas en este periodo.</td></tr>`}
+ <tr class="tot"><td class="fd">TOTAL</td>${m.T.pv.map(x=>`<td>${x[0]}</td><td>${x[1]}</td>`).join('')}<td>${m.T.pm}</td><td>${m.T.pf}</td>${m.T.sb.map(x=>`<td>${x[0]}</td><td>${x[1]}</td>`).join('')}<td>${m.T.sm}</td><td>${m.T.sf}</td><td>${m.T.tm}</td><td>${m.T.tf}</td><td>${m.T.tt}</td></tr></tbody></table>`}
+const FM_CSS=`table.fmt{border-collapse:collapse;font-size:10px;text-align:center;width:100%;table-layout:fixed}table.fmt th,table.fmt td{border:1px solid #444;padding:1px 0;line-height:1.25;white-space:nowrap;overflow:hidden}
+table.fmt th{font-weight:700;background:#eef2f1;color:#000}table.fmt th.pv{background:#e3f1ee}table.fmt th.sb{background:#e6ecfa}table.fmt th.tt{background:#f6efd9}table.fmt td{color:#000}table.fmt .fd{width:34px;font-weight:700;background:#f4f4f4}table.fmt td.st{font-weight:700;background:#fafafa}
+table.fmt tr.tot td{font-weight:700;background:#e9e9e9;border-top:2px solid #000}table.fmt td.emp{padding:14px;color:#666}table.fmt th[colspan="2"]{font-size:8.5px}`;
+function fmHead(){const L=k=>{const U=DB.logos||{};return(k in U)?U[k]:(typeof LOGO_DEF!=='undefined'?LOGO_DEF[k]:'')};return{l:L('l1'),r:L('r1')}}
+function fmDoc(m){const lg=fmHead();
+ return `<!doctype html><html lang="es"><meta charset="utf-8"><title>Formato intermedio por edad y sexo</title><style>@page{size:letter landscape;margin:8mm}*{box-sizing:border-box}body{margin:0;font:11pt/1.25 Aptos,Calibri,Carlito,Arial,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .hd{display:flex;justify-content:space-between;align-items:center}.hd img{display:block;max-width:3.1in}.hd .a{height:.46in}.hd .b{height:.34in}.c{text-align:center;font-weight:700;font-size:9.5pt;line-height:1.25;margin:2px 0}.c.s{font-size:9pt}
+ .mm{display:flex;gap:.4in;font-size:10pt;margin:6px 0 2px}.mm span u{text-decoration:none;border-bottom:1px solid #000;padding:0 8px}.t{text-align:center;font-weight:700;font-size:10pt;margin:2px 0 3px}${FM_CSS}table.fmt{font-size:7.4pt}table.fmt th.tt{white-space:normal;line-height:1.1}table.fmt tbody td{height:.2in}table.fmt th[colspan="2"]{font-size:6.6pt}table.fmt .fd{width:.34in}</style>
+ <body><div class="hd"><div>${lg.l?`<img class="a" src="${lg.l}" alt="">`:''}</div><div>${lg.r?`<img class="b" src="${lg.r}" alt="">`:''}</div></div>
+ <div class="c">SISTEMA DE ATENCIÓN A NIÑOS, NIÑAS Y ADOLESCENTES FARMACODEPENDIENTES DEL ESTADO DE CAMPECHE “VIDA NUEVA”</div><div class="c s">FORMATO INTERMEDIO POR EDAD Y SEXO</div>
+ <div class="mm"><span>MÉDICO: <u>${esc(fmMedico())}</u></span><span>MES: <u>${esc(fmMesTxt())}</u></span><span>AÑO: <u>${esc(fmAnio())}</u></span></div><div class="t">ACTIVIDADES DE MEDICINA GENERAL POR GRUPOS DE EDAD Y SEXO</div>${fmTable(m,1)}</body></html>`}
+function fmPrint(){const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+ f.onload=()=>setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),4000)},350);f.srcdoc=fmDoc(fmModel())}
+function fmCSV(){const m=fmModel(),q=s=>'"'+String(s).replace(/"/g,'""')+'"',H=['Fecha'];
+ ['PV','SUB'].forEach(t=>{FM_AG.forEach(x=>{H.push(t+' '+x[0]+' MAS',t+' '+x[0]+' FEM')});H.push(t+' SUBTOTAL MASC.',t+' SUBTOTAL FEM.')});H.push('TOTAL MASC.','TOTAL FEM.','TOTAL DE CONSULTAS');
+ const line=r=>[r.dt?fd(r.dt):'TOTAL',...r.pv.flat(),r.pm,r.pf,...r.sb.flat(),r.sm,r.sf,r.tm,r.tf,r.tt];
+ const rows=[H,...m.rows.map(line),line({dt:'',...m.T})];
+ dlBlob('formato-edad-sexo-'+FMS.d+'_'+FMS.h+'.csv',new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));toast('CSV descargado')}
+V.formato={t:'Formato intermedio por edad y sexo',h(){fmInit();const m=fmModel(),k=m.skip,w=k.sinPac.length+k.sinEdad.length;
+ const warn=[k.pend&&!FMS.pend?`<b>${k.pend}</b> cita(s) pendiente(s) <u>no se cuentan</u> (aún no asisten). Márcalas como “Asistió” en la <a href="#agenda">Agenda</a> o activa “Incluir pendientes”.`:'',
+  k.sinPac.length?`<b>${k.sinPac.length}</b> cita(s) de pacientes <u>no registrados</u> no se pueden clasificar por edad y sexo (${k.sinPac.slice(0,4).map(a=>esc(agName(a))+' '+fd(a.date)).join(', ')}${k.sinPac.length>4?'…':''}). Regístralos en Historia clínica o Pacientes.`:'',
+  k.sinEdad.length?`<b>${k.sinEdad.length}</b> cita(s) sin fecha de nacimiento válida (${k.sinEdad.slice(0,4).map(a=>esc(agName(a))).join(', ')}).`:''].filter(Boolean);
+ return `<div class="card noprint"><div class="grid" style="align-items:end"><div><label for="fm-d">Desde</label><input id="fm-d" type="date" value="${esc(FMS.d)}"></div><div><label for="fm-h">Hasta</label><input id="fm-h" type="date" value="${esc(FMS.h)}"></div>
+  <div><label for="fm-mes">Mes (texto del formato)</label><input id="fm-mes" value="${esc(fmMesTxt())}"></div><div><label for="fm-anio">Año</label><input id="fm-anio" value="${esc(fmAnio())}"></div>
+  <div style="grid-column:span 2"><label for="fm-med">Médico</label><input id="fm-med" value="${esc(fmMedico())}"></div></div>
+  <div class="gap" style="margin-top:10px"><button class="s g" data-fm="ant">‹ Mes anterior</button><button class="s g" data-fm="act">Mes actual</button>
+  <label class="ck" style="margin:0 8px"><input type="checkbox" id="fm-pend" style="width:auto"${FMS.pend?' checked':''}> Incluir citas pendientes</label><label class="ck" style="margin:0"><input type="checkbox" id="fm-all" style="width:auto"${FMS.all?' checked':''}> Mostrar todos los días</label>
+  <span style="flex:1"></span><button data-fm="print">🖨 Imprimir formato</button><button class="g" data-fm="csv">⬇ CSV</button></div>
+  <p class="note">Se llena solo con la <b>Agenda</b>: cada cita de <b>primera vez</b> o <b>subsecuente</b> se cuenta por la edad del paciente el día de la cita y su sexo (<b>1 = masculino · 2 = femenino</b>). Cuenta las citas en estado “Asistió”; al guardar una nota o una historia clínica la asistencia se marca sola.</p></div>
+  ${warn.length?`<div class="msg noprint" style="margin-bottom:12px">${warn.map(x=>'⚠ '+x).join('<br>')}</div>`:''}
+  <div class="card"><div class="gap" style="justify-content:space-between;margin-bottom:6px"><span><b>MÉDICO:</b> ${esc(fmMedico())}</span><span><b>MES:</b> ${esc(fmMesTxt())}</span><span><b>AÑO:</b> ${esc(fmAnio())}</span></div>
+  <p style="text-align:center;font-weight:700;margin:4px 0 8px">ACTIVIDADES DE MEDICINA GENERAL POR GRUPOS DE EDAD Y SEXO</p><style>${FM_CSS}.fmw table.fmt{min-width:1250px;font-size:11px}</style><div class="wrap fmw">${fmTable(m)}</div>
+  <p class="note">Total del periodo: <b>${m.T.tt}</b> consultas · ${m.T.tm} masculino · ${m.T.tf} femenino · ${m.T.pm+m.T.pf} de primera vez · ${m.T.sm+m.T.sf} subsecuentes.</p></div>
+  <div class="card noprint"><details><summary style="cursor:pointer;font-weight:700">Detalle de las ${m.det.length} consultas contadas</summary><div class="wrap" style="margin-top:8px"><table><tr><th>Fecha<th>Hora<th>Paciente<th>Exp.<th class="n">Edad<th class="n">Sexo<th>Tipo<th>Estado</tr>
+  ${m.det.sort((a,b)=>a.a.date.localeCompare(b.a.date)||(a.a.hora||'').localeCompare(b.a.hora||'')).map(x=>`<tr><td>${fd(x.a.date)}<td>${esc(x.a.hora||'—')}<td>${esc(pn(x.p))}<td>${esc(pExp(x.p))}<td class="n">${x.e.a} a.<td class="n">${x.sx?'2 · Mujer':'1 · Hombre'}<td>${x.ty?'Subsecuente':'Primera vez'}<td>${x.a.estado}`).join('')||'<tr><td colspan="8">Sin consultas.'}</table></div></details></div>`},
+ i(){const v=$('#view'),re=()=>render();
+  v.onchange=e=>{const t=e.target;
+   if(t.id==='fm-d'){FMS.d=t.value||FMS.d;if(FMS.h<FMS.d)FMS.h=FMS.d;FMS.mes='';FMS.anio='';re()}
+   else if(t.id==='fm-h'){FMS.h=t.value||FMS.h;if(FMS.h<FMS.d)FMS.d=FMS.h;FMS.mes='';FMS.anio='';re()}
+   else if(t.id==='fm-pend'){FMS.pend=t.checked;re()}else if(t.id==='fm-all'){FMS.all=t.checked;re()}
+   else if(t.id==='fm-mes'){FMS.mes=t.value.trim();re()}else if(t.id==='fm-anio'){FMS.anio=t.value.trim();re()}
+   else if(t.id==='fm-med'){DB.fmMed=t.value.trim();save();re()}};
+  v.onclick=e=>{const b=e.target.closest('[data-fm]');if(!b)return;const a=b.dataset.fm;
+   if(a==='ant'){const t=new Date(FMS.d+'T12:00');t.setDate(1);t.setMonth(t.getMonth()-1);const y=t.getFullYear(),mo=t.getMonth();FMS.d=`${y}-${String(mo+1).padStart(2,'0')}-01`;FMS.h=`${y}-${String(mo+1).padStart(2,'0')}-${String(new Date(y,mo+1,0).getDate()).padStart(2,'0')}`;FMS.mes='';FMS.anio='';re()}
+   else if(a==='act'){fmMes(0);re()}else if(a==='print')fmPrint();else if(a==='csv')fmCSV()}}};
 
 paintBrand();fillSel();render();
 if(!sessionStorage.getItem('nc_ok'))showPicker();
