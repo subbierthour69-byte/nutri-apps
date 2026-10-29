@@ -1648,10 +1648,10 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  H('Indicadores clínicos');
  L(lb('Patologías actuales del sistema digestivo:',I.pdig,18));
  L(['b','Signos físicos'],T_(' (marcar si hay):'));L(chk(SIGNOS,'sf'));
- L(['b','Estado emocional y conductual']);
+ H('Estado emocional y conductual');
  L(T_('Nivel de energía: '),opts(['Bajo','Medio','Alto'],I.nrg));
  L(T_('Estado emocional percibido: '),chk(EMO,'emo'));
- L(['b','Sistema digestivo'],T_(' (Seleccionar lo que el paciente refiere):'));L(chk(DIG,'dg'));
+ H('Sistema digestivo (Seleccionar lo que el paciente refiere).');L(chk(DIG,'dg'));
  L(lb('Frecuencia y duración:',I['dg.f'],18));L(lb('Problemas de masticación:',I.mast,18));
  H('Indicadores de estilo de vida saludable');
  L(T_('¿Realiza alguna actividad física? '),O(I.af==='Sí','Sí'),O(I.af==='No','No'),T_('- Cual: '),U(I['af.c'],14));
@@ -1734,21 +1734,21 @@ function paperDocx(p){const o=[];
 /* ----- Render HTML (impresión / PDF del navegador) ----- */
 const lgU=k=>{const L=DB.logos||{};return(k in L)?L[k]:(typeof LOGO_DEF!=='undefined'?LOGO_DEF[k]:'')};
 function partsH(parts){return parts.map(([k,a,b])=>k==='b'?`<b>${esc(a)}</b>`:k==='t'?esc(a).replace(/  /g,'&nbsp; '):k==='u'?(S_(a)?`<span class="uv">${esc(S_(a))}</span>`:`<span class="ub" style="width:${(b||10)*.62}ch"></span>`):`<span class="op"><span class="bx${b?' on':''}"></span>&nbsp;${esc(a)}</span> `).join('')}
-function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1;const bg=['nota1','nota','plan'].reduce((a,k)=>a+String(((p.hci||{})[k])||'').length,0),SZ=bg>1100?' sm2':bg>600?' sm1':'';const open=()=>{if(!g){o.push('<div class="sc">');g=true}},close=()=>{if(g){o.push('</div>');g=false}},
+function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1,hn=0;const pf=n=>`<div class="pft"><span>SANNAFARM · Departamento de Nutrición</span><span>Pág. ${n} de 3</span></div>`;const bg=['nota1','nota','plan'].reduce((a,k)=>a+String(((p.hci||{})[k])||'').length,0),SZ=bg>1100?' sm2':bg>600?' sm1':'';const open=()=>{if(!g){o.push('<div class="sc">');g=true}},close=()=>{if(g){o.push('</div>');g=false}},
  cl=(x,i)=>x&&x.v!==undefined?`<td class="c${x.out?' red':''}">${esc(x.v)}</td>`:`<td class="c">${esc(x||'')}</td>`,
  im=(k)=>{const u=lgU(k);return u?`<img src="${u}" alt="">`:''};
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
-  case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">Historia Clínica</div>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
-  case 'pb':close();sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
+  case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
+  case 'pb':close();o.push(pf(sc));sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
   case 'p':o.push(`<p${b.al?` style="text-align:${b.al}"`:''}>${partsH(b.parts)}</p>`);break;
-  case 'h':close();open();o.push(`<h4>${esc(b.text)}</h4>`);break;
+  case 'h':close();open();o.push(`<h4><span class="hn">${String(++hn).padStart(2,'0')}</span><span>${esc(b.text.replace(/:$/,''))}</span></h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
   case 'bq':o.push(`<table class="gr"><colgroup><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:20.8%"></colgroup>${b.head?'<tr><th>Indicador</th><th>Valor normal</th><th class="c">Consulta 1º</th><th class="c">Consulta 2º</th><th class="c">Consulta 3º</th></tr>':''}${b.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td style="white-space:pre-line">${esc(r[1])}</td>${r.slice(2).map(cl).join('')}</tr>`).join('')}</table>`);break;
   case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:76.2%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos, cantidad y preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.55:.4}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td></tr>`).join('')}</table>`);break;
   case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');break}
   case 'firma':o.push(`<div class="fm"><span class="uv">${esc(S_(b.text))||'&nbsp;'.repeat(30)}</span></div><p style="text-align:right;margin-bottom:0"><b>Nombre y firma de la nutrióloga</b></p><p style="text-align:right">CP: ${esc(S_(b.cp))}</p>`);break;
- }});close();o.push('</section>');return o.join('')}
+ }});close();o.push(pf(sc));o.push('</section>');return o.join('')}
 const pst=document.createElement('style');
 pst.textContent=`#hcpaper{display:none}@page paper{size:letter;margin:0}
 @media print{body.paper-print{display:block!important;background:#fff!important}body.paper-print>*:not(#hcpaper){display:none!important}
@@ -1770,7 +1770,16 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .op{white-space:nowrap;margin-right:.28em}
 #hcpaper .bx{display:inline-block;position:relative;box-sizing:border-box;width:.92em;height:.92em;border:1.1pt solid #000;vertical-align:-.12em}
 #hcpaper .bx.on::after{content:'';position:absolute;left:27%;top:-6%;width:30%;height:62%;border:solid #000;border-width:0 2pt 2pt 0;transform:rotate(45deg)}
-#hcpaper .ln{border-bottom:0;min-height:1.4em;line-height:1.4;white-space:pre-wrap}#hcpaper .pgp.pgp.sm1{font-size:10pt}#hcpaper .pgp.pgp.sm2{font-size:9pt}#hcpaper .fm{text-align:right;margin-top:.45in}}`;
+#hcpaper .ln{border-bottom:0;min-height:1.4em;line-height:1.4;white-space:pre-wrap}#hcpaper .pgp.pgp.sm1{font-size:10pt}#hcpaper .pgp.pgp.sm2{font-size:9pt}#hcpaper .fm{text-align:right;margin-top:.45in}
+#hcpaper .pgp:not(.npg) h4{display:flex;align-items:center;gap:6pt;background:#d3dbcd;border:0;border-radius:3pt;padding:0 6pt 0 0;margin:0 0 .05in;text-transform:uppercase;font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:1em;letter-spacing:.02em;color:#3f4a42}
+#hcpaper h4 .hn{background:#a98c6f;color:#fff;font-family:Aptos,Calibri,Arial,sans-serif;font-weight:700;padding:1.5pt 7pt;border-radius:3pt 0 0 3pt}
+#hcpaper .hdw{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>") right top/1.3in no-repeat,linear-gradient(100deg,#dfe5d9 0,transparent 28%)}
+#hcpaper .hdw .ht{font-family:Georgia,'Times New Roman',serif;font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:19pt;color:#3f4a42;line-height:1.1;margin:.02in 0 0}
+#hcpaper .ht span{display:block;font-size:.8em;letter-spacing:.1em}
+#hcpaper .hrl{display:block;width:.9in;height:1.5pt;background:#b79c7d;margin:.04in auto .05in}
+#hcpaper .hm2{margin-top:.02in}#hcpaper .gr th,#hcpaper .hf th{background:#e6ebe1}
+#hcpaper .pft{display:flex;justify-content:space-between;font-size:8pt;color:#555;margin-top:.05in;border-top:.5pt solid #c9cfc3;padding-top:2pt}
+#hcpaper .pgp:not(.npg){padding-bottom:.3in}}`;
 document.head.appendChild(pst);
 const hashR=()=>(location.hash||'#hc').slice(1);
 function paperFill(){if(hashR()==='notas'){const q=cur();if(!q)return false;let h0=$('#hcpaper');if(!h0){document.body.insertAdjacentHTML('beforeend','<div id="hcpaper"></div>');h0=$('#hcpaper')}const hx=notaHTML(q);if(h0.__nh!==hx||!h0.firstChild){h0.innerHTML=hx;h0.__nh=hx;h0.querySelectorAll('img').forEach(i=>i.decode&&i.decode().catch(()=>{}))}return true}
