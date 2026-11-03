@@ -1642,8 +1642,8 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  B.push({t:'fic',rows:[[['Nombre:',pn(p),'',1]],
   [['Fecha de nacimiento:',p.nac?fd(p.nac):'','d'],['Edad:',p.nac?edTxt(edad(p.nac)):'','e',.45],['Sexo:',p.sexo,'s']],
   [['Estado civil:',I.ec,'',1],['Ocupación:',I.ocup,'',1.3]],
-  [['Escolaridad:',I.esc,'',1],['Nacionalidad:',I.nacion,'',1.2]],
-  [['Tel:',p.tel,'t'],['Patología de base:',(p.pat||[]).join(', '),'b',1]]]});
+  [['Escolaridad:',I.esc,'',1],['Nacionalidad:',I.nacion,'',1.1],['Tel:',p.tel,'t']],
+  [['Patología de base:',(p.pat||[]).join(', '),'b',1]]]});
  H('Antecedentes heredofamiliares');
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
@@ -1786,7 +1786,7 @@ body.paper-print #hcpaper{display:block!important;page:paper;font:12pt/1.2 Aptos
 #hcpaper .hf td.c{height:.2in}
 #hcpaper .lbox{border:.75pt solid #b9b9b9;border-radius:4pt;padding:.03in .12in;margin-bottom:.06in}#hcpaper .lbox .ln{border-bottom:0;min-height:1.55em;line-height:1.55}
 #hcpaper .fmb{width:2.7in;margin:.4in 0 0 auto;text-align:center;font-size:.95em;line-height:1.25}#hcpaper .fmb .fm{margin:0 0 2pt;border-bottom:.75pt solid #000;text-align:center;min-height:1.2em}
-#hcpaper .fbig{align-items:flex-start}#hcpaper .fl.fb{display:block;min-height:.72in;line-height:1.4;border:.75pt solid #000;border-radius:3pt;padding:3pt 6pt;margin-left:6pt}
+#hcpaper .fbig{align-items:flex-end}#hcpaper .fl.fb{min-height:.24in;line-height:1.5}
 #hcpaper .fr{display:flex;align-items:flex-end;gap:.22in;margin-bottom:.07in}#hcpaper .ff{display:flex;align-items:flex-end;min-width:0;white-space:nowrap}#hcpaper .ff .op{margin-left:.12in}
 #hcpaper .fl{flex:1;min-width:0;border-bottom:.75pt solid #000;margin-left:4pt;padding:0 3pt;min-height:1.1em;white-space:normal;line-height:1.1}
 #hcpaper .pgp.pgp{padding:.3in .55in .25in;max-height:10.97in;overflow:hidden}#hcpaper .pgp.pgp:nth-child(1){font-size:9.6pt}#hcpaper .pgp.pgp:nth-child(2){font-size:9.8pt}#hcpaper .pgp.pgp:nth-child(3){font-size:10pt}#hcpaper .fr{margin-bottom:.045in}#hcpaper .fmb{margin-top:.22in}
