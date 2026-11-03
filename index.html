@@ -1643,8 +1643,7 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
   [['Fecha de nacimiento:',p.nac?fd(p.nac):'','d'],['Edad:',p.nac?edTxt(edad(p.nac)):'','e',.45],['Sexo:',p.sexo,'s']],
   [['Estado civil:',I.ec,'',1],['Ocupación:',I.ocup,'',1.3]],
   [['Escolaridad:',I.esc,'',1],['Nacionalidad:',I.nacion,'',1.2]],
-  [['Tel:',p.tel,'',1],['','','x',1]],
-  [['Patología de base:',(p.pat||[]).join(', '),'b',1]]]});
+  [['Tel:',p.tel,'t'],['Patología de base:',(p.pat||[]).join(', '),'b',1]]]});
  H('Antecedentes heredofamiliares');
  B.push({t:'hf',head:['Familiar',...HF_COLS.map(c=>c[1]),'Otros:'],rows:FAMS.map((f,i)=>[f,...HF_COLS.map(([k])=>!!I[`hf.${i}.${k}`]),S_(I[`hf.${i}.otros`])])});
  H('Indicadores clínicos');
@@ -1744,7 +1743,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1,hn=0;co
  paperModel(p).forEach(b=>{if(b.t!=='hdr'&&b.t!=='pb'&&b.t!=='h')open();switch(b.t){
   case 'hdr':close();o.push(`<div class="sc hdw"><div class="hd2"><div>${im('l1')}</div><div>${im('r1')}</div></div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i>${b.meta?`<div class="hm2"><span>Fecha: ${S_(b.fecha)?`<span class="uv">${esc(b.fecha)}</span>`:'<span class="ub" style="width:9ch"></span>'}</span><span class="gp"></span><span>N.º de expediente: ${S_(b.exp)?`<span class="uv">${esc(S_(b.exp))}</span>`:'<span class="ub" style="width:11ch"></span>'}</span></div>`:''}</div>`);break;
   case 'pb':close();o.push(pf(sc));sc++;o.push('</section><section class="pgp'+(sc===3?SZ:'')+'">');break;
-  case 'fic':b.rows.forEach(r=>o.push('<div class="fr">'+r.map(([l,v,k,w])=>k==='x'?'<span class="ff" style="flex:1"></span>':k==='s'?`<span class="ff">${esc(l)}&nbsp;<span class="op"><span class="bx${v==='M'?' on':''}"></span>&nbsp;Hombre</span><span class="op"><span class="bx${v==='F'?' on':''}"></span>&nbsp;Mujer</span></span>`:`<span class="ff${k==='b'?' fbig':''}" style="${k==='d'?'flex:none':'flex:'+(w||1)}">${esc(l)}<span class="fl${k==='b'?' fb':''}"${k==='d'?' style="flex:none;width:1.15in;text-align:center"':''}>${esc(S_(v)||(k==='d'?'    /    /':''))||'&nbsp;'}</span></span>`).join('')+'</div>'));break;
+  case 'fic':b.rows.forEach(r=>o.push('<div class="fr">'+r.map(([l,v,k,w])=>k==='x'?'<span class="ff" style="flex:1"></span>':k==='s'?`<span class="ff">${esc(l)}&nbsp;<span class="op"><span class="bx${v==='M'?' on':''}"></span>&nbsp;Hombre</span><span class="op"><span class="bx${v==='F'?' on':''}"></span>&nbsp;Mujer</span></span>`:`<span class="ff${k==='b'?' fbig':''}" style="${k==='d'||k==='t'?'flex:none':'flex:'+(w||1)}">${esc(l)}<span class="fl${k==='b'?' fb':''}"${k==='d'?' style="flex:none;width:1.15in;text-align:center"':k==='t'?' style="flex:none;width:1.1in;text-align:center"':''}>${esc(S_(v)||(k==='d'?'    /    /':''))||'&nbsp;'}</span></span>`).join('')+'</div>'));break;
   case 'p':o.push(`<p${b.al||b.grid?` style="${b.al?'text-align:'+b.al+';':''}${b.grid?'display:grid;row-gap:.05in;'+b.grid:''}"`:''}>${partsH(b.parts)}</p>`);break;
   case 'h':close();open();o.push(`<h4><span class="hn">${String(++hn).padStart(2,'0')}</span><span>${esc(b.text.replace(/:$/,''))}</span></h4>`);break;
   case 'hf':o.push(`<table class="hf"><colgroup>${HFW.map(w=>`<col style="width:${w/100.8}%">`).join('')}</colgroup><tr>${b.head.map((h,i)=>`<th class="${i&&i<7?'c':''}">${esc(h)}</th>`).join('')}</tr>${b.rows.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1,7).map(c=>`<td class="c"><span class="bx${c?' on':''}"></span></td>`).join('')}<td>: ${esc(r[7])}</td></tr>`).join('')}</table>`);break;
@@ -2911,13 +2910,18 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
   const v=$('#view');v.querySelectorAll('tr').forEach(tr=>{const b=tr.querySelector('button[data-a="hist"]');if(!b)return;const p=DB.p.find(x=>x.id===b.dataset.id),td=tr.cells[0];if(!p||!td)return;
    td.dataset.folder=p.id;td.style.cssText+=';cursor:pointer;font-weight:600;color:var(--ac,#2f6f5e);text-decoration:underline';td.title='Abrir carpeta: historia clínica y notas subsecuentes';
    const d=lastD(p);td.insertAdjacentHTML('beforeend',`<div class="note" style="font-weight:400;text-decoration:none;color:var(--mu,#777)">${d?'Última atención: '+fd(d):'Sin consultas'}</div>`)});
-  const oc=v.onclick;v.onclick=e=>{const t=e.target.closest('[data-folder]');if(t&&!e.target.closest('button')){HS.draft=null;DB.sel=t.dataset.folder;MF=null;NS.mode='con';NS.q='';NS.lst=false;NS.pf=t.dataset.folder;save();fillSel();go('hc');return}if(oc)oc(e)}};
+  const oc=v.onclick;v.onclick=e=>{const t=e.target.closest('[data-folder]');if(t&&!e.target.closest('button')){HS.draft=null;DB.sel=t.dataset.folder;MF=null;NS.mode='con';NS.q='';NS.lst=false;NS.fromPac=true;NS.pf=t.dataset.folder;save();fillSel();go('hc');return}if(oc)oc(e)}};
  V.hc.h=function(){const h=_hh.apply(this,arguments),p=hcPat();return(p&&DB.p.includes(p)&&!HS.cfg?fbar(p,'hc'):'')+h};
  V.notas.h=function(){if(!MF&&NS.mode==='con'&&!NS.lst)MF=(NS.pf&&NS.pf===DB.sel&&cur())?{key:'notas',id:''}:{key:'notas',id:'',np:1};const p=MF&&MF.key==='notas'&&!MF.np?cur():null;const h=_nh.apply(this,arguments);return nhdr()+fbar(p,'notas')+h};
  document.addEventListener('click',e=>{const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
   if(a==='lista'){NS.lst=true;NS.q='';render();return}
   NS.lst=false;NS.pf=DB.sel;go(a)});
 }
+
+/* ===== Flecha ← : desde la carpeta del paciente regresa a Pacientes ===== */
+{const _bo=$('#back').onclick;
+ $('#back').onclick=function(e){if(NS.fromPac&&(location.hash==='#hc'||location.hash==='#notas')){NS.fromPac=false;MF=null;editId=null;NAVSTK.pop();_bk=true;location.hash='#pac';setTimeout(()=>{_bk=false},80);render();return}return _bo.call(this,e)};
+ $('#nav').addEventListener('click',()=>{NS.fromPac=false})}
 </script>
 </body>
 </html>
