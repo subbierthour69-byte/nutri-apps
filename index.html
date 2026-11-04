@@ -2920,8 +2920,16 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
   if(p&&MF&&!MF.np){const L=nl(p),ix=MF.id?L.findIndex(r=>r.id===MF.id):L.length,pv=ix>0?L[ix-1]:null,nx=MF.id&&ix>=0&&ix<L.length-1?L[ix+1]:null;
    const nv=`<button class="g" data-nv="${pv?pv.id:''}" ${pv?'':'disabled'} style="margin-left:24px">◀ Nota anterior${pv&&pv.date?' ('+fd(pv.date)+')':''}</button>`+(MF.id?(nx?`<button class="g" data-nv="${nx.id}">Nota siguiente ▶</button>`:`<button class="g" data-nv="new">＋ Nota nueva</button>`):'');
    h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button>'+nv+'</span>')}
+  else if(MF&&MF.np)h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button><button class="g" data-nv="np" style="margin-left:24px" title="Escribe el nombre del paciente, o usa la última nota guardada">◀ Nota anterior</button></span>');
   return nhdr()+fbar(p,'notas')+h};
- document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&!q.disabled){const dirty=MF&&!MF.id&&[...document.querySelectorAll('#mform textarea,#mform input')].some(x=>x.value.trim()&&!/^(date|hora)$/.test((x.id||'').replace('mf-','')));if(dirty&&!confirm('Hay datos sin guardar en esta nota nueva. ¿Salir sin guardar?'))return;MF={key:'notas',id:q.dataset.nv==='new'?'':q.dataset.nv};render();window.scrollTo(0,0);return}const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
+ document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&q.dataset.nv==='np'){const nom=(document.querySelector('#mf-pn')||{value:''}).value.trim();let pt=null;
+   if(nom){const dp=findDup(nom,(document.querySelector('#mf-pe')||{value:''}).value.trim(),(document.querySelector('#mf-pnac')||{value:''}).value);pt=dp&&dp.p}
+   if(!pt&&NS.last)pt=DB.p.find(x=>x.id===NS.last.pid);
+   if(!pt)return toast('Escribe el nombre del paciente para ver su nota anterior');
+   const L=nl(pt),lt=NS.last&&NS.last.pid===pt.id&&L.find(r=>r.id===NS.last.nid)||L[L.length-1];
+   if(!lt)return toast('Ese paciente aún no tiene notas');
+   DB.sel=pt.id;NS.pf=pt.id;NS.lst=false;MF={key:'notas',id:lt.id};fillSel();render();window.scrollTo(0,0);return}
+  if(q&&!q.disabled){const dirty=MF&&!MF.id&&[...document.querySelectorAll('#mform textarea,#mform input')].some(x=>x.value.trim()&&!/^(date|hora)$/.test((x.id||'').replace('mf-','')));if(dirty&&!confirm('Hay datos sin guardar en esta nota nueva. ¿Salir sin guardar?'))return;MF={key:'notas',id:q.dataset.nv==='new'?'':q.dataset.nv};render();window.scrollTo(0,0);return}const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
   if(a==='lista'){NS.lst=true;NS.q='';render();return}
   NS.lst=false;NS.pf=DB.sel;go(a)});
 }
@@ -2930,6 +2938,9 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
 {const _bo=$('#back').onclick;
  $('#back').onclick=function(e){if(NS.fromPac&&(location.hash==='#hc'||location.hash==='#notas')){NS.fromPac=false;MF=null;editId=null;NAVSTK.pop();_bk=true;location.hash='#pac';setTimeout(()=>{_bk=false},80);render();return}return _bo.call(this,e)};
  $('#nav').addEventListener('click',()=>{NS.fromPac=false})}
+
+/* recordar la última nota guardada para poder abrirla y editarla */
+{const _a=agAfterNote;agAfterNote=function(tp,sid){NS.last={pid:tp.id,nid:sid};return _a.apply(this,arguments)}}
 </script>
 </body>
 </html>
