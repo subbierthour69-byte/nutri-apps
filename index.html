@@ -1512,7 +1512,7 @@ body.paper-print #hcpaper .npg .nplg img.lb2{height:.46in}
 body.paper-print #hcpaper .npg .npt1{font-size:12pt}body.paper-print #hcpaper .npg .npt2{font-size:9pt}
 body.paper-print #hcpaper .npg .npb{flex:0 0 3.05in;border:1.2pt solid #000;padding:.035in .08in;font-size:10pt;line-height:1.3;display:flex;flex-direction:column;justify-content:center}
 body.paper-print #hcpaper .npg .nprow{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:.12in}body.paper-print #hcpaper .npg .nprow>span{white-space:nowrap}
-body.paper-print #hcpaper .npg .npnm{display:flex;justify-content:space-between;align-items:baseline;column-gap:.12in}body.paper-print #hcpaper .npg .npnm>span:first-child{min-width:0}body.paper-print #hcpaper .npg .npnm>span:last-child{white-space:nowrap}
+body.paper-print #hcpaper .npg .npnm{display:flex;justify-content:space-between;align-items:baseline;column-gap:.12in}body.paper-print #hcpaper .npg .npnm>span{white-space:nowrap}body.paper-print #hcpaper .npg .npnm>span:first-child{min-width:0}
 body.paper-print #hcpaper .npg .npdx{max-height:2.85em;overflow:hidden}
 body.paper-print #hcpaper .npg .npt{flex:1 0 auto;display:flex;flex-direction:column;border:1.2pt solid #000}
 body.paper-print #hcpaper .npg .r{display:flex;border-top:1px solid #000;flex:none;min-width:0}
@@ -1798,7 +1798,11 @@ const hashR=()=>(location.hash||'#hc').slice(1);
 function paperFill(){if(hashR()==='notas'){const q=cur();if(!q)return false;let h0=$('#hcpaper');if(!h0){document.body.insertAdjacentHTML('beforeend','<div id="hcpaper"></div>');h0=$('#hcpaper')}const hx=notaHTML(q);if(h0.__nh!==hx||!h0.firstChild){h0.innerHTML=hx;h0.__nh=hx;h0.querySelectorAll('img').forEach(i=>i.decode&&i.decode().catch(()=>{}))}return true}
  if(MODE!=='inst'||hashR()!=='hc')return false;const p=hcPat();if(!p)return false;let h=$('#hcpaper');if(!h){document.body.insertAdjacentHTML('beforeend','<div id="hcpaper"></div>');h=$('#hcpaper')}
  h.innerHTML=paperHTML(p);h.querySelectorAll('img').forEach(i=>i.decode&&i.decode().catch(()=>{}));return true}
-function paperOn(){if(paperFill())document.body.classList.add('paper-print')}
+function fitNpNames(){const h=document.getElementById('hcpaper');if(!h)return;const cv=(fitNpNames.cv||(fitNpNames.cv=document.createElement('canvas'))).getContext('2d');
+ h.querySelectorAll('.npg .npnm').forEach(el=>{const sp=el.children;if(sp.length<2)return;el.style.fontSize='';const fam=getComputedStyle(el).fontFamily||'Arial,sans-serif';cv.font='13.333px '+fam;
+  const w=cv.measureText((sp[0].textContent||'').trim()).width+cv.measureText((sp[1].textContent||'').trim()).width+14,max=268;
+  if(w>max)el.style.fontSize=Math.max(5.5,Math.floor(10*max/w*10)/10)+'pt'})}
+function paperOn(){if(paperFill()){document.body.classList.add('paper-print');try{fitNpNames()}catch(e){}}}
 function paperOff(){NP=null;document.body.classList.remove('paper-print');const h=$('#hcpaper');if(h&&hashR()!=='notas')h.innerHTML=''}
 addEventListener('beforeprint',paperOn);addEventListener('afterprint',paperOff);
 let ptm=null;const pprep=()=>{clearTimeout(ptm);ptm=setTimeout(paperFill,700)};
@@ -2759,8 +2763,8 @@ function archPat(id,quiet){const p=DB.p.find(x=>x.id===id);if(!p)return;const n=
  dlBlob(`expediente-${n}-${d}.json`,new Blob([JSON.stringify(patFile(p))],{type:'application/json'}));
  setTimeout(()=>dlBlob(`expediente-${n}-${d}.html`,new Blob([patHTML(p)],{type:'text/html'})),400);if(!quiet)toast('Expediente descargado (.json para restaurar y .html para leer)')}
 function delPat(id){const p=DB.p.find(x=>x.id===id);if(!p)return;const nn=pNotes(p).length;
- if(!confirm(`Vas a ELIMINAR a ${pn(p)}.\n\nSe borrará para siempre su historia clínica, ${nn} nota(s) subsecuente(s), sus consultas y sus citas.\n\nAntes se descargará una copia de su expediente. ¿Continuar?`))return;
- archPat(id,true);DB.p=DB.p.filter(x=>x.id!==id);DB.ag=agList().filter(a=>a.pid!==id);if(DB.sel===id)DB.sel=null;save();fillSel();render();toast('Paciente eliminado · copia del expediente descargada')}
+ if(!confirm(`Vas a ELIMINAR a ${pn(p)}.\n\nSe borrará para siempre su historia clínica, ${nn} nota(s) subsecuente(s), sus consultas y sus citas.\n\nEsta acción no se puede deshacer. ¿Continuar?`))return;
+ DB.p=DB.p.filter(x=>x.id!==id);DB.ag=agList().filter(a=>a.pid!==id);if(DB.sel===id)DB.sel=null;save();fillSel();render();toast('Paciente eliminado')}
 
 /* =====================================================================
    11. v2.4 — NOTAS SUBSECUENTES: edad, IMC, diagnóstico por IMC y percentil automáticos · lista "Con paciente"
