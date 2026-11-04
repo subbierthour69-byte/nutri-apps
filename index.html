@@ -330,7 +330,7 @@ setTheme(DB.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'li
 $('#theme').onclick=()=>{setTheme(DB.theme==='dark'?'light':'dark');save()};
 
 /* ===== Menú lateral por secciones ===== */
-const NAV=[['Atención',[['agenda','Agenda','clock'],['formato','Formato mensual','list'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['notas','Notas subsecuentes','repeat'],['cons','Consulta','pulse'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
+const NAV=[['Atención',[['agenda','Agenda','clock'],['formato','Formato mensual','list'],['pac','Pacientes','users'],['hc','Historia clínica','list'],['notas','Notas subsecuentes','repeat'],['cons','Calculadora rápida','pulse'],['dietas','Dietas dinámicas','diet']]],['General',[['panel','Panel','panel']]],
  ['Bases de datos',[['cat','Equivalentes (SMAE)','book'],['smr','Calculadora R24 (SMAE)','book'],['mic','Micronutrientes','flask']]],['Expediente del paciente',[['datos','Datos generales','id'],['med','Mediciones','scale'],['eqdist','Cuadro de equivalentes','scale'],['recordatorio','Recordatorio 24H','clock'],['clinica','Clínica','heart'],['laboratorio','Laboratorio','flask'],['signos','Signos vitales','pulse'],['archivos','Archivos clínicos','folder'],['entrevista','Entrevista motivacional','bulb'],['actividad','Actividad física','dumb'],['cuestionarios','Cuestionarios','list'],['habitos','Hábitos','repeat'],['seguimiento','App de seguimiento','phone'],['pagos','Pagos del paciente','wallet'],['whatsapp','Whatsapp','chat']]],
  ['Sistema',[['aj','Ajustes','gear']]]];
 $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,i])=>`<a data-v="${id}" tabindex="0">${ico(i)}${t}</a>`).join('')).join('');
@@ -632,7 +632,7 @@ const kpi=(l,v)=>`<div class="card kpi" style="margin:0">${v}<small>${l}</small>
 V.panel={t:'Panel',h(){const p=cur(),c=p&&curC(),e=p&&c&&en(c,p);
  return `<div class="grid">${kpi('Pacientes',DB.p.length)}${kpi('Consultas registradas',DB.p.reduce((a,x)=>a+(x.cons||[]).length,0))}
  ${kpi('IMC del paciente activo',e?fx(e.imc):'—')}${kpi('GET + ETA (kcal/día)',e&&e.tot?fx(e.tot,0):'—')}</div>
- <div class="card" style="margin-top:16px"><h2>Flujo de trabajo</h2><p style="margin:0">1) Llena la <b>Historia clínica</b>: el paciente se registra solo. 2) En <b>Consulta</b> captura medidas, revisa energía, percentiles y composición (con semáforo bajo/óptimo/elevado). 3) Arma el plan en el <b>cuadro de equivalentes y distribución</b> (o agrega alimentos con el botón + del <b>Catálogo SMAE</b>) y revisa el % de adecuación en verde/amarillo/rojo. 4) Revisa la cobertura en <b>Micronutrientes</b>.</p></div>`}};
+ <div class="card" style="margin-top:16px"><h2>Flujo de trabajo</h2><p style="margin:0">1) Llena la <b>Historia clínica</b>: el paciente se registra solo. 2) En <b>Calculadora rápida</b> captura medidas, revisa energía, percentiles y composición (con semáforo bajo/óptimo/elevado). 3) Arma el plan en el <b>cuadro de equivalentes y distribución</b> (o agrega alimentos con el botón + del <b>Catálogo SMAE</b>) y revisa el % de adecuación en verde/amarillo/rojo. 4) Revisa la cobertura en <b>Micronutrientes</b>.</p></div>`}};
 
 /* ---------- PACIENTES ---------- */
 V.pac={t:'Pacientes e historia clínica',h(){
@@ -650,7 +650,7 @@ V.pac={t:'Pacientes e historia clínica',h(){
  <p><button id="bsave">Guardar paciente</button> <button class="g" id="bcancel">Cancelar</button></p>`}</div>
  <div class="card wrap"><table><tr><th>Paciente<th>Edad<th>Sexo<th>Patologías<th class="n">Consultas<th></tr>
  ${DB.p.map(x=>`<tr><td>${avHTML(x,32)} ${esc(pn(x))}<td>${edTxt(edad(x.nac))}<td>${x.sexo==='M'?'Hombre':'Mujer'}<td>${esc((x.pat||[]).join(', '))||'—'}<td class="n">${(x.cons||[]).length}
- <td class="n"><button class="s g" data-a="hist" data-id="${x.id}">Historia</button> <button class="s g" data-a="sel" data-id="${x.id}">Consulta</button> <button class="s g" data-a="ed" data-id="${x.id}">Editar</button> <button class="s g" data-a="arch" data-id="${x.id}" title="Descargar expediente completo">Expediente</button> <button class="s d" data-a="del" data-id="${x.id}">Borrar</button>`).join('')||'<tr><td colspan=6>Aún no hay pacientes.'}</table></div>`},
+ <td class="n"><button class="s g" data-a="hist" data-id="${x.id}">Historia</button> <button class="s g" data-a="sel" data-id="${x.id}">Calculadora rápida</button> <button class="s g" data-a="ed" data-id="${x.id}">Editar</button> <button class="s g" data-a="arch" data-id="${x.id}" title="Descargar expediente completo">Expediente</button> <button class="s d" data-a="del" data-id="${x.id}">Borrar</button>`).join('')||'<tr><td colspan=6>Aún no hay pacientes.'}</table></div>`},
  i(){const draw=()=>{const c=$('#chips');if(!c)return;c.innerHTML=[...new Set([...PAT,...chips])].map(x=>`<span class="chip${chips.includes(x)?' on':''}" data-c="${esc(x)}">${esc(x)}</span>`).join('')};
   draw();const go=()=>{$('#view').innerHTML=V.pac.h();V.pac.i()};
   $('#bnew')&&($('#bnew').onclick=()=>{editId='';chips=[];go()});
@@ -681,7 +681,7 @@ function eqData(c){const G=Object.keys(GR),M=MEALS,r=G.map(()=>({m:{},u:0,n:0,kc
   if(d.t===UND){x.u+=n;return}const m=M.includes(d.t)?d.t:'Comida';x.m[m]=(x.m[m]||0)+n;mk[m]+=f.kcal*n});
  const T=r.reduce((a,x)=>({n:a.n+x.n,kcal:a.kcal+x.kcal,p:a.p+x.p,l:a.l+x.l,hc:a.hc+x.hc}),{n:0,kcal:0,p:0,l:0,hc:0});
  return{G,r,T,mk}}
-V.cons={t:'Consulta',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC();DB.csel[p.id]=c.id;
+V.cons={t:'Calculadora rápida',h(){const p=cur();if(!p)return noP;ensureC(p);const c=curC();DB.csel[p.id]=c.id;
  const d=(k,l,u,st='0.1')=>`<div><label>${l}</label><input data-f="${k}" type="number" step="${st}" value="${esc(c[k])}" placeholder="${u}"></div>`;
  const cs=[...p.cons].sort((a,b)=>b.fecha.localeCompare(a.fecha));
  return `<div class="card"><h2>${avHTML(p,34)} ${esc(pn(p))} · ${p.sexo==='M'?'Hombre':'Mujer'}</h2><div class="grid" style="align-items:end">
