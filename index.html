@@ -213,6 +213,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--bg)}
 @media(max-width:600px){.r24b .rr{grid-template-columns:1fr}}
 input.ro{background:var(--bg);font-weight:700;cursor:default}
 @media print{#back,.fbar{display:none!important}}
+#mform .grid>*:has(#mf-pn){grid-column:1/-1}#mform #mf-pn{font-size:1.1em;min-height:50px}.fbar h2{white-space:normal;overflow-wrap:anywhere}
 /* ===== Historia clínica: diseño SANNAFARM (secciones numeradas, encabezado con hojas, 3 páginas) ===== */
 .hcc.hhead,.hcc.hs{background:#fff;border:1px solid #e4e0d4!important;border-radius:12px}
 .hhead,.phdr{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='120' viewBox='0 0 170 120'><g fill='%23b9c6b3' opacity='.55'><ellipse cx='130' cy='70' rx='9' ry='30' transform='rotate(35 130 70)'/><ellipse cx='150' cy='55' rx='8' ry='26' transform='rotate(10 150 55)'/><ellipse cx='112' cy='92' rx='8' ry='24' transform='rotate(60 112 92)'/><ellipse cx='160' cy='85' rx='7' ry='22' transform='rotate(-15 160 85)'/></g></svg>");background-repeat:no-repeat;background-position:right top,left top}
@@ -2903,6 +2904,9 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
  const nNotas=p=>((p.mod&&p.mod.notas)||[]).length;
  const fbar=(p,a)=>p?`<div class="card noprint gap" style="align-items:center"><b>📁 Carpeta de ${esc(pn(p))}</b><button data-fb="hc" class="${a==='hc'?'':'g'}">Historia clínica</button><button data-fb="notas" class="${a==='notas'?'':'g'}">Notas subsecuentes (${nNotas(p)})</button>${a==='notas'?`<button data-fb="lista" class="g">Ver lista de notas</button>`:''}</div>`:a==='notas'?`<div class="card noprint gap" style="align-items:center"><span class="note" style="margin:0">Llena el formato y pulsa <b>Guardar</b>: el paciente se registra solo.</span><button data-fb="lista" class="g">Ver lista de notas</button></div>`:'';
  const nhdr=()=>`<div class="card hcc hhead noprint"><div class="hdr"><div class="hl">${hcLogo('l1','Logo izquierdo',200)}</div><div class="hr">${hcLogo('r1','Logo derecho',135)}</div></div><h2 class="ht">NOTA SUBSECUENTE<span>NUTRICIONAL</span></h2><i class="hrl"></i></div>`;
+ const nl=p=>((p.mod&&p.mod.notas)||[]).slice().sort((a,b)=>((a.date||'')+(a.hora||'')+a.id).localeCompare((b.date||'')+(b.hora||'')+b.id));
+ const sig=r=>JSON.stringify(Object.keys(r).filter(k=>k!=='id'&&!/^(ts|cr|created|upd|mod)/i.test(k)).sort().map(k=>[k,r[k]]));
+ const dedupeN=()=>{let n=0;DB.p.forEach(p=>{const L=p.mod&&p.mod.notas;if(!L||L.length<2)return;const seen=new Set();p.mod.notas=L.filter(r=>{const k=sig(r);if(seen.has(k)){n++;return false}seen.add(k);return true})});if(n){save();toast('Se eliminaron '+n+' nota(s) repetida(s)')}};
  const go=a=>{if(location.hash==='#'+a)render();else location.hash=a};
  const _ph=V.pac.h,_pi=V.pac.i,_hh=V.hc.h,_nh=V.notas.h;
  V.pac.h=function(){const o=DB.p;DB.p=o.slice().sort((a,b)=>lastD(b).localeCompare(lastD(a)));try{return _ph.apply(this,arguments)}finally{DB.p=o}};
@@ -2912,8 +2916,12 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
    const d=lastD(p);td.insertAdjacentHTML('beforeend',`<div class="note" style="font-weight:400;text-decoration:none;color:var(--mu,#777)">${d?'Última atención: '+fd(d):'Sin consultas'}</div>`)});
   const oc=v.onclick;v.onclick=e=>{const t=e.target.closest('[data-folder]');if(t&&!e.target.closest('button')){HS.draft=null;DB.sel=t.dataset.folder;MF=null;NS.mode='con';NS.q='';NS.lst=false;NS.fromPac=true;NS.pf=t.dataset.folder;save();fillSel();go('hc');return}if(oc)oc(e)}};
  V.hc.h=function(){const h=_hh.apply(this,arguments),p=hcPat();return(p&&DB.p.includes(p)&&!HS.cfg?fbar(p,'hc'):'')+h};
- V.notas.h=function(){if(!MF&&NS.mode==='con'&&!NS.lst)MF=(NS.pf&&NS.pf===DB.sel&&cur())?{key:'notas',id:''}:{key:'notas',id:'',np:1};const p=MF&&MF.key==='notas'&&!MF.np?cur():null;const h=_nh.apply(this,arguments);return nhdr()+fbar(p,'notas')+h};
- document.addEventListener('click',e=>{const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
+ V.notas.h=function(){if(!MF&&NS.mode==='con'&&!NS.lst)MF=(NS.pf&&NS.pf===DB.sel&&cur())?{key:'notas',id:''}:{key:'notas',id:'',np:1};const p=MF&&MF.key==='notas'&&!MF.np?cur():null;dedupeN();const h0=_nh.apply(this,arguments);let h=h0.replace('<button data-x="saveprint">Guardar e imprimir</button>','<button data-x="saveprint" style="margin-left:24px">Imprimir</button>');
+  if(p&&MF&&!MF.np){const L=nl(p),ix=MF.id?L.findIndex(r=>r.id===MF.id):L.length,pv=ix>0?L[ix-1]:null,nx=MF.id&&ix>=0&&ix<L.length-1?L[ix+1]:null;
+   const nv=`<button class="g" data-nv="${pv?pv.id:''}" ${pv?'':'disabled'} style="margin-left:24px">◀ Nota anterior${pv&&pv.date?' ('+fd(pv.date)+')':''}</button>`+(MF.id?(nx?`<button class="g" data-nv="${nx.id}">Nota siguiente ▶</button>`:`<button class="g" data-nv="new">＋ Nota nueva</button>`):'');
+   h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button>'+nv+'</span>')}
+  return nhdr()+fbar(p,'notas')+h};
+ document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&!q.disabled){const dirty=MF&&!MF.id&&[...document.querySelectorAll('#mform textarea,#mform input')].some(x=>x.value.trim()&&!/^(date|hora)$/.test((x.id||'').replace('mf-','')));if(dirty&&!confirm('Hay datos sin guardar en esta nota nueva. ¿Salir sin guardar?'))return;MF={key:'notas',id:q.dataset.nv==='new'?'':q.dataset.nv};render();window.scrollTo(0,0);return}const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
   if(a==='lista'){NS.lst=true;NS.q='';render();return}
   NS.lst=false;NS.pf=DB.sel;go(a)});
 }
