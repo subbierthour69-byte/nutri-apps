@@ -1478,7 +1478,7 @@ function notaHTML(p){
  fh=(r.date?fd(r.date):'')+(r.hora?'  '+r.hora+' hrs':''),
  al=(l,v,un)=>`<div class="al"><span>${l}</span><b>${n(v)}</b><i>${un}</i></div>`,
  BQ=[['GLUCOSA SERICA:','glu','70/100mg/dL'],['HEMOGLOBINA:','hb','♀:12–15 ♂:13–17g/dL'],['COLESTEROL TOTAL:','colt','&lt;200mg/dL'],['HDL (BUENO):','hdl','♀:50mg/dL ♂:40mg/dL'],['LDL (MALO):','ldl','&lt;100mg/dL'],['TRIGLICERIDOS:','tg','&lt;150mg/dL'],['UREA:','urea','15-40 mg/dL'],['CREATININA:','cre','♀:0.6-1.1mg/dL ♂:3.4- 7.0 mg/dL']],
- tx=(l,v,g,cls,mh)=>`<div class="r g ${cls||''}" style="flex:${g} 0 auto;min-height:${mh}in"><div class="lb">${l}</div><div class="tx">${n(v)}</div></div>`;
+ tx=(l,v,g,cls,mh)=>`<div class="r g ${cls||''}" style="flex:${g} 0 auto;min-height:${mh}in"><div class="lb">${l}</div><div class="tx">${n(v).replace(/\*\*(.+?)\*\*/gs,'<b>$1</b>')}</div></div>`;
  const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26)),sz=load>36?' s2':load>23?' s1':'';
  return `<section class="pgp npg${sz}">
  <div class="nph"><div class="npl"><div class="nplg"><img src="${NP_LOGO.a}" alt="" decoding="sync"><img class="lb2" src="${NP_LOGO.b}" alt="" decoding="sync"></div><div class="npt1">NOTAS DE</div><div class="npt2">EVOLUCIÓN  Y TRATAMIENTO NUTRICIONAL</div></div>
@@ -1705,6 +1705,7 @@ const TINY='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRu
 const PBK='<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>';
 const FP=(inner,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.bb?'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="000000"/></w:pBdr>':''}<w:spacing w:before="${o.bf||0}" w:after="0" w:line="240" w:lineRule="auto"/>${o.al?`<w:jc w:val="${o.al}"/>`:''}</w:pPr>${inner}</w:p>`;
 const FR=(t,o={})=>R(t,{sz:24,...o});
+const frb=l=>{const q=l.split('**');return q.length%2?q.map((t,i)=>t?FR(t,i%2?{b:1}:{}):'').join(''):FR(l)};
 const NB='\u00A0',HFW=[1850,1300,600,700,1700,1100,1000,1830];
 function partsX(parts){return parts.map(x=>{const[k,a,b]=x;
  if(k==='b')return FR(a,{b:1});if(k==='t')return FR(a);
@@ -1732,7 +1733,7 @@ function paperDocx(p){const o=[];
   case 'bq':{const W=[2000,2000,2000,2000,2080],hd=b.head?[['Indicador','Valor normal','Consulta 1º','Consulta 2º','Consulta 3º'].map((h,i)=>({t:h,b:1,al:i>1?'center':''}))]:[];
    o.push(TFx([...hd,...b.rows.map(r=>[{t:r[0],b:1},r[1],...r.slice(2).map(x=>x?{t:x.v,b:x.out,c:x.out?'C00000':'',al:'center'}:'')])],{w:W,borders:'grid'}));o.push(TINY);break}
   case 'r24':o.push(TFx([['Tiempo de alimentos','Alimentos, cantidad y preparación'].map(h=>({t:h,b:1})),...b.rows.map(r=>[{t:r[0]+'\nHrs: '+r[1]},r[2]])],{w:[2400,7680],borders:'grid',minH:[0,...b.rows.map((_,i)=>i<3?1080:i===3?900:720)]}));o.push(TINY);break;
-  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(FP(FR(l))));for(let i=used;i<b.n;i++)o.push(FP(''));break}
+  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);ls.forEach(l=>o.push(FP(frb(l))));for(let i=used;i<b.n;i++)o.push(FP(''));break}
   case 'firma':{const t=S_(b.text);o.push(FP(FR(t+NB.repeat(Math.max(2,34-t.length)),{u:1}),{al:'right',bf:480}));o.push(FP(FR('Nombre y firma de la nutrióloga',{b:1}),{al:'right'}));o.push(FP(FR('CP: '+S_(b.cp)),{al:'right'}));break}
  }});return o.join('')}
 /* ----- Render HTML (impresión / PDF del navegador) ----- */
@@ -1751,7 +1752,7 @@ function paperHTML(p){const o=['<section class="pgp">'];let g=false,sc=1,hn=0;co
   case 'antro':b.tabs.forEach(t=>o.push(`<table class="gr an"><colgroup><col style="width:18.3%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.4%"><col style="width:20.5%"></colgroup><tr>${t.head.map((h,i)=>`<th class="${i?'c':'rl'}">${esc(h)}</th>`).join('')}</tr>${t.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="c">${esc(c)}</td>`:`<td class="rl"><i>${esc(c)}</i></td>`).join('')}</tr>`).join('')}</table>`));break;
   case 'bq':o.push(`<table class="gr"><colgroup><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:19.8%"><col style="width:20.8%"></colgroup>${b.head?'<tr><th>Indicador</th><th>Valor normal</th><th class="c">Consulta 1º</th><th class="c">Consulta 2º</th><th class="c">Consulta 3º</th></tr>':''}${b.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td style="white-space:pre-line">${esc(r[1])}</td>${r.slice(2).map(cl).join('')}</tr>`).join('')}</table>`);break;
   case 'r24':o.push(`<table class="gr r24"><colgroup><col style="width:23.8%"><col style="width:76.2%"></colgroup><tr><th>Tiempo de alimentos</th><th>Alimentos, cantidad y preparación</th></tr>${b.rows.map((r,i)=>`<tr style="height:${i<3?.55:.4}in"><td>${esc(r[0])}<br>Hrs: ${esc(r[1])}</td><td style="white-space:pre-wrap">${esc(r[2])}</td></tr>`).join('')}</table>`);break;
-  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);o.push('<div class="lbox">');ls.forEach(l=>o.push(`<div class="ln">${esc(l)}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');o.push('</div>');break}
+  case 'lines':{const ls=S_(b.text)?S_(b.text).split('\n'):[],used=ls.reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/85)),0);o.push('<div class="lbox">');ls.forEach(l=>o.push(`<div class="ln">${esc(l).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</div>`));for(let i=used;i<b.n;i++)o.push('<div class="ln">&nbsp;</div>');o.push('</div>');break}
   case 'firma':o.push(`<div class="fmb"><div class="fm">${esc(S_(b.text))||'&nbsp;'}</div><div>Nombre y firma de la nutrióloga</div><div>CP: ${esc(S_(b.cp))}</div></div>`);break;
  }});close();o.push(pf(sc));o.push('</section>');return o.join('')}
 const pst=document.createElement('style');
@@ -2538,7 +2539,7 @@ function cmpUpdate(){const box=$('#cmp');if(!box)return;
   let dl='—';if(a!=null&&b!=null){const x=b-a;dl=Math.abs(x)<1e-9?'＝ sin cambio':`${x>0?'▲':'▼'} ${Math.abs(x).toFixed(d)} ${u}`+(k==='peso'&&a?` (${x>0?'+':'−'}${Math.abs(x/a*100).toFixed(1)} %)`:'')}
   return`<tr><td>${l}<td class="n">${a==null?'—':fx(a,d)}<td class="n"><b>${b==null?'—':fx(b,d)}</b><td>${dl}`}).join('');
  const nC=(ref?ref.nprev:0)+1;
- const sr=(l,t,k)=>t&&String(t).trim()?`<div style="margin:6px 0"><b>${l}:</b> ${esc(cut(t,320))}${k?` <button class="s g" data-take="${k}" style="margin-left:6px">Traer al campo</button>`:''}</div>`:'';
+ const sr=(l,t,k)=>t&&String(t).trim()?`<div style="margin:6px 0"><b>${l}:</b> ${esc(cut(String(t).replace(/\*\*/g,''),320))}${k?` <button class="s g" data-take="${k}" style="margin-left:6px">Traer al campo</button>`:''}</div>`:'';
  let sum='',head;
  if(ref){const txt=sr('Evolución / motivo',ref.ev)+sr('R24 anterior',(ref.r24||[]).join(' · '))+sr('Diagnóstico nutricional PES',ref.dx,'dx')+sr('Plan / recomendaciones',ref.pl,'pl')+sr('Pendientes',ref.pend,'pend')+(ref.prox?`<div style="margin:6px 0"><b>Cita que se había programado:</b> ${fd(ref.prox)}</div>`:'');
   sum=`<h3 style="margin:14px 0 4px;font-size:14px">Resumen de la consulta anterior</h3>${txt||'<p class="note">La consulta anterior no tiene texto capturado.</p>'}`;
@@ -2793,7 +2794,7 @@ function notasRowsHTML(){const q=_nz(NS.q),L=notasRows().filter(x=>!q||_nz(pn(x.
  return L.map(({p,r})=>{const nm=`<b>${esc(pn(p))}</b>${pExp(p)?`<div class="note" style="margin:0">Exp. ${esc(pExp(p))}</div>`:''}`;
   if(!r)return `<tr class="clk" data-new="${p.id}"><td>${nm}<td colspan="8" style="color:var(--mut)">Sin notas · clic para crear la primera<td class="n"><button class="s" data-new="${p.id}">+ Nota</button>`;
   const o=imcDx(p,r.date,num(r.peso),num(r.talla));
-  return `<tr class="clk" data-open="${p.id}|${r.id}"><td>${nm}<td>${fd(r.date)}<td>${esc(r.hora||'—')}<td>${o.e?edShort(o.e):'—'}<td class="n">${fx(num(r.peso))}<td class="n">${o.imc!=null?fx(o.imc,1):'—'}<td>${esc(o.dx||'—')}<td>${esc(cut(r.dx,48)||'—')}<td>${r.prox?fd(r.prox):'—'}<td class="n"><button class="s g" data-nprint="${p.id}|${r.id}">Imprimir</button> <button class="s d" data-ndel="${p.id}|${r.id}">✕</button>`}).join('')}
+  return `<tr class="clk" data-open="${p.id}|${r.id}"><td>${nm}<td>${fd(r.date)}<td>${esc(r.hora||'—')}<td>${o.e?edShort(o.e):'—'}<td class="n">${fx(num(r.peso))}<td class="n">${o.imc!=null?fx(o.imc,1):'—'}<td>${esc(o.dx||'—')}<td>${esc(cut(String(r.dx||'').replace(/\*\*/g,''),48)||'—')}<td>${r.prox?fd(r.prox):'—'}<td class="n"><button class="s g" data-nprint="${p.id}|${r.id}">Imprimir</button> <button class="s d" data-ndel="${p.id}|${r.id}">✕</button>`}).join('')}
 function notasListHTML(){const con=NS.mode==='con',c=cur();
  const seg=`<div class="seg"><button data-nm="con" class="${con?'':'g'}">Con paciente</button><button data-nm="sin" class="${con?'g':''}">Sin paciente</button></div>`;
  if(!con)return seg+`<div class="card"><h2>Nota de paciente no registrado</h2><p class="note" style="margin-top:0">Para pacientes que ya tienen expediente en el trabajo pero aún no están en la app. Al guardar la nota, el paciente se registra automáticamente.</p><p><button data-x="newpat">+ Nota de paciente no registrado</button></p></div>`;
@@ -2945,6 +2946,250 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
 
 /* recordar la última nota guardada para poder abrirla y editarla */
 {const _a=agAfterNote;agAfterNote=function(tp,sid){NS.last={pid:tp.id,nid:sid};return _a.apply(this,arguments)}}
+
+/* =====================================================================
+   v3.0 — CHAT DE IA (lado derecho)
+   · Con internet + llave gratuita de Google AI Studio (Gemini): IA avanzada.
+   · Sin internet / sin llave: base local de nutrición + tu Biblioteca guardada.
+   · Todo lo que preguntas se guarda en DB.ia (entra al respaldo .json). La llave NO entra al respaldo.
+   ===================================================================== */
+(function(){
+const IA=()=>(DB.ia=DB.ia||{lib:[],pend:[]}),KEYK='nutriclin_ia_key',MODK='nutriclin_ia_model';
+const PROXY_URL='';   /* ← pega aquí la URL de tu Worker de Cloudflare para que todos usen tu IA con solo un código */
+const key=()=>localStorage.getItem(KEYK)||'',proxy=()=>localStorage.getItem('nutriclin_ia_proxy')||PROXY_URL,code=()=>localStorage.getItem('nutriclin_ia_code')||'',okIA=()=>!!(key()||proxy()),model=()=>localStorage.getItem(MODK)||'gemini-flash-latest';
+const nz=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const fmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^\s*[-*] /gm,'• ').replace(/\n/g,'<br>');
+const SYS='Eres un asistente de apoyo para nutriólogos clínicos en México. Responde en español, claro y breve (unas 200 palabras salvo que pidan más), con datos prácticos y cifras de guías reconocidas (OMS, ADA, KDIGO, NOM) cuando apliquen. No inventes datos: si no sabes, dilo. La decisión final es siempre del profesional.';
+/* ---------- Base local (funciona sin internet) ---------- */
+const KB=[
+['Clasificación del IMC',['imc','indice de masa','sobrepeso','obesidad','bajo peso'],'**Adultos (OMS):** <18.5 bajo peso · 18.5–24.9 normal · 25–29.9 sobrepeso · ≥30 obesidad (I: 30–34.9, II: 35–39.9, III: ≥40).\n**Menores de 18 años:** se usa percentil IMC/edad (CDC): <P5 bajo peso · P5–P84 normal · P85–P94 sobrepeso · ≥P95 obesidad.'],
+['Gasto energético (GET)',[' get ','gasto energetico','calorias','kcal','mifflin','harris','requerimiento energetico',' tmb ','gasto basal'],'**Mifflin-St Jeor:** hombres = 10·kg + 6.25·cm − 5·edad + 5; mujeres = 10·kg + 6.25·cm − 5·edad − 161.\n**Factor de actividad:** 1.2 sedentario · 1.375 ligera · 1.55 moderada · 1.725 intensa · 1.9 muy intensa. GET = TMB × factor (+10% de ETA si usas fórmula de GET total).'],
+['Distribución de macronutrimentos',['macro','carbohidrato','proteina','lipido','grasa','distribucion','porcentaje'],'Referencia en adultos sanos: carbohidratos 50–60%, proteínas 10–20% (mínimo 0.8 g/kg), lípidos 25–30% (saturadas <10%). Energía: 4 kcal/g de carbohidrato y proteína, 9 kcal/g de grasa. Ajusta según patología y objetivo.'],
+['Pérdida de peso',['bajar de peso','perdida de peso','adelgazar','deficit','reducir peso'],'Un déficit de ~500 kcal/día da ≈0.5 kg/semana. Meta realista: 5–10% del peso en 6 meses. Evita dietas por debajo de 1200 kcal (mujeres) o 1500 kcal (hombres) sin supervisión. Mantén proteína suficiente, fibra y actividad física.'],
+['Ganancia de masa muscular',['ganar musculo','masa muscular','hipertrofia','superavit','deportista','entrenamiento'],'Superávit moderado de 250–500 kcal/día, proteína 1.4–2.0 g/kg/día repartida en 3–5 tomas, carbohidratos según volumen de entrenamiento (3–7 g/kg), y entrenamiento de fuerza progresivo.'],
+['Diabetes mellitus 2',['diabetes','glucosa','hba1c','hemoglobina glucosilada','resistencia a la insulina','prediabetes'],'Distribuye los carbohidratos en el día, prioriza integrales, leguminosas y fibra; evita bebidas azucaradas. Metas ADA (individualizar): HbA1c <7%, glucosa preprandial 80–130 mg/dL. Si hay sobrepeso, una pérdida del 5–10% mejora el control. Coordina con el médico si usa insulina o sulfonilureas (riesgo de hipoglucemia).'],
+['Hipertensión arterial',['hipertension','presion arterial','sodio',' sal ','dash'],'Patrón DASH: más verduras, frutas, lácteos bajos en grasa, leguminosas y oleaginosas. Sodio <2 g/día (≈5 g de sal). Aumenta potasio con alimentos (si no hay ERC), baja de peso si hay exceso, limita alcohol y ultraprocesados.'],
+['Dislipidemias',['colesterol','trigliceridos','dislipidemia','ldl','hdl','lipidos'],'Reduce grasa saturada (<7–10% de la energía) y elimina grasas trans. Aumenta fibra soluble (avena, leguminosas, frutas), pescado 2 veces/semana, oleaginosas y aceite de oliva. En triglicéridos altos: limita azúcares simples y alcohol, y baja de peso.'],
+['Gastritis y reflujo',['gastritis','reflujo',' erge ','colitis','acidez','ulcera'],'Comidas pequeñas y frecuentes; cenar 2–3 h antes de dormir; evitar alcohol, tabaco y lo que irrite a cada paciente (picante, café, cítricos, grasas altas). Elevar la cabecera de la cama en reflujo. Individualiza: no todos toleran lo mismo.'],
+['Estreñimiento',['estrenimiento','constipacion','evacuar'],'Aumenta la fibra de forma gradual hasta 25–30 g/día (verduras, frutas con cáscara, leguminosas, avena), con buena hidratación y actividad física. Más fibra sin agua puede empeorar el cuadro.'],
+['Enfermedad renal crónica',['renal',' erc ','rinon','insuficiencia renal','dialisis','creatinina'],'Sin diálisis, KDIGO sugiere ~0.8 g/kg/día de proteína (individualizar según estadio y nefrólogo). Controla sodio, y potasio y fósforo según laboratorios. Evita suplementos y sustitutos de sal con potasio sin autorización médica.'],
+['Embarazo',['embarazo','embarazada','gestacion','gestante'],'Energía extra aproximada (IOM): 1er trimestre ninguna, 2º ≈ +340 kcal, 3º ≈ +450 kcal. Ganancia de peso total según IMC pregestacional: bajo 12.5–18 kg · normal 11.5–16 kg · sobrepeso 7–11.5 kg · obesidad 5–9 kg. Ácido fólico 400 µg/día (desde antes de la concepción), hierro y calcio. Evitar alcohol, crudos y pescados altos en mercurio.'],
+['Lactancia',['lactancia','lactante','amamantar','amamantando'],'Requiere aprox. +330 a +500 kcal/día sobre el requerimiento previo, más líquidos, calcio, hierro, yodo y vitamina A. Lactancia materna exclusiva hasta los 6 meses.'],
+['Alimentación infantil',['bebe','lactante menor','ablactacion','alimentacion complementaria','infantil','nino','ninos'],'Lactancia exclusiva hasta los 6 meses; alimentación complementaria desde los 6 meses. No dar miel antes de 1 año ni leche de vaca como bebida principal antes de 1 año. Evitar sal y azúcar añadidas. Evalúa crecimiento con curvas OMS (0–5 años) o CDC.'],
+['Anemia por deficiencia de hierro',['anemia','hierro','ferritina','hemoglobina'],'Cortes OMS de hemoglobina: mujeres <12 g/dL, hombres <13 g/dL, embarazadas <11 g/dL. Combina hierro hemo (carnes, hígado) con alimentos con vitamina C; evita té, café y lácteos junto con las comidas ricas en hierro. Confirma con ferritina y valora suplemento con el médico.'],
+['Fibra',['fibra'],'Ingesta adecuada: ≈25 g/día mujeres y ≈38 g/día hombres (≈14 g por cada 1000 kcal). Incrementa poco a poco y con líquidos.'],
+['Hidratación',[' agua ','hidratacion','liquidos','beber'],'Ingesta total de líquidos (incluye alimentos) ≈2.7 L/día mujeres y ≈3.7 L/día hombres (IOM); como bebida, alrededor de 2–3 L. Aumenta con calor, ejercicio, fiebre o diarrea. Ajusta en ERC, insuficiencia cardiaca o hiponatremia.'],
+['Dietas vegetarianas',['vegetariano','vegano','vegetariana','vegana'],'Vigila vitamina B12 (suplemento obligatorio en veganos), hierro, zinc, calcio, omega-3 y yodo. Combina leguminosas con cereales, y usa vitamina C con las fuentes de hierro vegetal.'],
+['Equivalentes (SMAE)',['equivalente','smae','sistema mexicano','grupos de alimentos'],'El SMAE agrupa los alimentos en equivalentes: verduras, frutas, cereales y tubérculos, leguminosas, alimentos de origen animal, leche, aceites y grasas, azúcares y alimentos libres. Cada equivalente aporta cantidades similares de energía y macronutrimentos, y permite intercambiarlos dentro del grupo.'],
+['Gota y ácido úrico',['gota','acido urico','purinas'],'Limita alcohol (sobre todo cerveza), bebidas con fructosa y vísceras, mariscos y carnes rojas en exceso. Baja de peso gradual, hidratación suficiente y lácteos bajos en grasa pueden ayudar.']
+];
+/* ---------- utilidades ---------- */
+const sc=(tk,t)=>tk.length?tk.filter(w=>t.includes(w)).length/tk.length:0;
+const toks=q=>nz(q).split(/[^a-z0-9]+/).filter(w=>w.length>3);
+function patCtx(q){if(!/paciente|este caso|su imc|su dieta|el caso/i.test(q))return'';const p=cur();if(!p)return'';const o=[];try{const e=edad(p.nac);if(e)o.push('edad '+e.a+' años');}catch(_){}
+ o.push('sexo '+(p.sexo==='M'?'masculino':'femenino'));try{const m=lastMeas(p);if(m&&m.w&&m.t){o.push('peso '+m.w+' kg','talla '+m.t+' cm','IMC '+(m.w/((m.t/100)**2)).toFixed(1))}}catch(_){}
+ if(p.pat&&p.pat.length)o.push('patologías: '+p.pat.join(', '));return o.join('; ')}
+function imcCalc(q){const kg=q.match(/(\d{2,3}(?:[.,]\d+)?)\s*kg/i),cm=q.match(/(\d{3}(?:[.,]\d+)?)\s*cm/i)||q.match(/\b(1[.,]\d{1,2})\s*m\b/i);if(!kg||!cm)return'';
+ let w=parseFloat(kg[1].replace(',','.')),t=parseFloat(cm[1].replace(',','.'));if(t<3)t*=100;const i=w/((t/100)**2),c=i<18.5?'bajo peso':i<25?'normal':i<30?'sobrepeso':i<35?'obesidad I':i<40?'obesidad II':'obesidad III';
+ return '**IMC calculado:** '+i.toFixed(1)+' kg/m² ('+c+', criterio adultos OMS).\n\n'}
+const addLib=(q,a,src)=>{const L=IA().lib,k=nz(q);const i=L.findIndex(e=>nz(e.q)===k);if(i>=0)L.splice(i,1);L.unshift({id:uid(),q,a,src,t:Date.now()});if(L.length>300)L.length=300;safeSave()};
+let H=[],busy=false;
+async function gem(q,ctx){const txt=q+(ctx?'\n\n[Contexto anónimo del paciente: '+ctx+']':'');
+ const px=proxy(),r=await fetch(px?px+(px.includes('?')?'&':'?')+'model='+encodeURIComponent(model()):'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model())+':generateContent',{method:'POST',headers:px?{'Content-Type':'application/json','x-access-code':code()}:{'Content-Type':'application/json','x-goog-api-key':key()},body:JSON.stringify({systemInstruction:{parts:[{text:SYS}]},contents:[...H.slice(-8),{role:'user',parts:[{text:txt}]}]})});
+ if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error((j.error&&j.error.message)||('HTTP '+r.status))}
+ const j=await r.json(),t=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(x=>x.text||'').join('');if(!t)throw new Error('respuesta vacía');
+ H.push({role:'user',parts:[{text:txt}]},{role:'model',parts:[{text:t}]});return t}
+function local(q){const nq=' '+nz(q)+' ',tk=toks(q),pre=imcCalc(q);
+ let bk=null,bs=0;KB.forEach(e=>{const s=e[1].filter(k=>nq.includes(k.startsWith(' ')||k.endsWith(' ')?k:k)).length;if(s>bs){bs=s;bk=e}});
+ let bl=null,bls=0;IA().lib.forEach(e=>{const s=sc(tk,nz(e.q));if(s>bls){bls=s;bl=e}});
+ if(bl&&bls>=.7&&bl.src==='ia')return{a:bl.a,src:'lib',note:'Respuesta guardada de tu biblioteca (IA)'};
+ if(bk)return{a:pre+'**'+bk[0]+'**\n'+bk[2],src:'kb',note:'Base local de nutrición'};
+ if(pre)return{a:pre.trim(),src:'kb',note:'Cálculo local'};
+ if(bl&&bls>=.5)return{a:bl.a,src:'lib',note:'Relacionado en tu biblioteca: «'+bl.q+'»'};
+ return{a:'No tengo esa información guardada. **Guardé tu pregunta como pendiente**: se responderá sola cuando haya internet y tengas tu llave configurada (pestaña ⚙).',src:'pend'}}
+async function ask(q){let note='';
+ if(navigator.onLine&&okIA()){try{return{a:await gem(q,patCtx(q)),src:'ia',note:'IA en línea (Gemini)'}}catch(e){note=' · IA no disponible ('+e.message.slice(0,80)+')'}}
+ const x=local(q);x.note=(x.note||'')+(note||(!okIA()&&navigator.onLine?' · sin llave de IA':!navigator.onLine?' · sin conexión':''));return x}
+/* ---------- interfaz ---------- */
+const S={open:false,tab:'chat',M:[{r:'a',t:'Hola. Pregúntame lo que quieras de nutrición. Con internet y tu llave gratuita respondo con IA; sin internet uso la base local y lo que ya guardé. Escribe «este paciente…» para usar los datos (sin nombre) del paciente abierto.',src:'kb'}],q:''};
+const st=document.createElement('style');st.textContent=`#iabtn{position:fixed;right:0;top:42%;z-index:150;border-radius:10px 0 0 10px;padding:10px 8px;font-size:18px;background:var(--pri);color:#fff;border:0;box-shadow:0 4px 14px #0003}
+#iap{position:fixed;right:0;top:0;bottom:0;width:380px;max-width:100vw;z-index:160;background:var(--card);color:var(--tx);border-left:1px solid var(--bd);display:flex;flex-direction:column;box-shadow:-8px 0 28px #0003}#iap[hidden]{display:none}
+#iap .ih{display:flex;gap:6px;align-items:center;padding:8px 10px;background:linear-gradient(135deg,#0e8f78,#2563eb);color:#fff;font-weight:700}#iap .ih button{background:#ffffff30;color:#fff;border:0;padding:2px 9px}
+#iap .it{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--bd)}#iap .it button{background:transparent;color:var(--tx);border:1px solid var(--bd);padding:3px 10px;font-size:12px}#iap .it button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+#iap .ib{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}#iap .m{max-width:92%;padding:7px 10px;border-radius:12px;font-size:13px;line-height:1.4}#iap .m.u{align-self:flex-end;background:var(--pri);color:#fff}#iap .m.a{align-self:flex-start;background:var(--bg);border:1px solid var(--bd)}
+#iap .m small{display:block;color:var(--mut);font-size:10px;margin-top:4px}#iap .if{display:flex;gap:6px;padding:8px;border-top:1px solid var(--bd)}#iap .if textarea{flex:1;resize:none;height:44px;min-width:0}
+#iap .lc{border:1px solid var(--bd);border-radius:8px;padding:6px 8px;font-size:12px}#iap .lc summary{cursor:pointer}#iap input{width:100%;box-sizing:border-box}#iap .nt{font-size:11px;color:var(--mut)}
+body.iaopen{padding-right:384px}body.iaopen #asst{right:394px}@media(max-width:1000px){body.iaopen{padding-right:0}body.iaopen #asst{right:14px}}@media print{#iap,#iabtn{display:none!important}body.iaopen{padding-right:0}}`;document.head.appendChild(st);
+document.body.insertAdjacentHTML('beforeend','<button id="iabtn" class="noprint" title="Chat de IA" aria-label="Abrir chat de IA">💬</button><div id="iap" class="noprint" hidden><div class="ih"><span>💬 Chat IA</span><span id="ist" style="flex:1;font-weight:400;font-size:11px"></span><button data-i="new" title="Borrar la conversación y empezar una nueva">🗑 Nuevo chat</button><button data-i="x" aria-label="Cerrar">✕</button></div><div class="it"><button data-t="chat">Chat</button><button data-t="lib">📚 Biblioteca</button><button data-t="cfg">⚙</button></div><div class="ib" id="ibd"></div><div class="if" id="iff"><textarea id="iai" placeholder="Pregunta lo que quieras…"></textarea><button data-i="send">Enviar</button></div></div>');
+const P=$('#iap');
+function paint(){const on=navigator.onLine,k=okIA();$('#ist').textContent=on?(k?'● IA en línea':'● sin llave · modo local'):'● sin internet · modo local';
+ P.querySelectorAll('.it button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));$('#iff').style.display=S.tab==='chat'?'flex':'none';const B=$('#ibd');let h='';
+ if(S.tab==='chat'){h=S.M.map(m=>`<div class="m ${m.r}">${fmt(m.t)}${m.note?`<small>${esc(m.note)}</small>`:''}</div>`).join('')}
+ else if(S.tab==='lib'){const L=IA().lib,Pd=IA().pend;h=`<input id="ilq" placeholder="Buscar en lo guardado…" value="${esc(S.q)}">`+(L.length?'<button class="s d" data-i="clr">Vaciar biblioteca</button>':'')+(Pd.length?`<div class="nt"><b>Pendientes (${Pd.length}):</b> ${Pd.map(e=>esc(e.q)).join(' · ')}</div>`:'')+
+  (L.filter(e=>!S.q||nz(e.q+' '+e.a).includes(nz(S.q))).map(e=>`<details class="lc"><summary>${esc(e.q)} <span class="nt">· ${new Date(e.t).toLocaleDateString('es-MX')} · ${e.src==='ia'?'IA':'local'}</span></summary><div style="margin-top:6px">${fmt(e.a)}</div><button class="s d" data-del="${e.id}">Quitar</button></details>`).join('')||'<p class="nt">Aún no hay nada guardado.</p>')}
+ else h=`<p><b>IA gratuita (Google Gemini)</b></p><p class="nt">1) Entra a aistudio.google.com/apikey con tu cuenta de Google y crea una llave (sin tarjeta). 2) Pégala aquí. Se guarda solo en este dispositivo y no entra al respaldo.</p><label class="nt">Llave</label><input id="ik" type="password" value="${esc(key())}" placeholder="AIza…"><label class="nt">Modelo</label><input id="im" value="${esc(model())}"><label class="nt">Servidor compartido (opcional, URL del Worker)</label><input id="ipx" value="${esc(localStorage.getItem('nutriclin_ia_proxy')||'')}" placeholder="${PROXY_URL?'ya configurado en la app':'https://…workers.dev'}"><label class="nt">Código de acceso (si tu servidor lo pide)</label><input id="icd" type="password" value="${esc(code())}"><p><button data-i="savecfg">Guardar</button> <button class="g" data-i="rmkey">Quitar llave</button></p>
+ <p class="nt"><b>Privacidad:</b> en el plan gratuito Google puede usar lo que envías para mejorar sus productos y revisores humanos pueden leerlo. Por eso el chat nunca envía nombre, expediente ni teléfono: solo edad, sexo, medidas y patologías, y solo si escribes «este paciente». Evita escribir datos que identifiquen a alguien.</p><p class="nt">Los límites gratuitos de Google cambian; si da error de cuota, espera un rato. Esto es apoyo, no sustituye tu criterio clínico.</p>`;
+ B.innerHTML=h;if(S.tab==='chat')B.scrollTop=B.scrollHeight}
+function toggle(v){S.open=v===undefined?!S.open:v;P.hidden=!S.open;$('#iabtn').style.display=S.open?'none':'';document.body.classList.toggle('iaopen',S.open);if(S.open)paint()}
+async function send(){const i=$('#iai'),q=i.value.trim();if(!q||busy)return;i.value='';busy=true;S.M.push({r:'u',t:q},{r:'a',t:'…'});paint();const x=await ask(q);S.M.pop();S.M.push({r:'a',t:x.a,note:x.note});busy=false;
+ if(x.src==='ia'||x.src==='kb')addLib(q,x.a,x.src==='ia'?'ia':'kb');else if(x.src==='pend'){const Pd=IA().pend;if(!Pd.some(e=>nz(e.q)===nz(q))){Pd.push({id:uid(),q,t:Date.now()});safeSave()}}paint()}
+async function resolvePend(){if(!navigator.onLine||!okIA()||busy||!IA().pend.length)return;let n=0;for(const e of IA().pend.slice()){try{const a=await gem(e.q,'');IA().pend=IA().pend.filter(z=>z.id!==e.id);addLib(e.q,a,'ia');n++}catch(_){break}}if(n){safeSave();toast(n+' pregunta(s) pendiente(s) respondida(s)');if(S.open)paint()}}
+P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.t){S.tab=b.dataset.t;paint()}else if(b.dataset.i==='x')toggle(false);else if(b.dataset.i==='new'){if(busy)return;H=[];S.M=[S.M[0]];S.tab='chat';paint();toast('Chat nuevo')}else if(b.dataset.i==='clr'){if(confirm('¿Vaciar toda la biblioteca y los pendientes?')){IA().lib=[];IA().pend=[];safeSave();paint()}}else if(b.dataset.i==='send')send();
+ else if(b.dataset.i==='savecfg'){localStorage.setItem(KEYK,$('#ik').value.trim());localStorage.setItem('nutriclin_ia_proxy',$('#ipx').value.trim());localStorage.setItem('nutriclin_ia_code',$('#icd').value.trim());localStorage.setItem(MODK,$('#im').value.trim()||'gemini-flash-latest');toast('Configuración guardada');resolvePend();paint()}
+ else if(b.dataset.i==='rmkey'){localStorage.removeItem(KEYK);toast('Llave quitada');paint()}
+ else if(b.dataset.del){IA().lib=IA().lib.filter(z=>z.id!==b.dataset.del);safeSave();paint()}});
+P.addEventListener('input',e=>{if(e.target.id==='ilq'){S.q=e.target.value;const p=e.target.selectionStart;paint();const n=$('#ilq');if(n){n.focus();n.setSelectionRange(p,p)}}});
+P.addEventListener('keydown',e=>{if(e.target.id==='iai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('#iabtn').onclick=()=>toggle(true);addEventListener('online',()=>{paint();resolvePend()});addEventListener('offline',paint);setTimeout(resolvePend,4000);
+})();
+
+/* =====================================================================
+   v3.1 — EDITAR NOMBRE, EXPEDIENTE, FECHA DE NACIMIENTO Y SEXO DESDE UNA NOTA SUBSECUENTE GUARDADA
+   (los datos son del paciente: al guardar se actualizan en su ficha y en todas sus notas)
+   ===================================================================== */
+{const _h=V.notas.h,_i=V.notas.i;
+ V.notas.h=function(){let html=_h.apply(this,arguments);
+  if(MF&&MF.key==='notas'&&MF.id&&!MF.np){const p=cur();if(p){
+   const f=`<div class="card noprint" id="npid"><h3 style="margin:0 0 6px">Datos del paciente</h3><p class="note" style="margin-top:0">Puedes corregirlos aquí. Se actualizan en la ficha del paciente y en todas sus notas.</p><div class="grid">${fieldHTML(['pen','Nombre completo','text'],pn(p))}${fieldHTML(['pee','N.º de expediente','text'],pExp(p))}${fieldHTML(['pef','Fecha de nacimiento','date'],p.nac||'')}${fieldHTML(['pes','Sexo','sel',['Mujer','Hombre']],p.sexo==='M'?'Hombre':'Mujer')}</div></div>`;
+   html=html.replace('<div class="card" id="mform">',m=>f+m)}}
+  return html};
+ V.notas.i=function(){_i.apply(this,arguments);const v=$('#view'),oc=v.onclick;
+  if(!(MF&&MF.key==='notas'&&MF.id&&!MF.np))return;
+  v.onclick=e=>{const b=e.target.closest('[data-x]');
+   if(b&&(b.dataset.x==='save'||b.dataset.x==='saveprint')){const p=cur(),n=$('#mf-pen');
+    if(p&&n){const nom=n.value.trim(),ex=($('#mf-pee')||{}).value.trim(),nac=($('#mf-pef')||{}).value||'',sx=($('#mf-pes')||{}).value==='Hombre'?'M':'F';
+     if(!nom)return toast('Captura el nombre del paciente');
+     if(nom!==pn(p)||ex!==pExp(p)){const d=findDup(nom,ex,nac||p.nac||'',p.id);if(d&&d.p!==p&&!confirm('Ya hay otro paciente registrado con ese nombre o expediente ('+pn(d.p)+').\n\n¿Guardar de todos modos? Después puedes unirlos en Pacientes.'))return}
+     if(nom!==pn(p)){p.nombre=nom;p.apellidos=''}
+     p.hci=p.hci||{};p.hci.exp=ex;if(nac)p.nac=nac;p.sexo=sx;fillSel()}}
+   if(oc)oc(e)}};
+}
+
+/* =====================================================================
+   v3.2 — NEGRITAS en las últimas secciones de escritura
+   Historia clínica: Nota de primera vez, Diagnóstico PES, Plan nutricional.
+   Nota subsecuente: Diagnóstico PES, Plan / recomendaciones, Pendientes.
+   Se guarda como **texto** y sale en negritas al imprimir / exportar.
+   ===================================================================== */
+(function(){
+const st=document.createElement('style');st.textContent='.bbtn{font-weight:900;padding:1px 10px;margin:0 6px 3px 0;min-width:0}.bnt{font-size:11px;color:var(--mut)}@media print{.bbtn,.bnt{display:none!important}}';document.head.appendChild(st);
+const SEL='textarea[data-i="nota1"],textarea[data-i="nota"],textarea[data-i="plan"],#mf-dx,#mf-pl,#mf-pend';
+function bold(ta){ta.focus();const v=ta.value,a=ta.selectionStart,b=ta.selectionEnd,sel=v.slice(a,b);let nv,ca,cb;
+ if(sel.length>4&&sel.startsWith('**')&&sel.endsWith('**')){nv=v.slice(0,a)+sel.slice(2,-2)+v.slice(b);ca=a;cb=b-4}
+ else if(v.slice(a-2,a)==='**'&&v.slice(b,b+2)==='**'&&b>a){nv=v.slice(0,a-2)+sel+v.slice(b+2);ca=a-2;cb=b-2}
+ else if(b>a){nv=v.slice(0,a)+'**'+sel+'**'+v.slice(b);ca=a+2;cb=b+2}
+ else{nv=v.slice(0,a)+'****'+v.slice(a);ca=cb=a+2}
+ ta.value=nv;ta.setSelectionRange(ca,cb);ta.dispatchEvent(new Event('input',{bubbles:true}))}
+function add(){document.querySelectorAll(SEL).forEach(ta=>{if(ta.parentNode.querySelector('.bbwrap'))return;
+ const w=document.createElement('span');w.className='bbwrap noprint';w.innerHTML='<button type="button" class="s g bbtn" title="Negritas (Ctrl+B): selecciona el texto y pulsa">B</button>';
+ w.querySelector('button').onmousedown=e=>e.preventDefault();w.querySelector('button').onclick=()=>bold(ta);ta.parentNode.insertBefore(w,ta)})}
+let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;add()})}).observe(document.getElementById('view'),{childList:true,subtree:true});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&String(e.key).toLowerCase()==='b'&&e.target.matches&&e.target.matches(SEL)){e.preventDefault();bold(e.target)}});
+add();
+})();
+
+/* =====================================================================
+   v3.3 — GENERADOR DE BORRADORES CLÍNICOS (sin internet, con los datos capturados)
+   Historia clínica: Nota de primera vez (SOAP), Diagnóstico PES y Plan nutricional de trabajo.
+   Nota subsecuente: Diagnóstico PES y Plan / recomendaciones (los Pendientes NO se generan).
+   Usa el mismo análisis del Asistente (R24, grupos recomendados, IMC/percentil).
+   Siempre es un borrador editable: donde falte información queda «[completar]».
+   ===================================================================== */
+(function(){
+const N=window.NCA,nz=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const J=(a,s=', ',l=' y ')=>a.length<2?a.join(''):a.slice(0,-1).join(s)+l+a[a.length-1];
+const dm=d=>d?String(d).split('-').reverse().join('/'):'',patS=p=>Array.isArray(p.pat)?p.pat.filter(Boolean).join(', '):String(p.pat||'');
+const U={glu:'mg/dL',cre:'mg/dL',hba:'%',hb:'g/dL',alt:'U/L',tg:'mg/dL',ldl:'mg/dL',col:'mg/dL'};
+const OR=['Aumentar','Incluir','Ajustar','Moderar','Limitar','Vigilar'];
+function core(x){const p=x.p,e=edad(p.nac),minor=!!(e&&e.a<18),sexM=p.sexo==='M',c=x.c,imc=c?imcOf(c):null,cl=c?clasifIMC(c,p):'',an=x.an,gm=(an&&an.gm)||{},h=x.hab||{},q=x.bq||{};
+ const exceso=/Sobrepeso|Obesidad/.test(cl),bajo=cl==='Bajo peso',ayuno=!!(an&&an.f.some(f=>/Ayuno|Primera comida tarde|Última comida/.test(f.txt))),tags=[];
+ if(gm.baz)tags.push('consumo de bebidas azucaradas');if(gm.ult)tags.push('consumo de fritos, embutidos o ultraprocesados');if(gm.dul&&!gm.baz)tags.push('consumo de azúcares y dulces');
+ if(an&&!gm.ver)tags.push('baja ingesta de verduras');if(ayuno)tags.push('horarios irregulares o ayunos prolongados');if(gm.alc)tags.push('consumo de alcohol');
+ if(/^no/i.test(String(h.af||'')))tags.push('inactividad física');const m=String(h.sue||'').match(/\d+([.,]\d+)?/),sue=m?parseFloat(m[0].replace(',','.')):null;if(sue!=null&&sue<6)tags.push('sueño insuficiente ('+sue+' h)');
+ const T=(...k)=>tags.filter(t=>k.some(z=>t.includes(z))),et=a=>a.length?J(a.slice(0,4)):'[completar etiología]',O=(id)=>q[id]!=null&&bqOut(id,q[id],p);
+ const G=[];
+ if(O('glu')||O('hba'))G.push(['Alteración de la glucemia',[...T('bebidas','azúcares'),...(exceso?['exceso de peso']:[])],[O('glu')&&`glucosa en ayuno de ${q.glu} mg/dL`,O('hba')&&`HbA1c de ${q.hba} %`]]);
+ if(O('tg')||O('ldl')||O('col'))G.push(['Perfil de lípidos alterado',[...T('ultra','verduras','alcohol'),...(exceso?['exceso de peso']:[])],[O('tg')&&`triglicéridos de ${q.tg} mg/dL`,O('ldl')&&`LDL de ${q.ldl} mg/dL`,O('col')&&`colesterol total de ${q.col} mg/dL`]]);
+ if(O('hb'))G.push(['Hemoglobina baja',an&&!gm.aoa?['ingesta insuficiente de alimentos fuente de hierro (sin proteína animal en el recordatorio)']:[],[`hemoglobina de ${q.hb} g/dL`]]);
+ if(O('alt')||O('cre'))G.push(['Alteración de pruebas de función hepática o renal',[],[O('alt')&&`ALT de ${q.alt} U/L`,O('cre')&&`creatinina de ${q.cre} mg/dL`]]);
+ const labs=G.flatMap(g=>g[2].filter(Boolean)),out=[],gd=l=>/^(Alteración|Obesidad|Hemoglobina)/.test(l)?['relacionada','evidenciada']:['relacionado','evidenciado'];
+ if(c&&(exceso||bajo)){const S=[`IMC de ${fx(imc)} kg/m²`];if(minor)S.push('clasificación: '+cl);const cin=num(c.cin);if(!minor&&cin&&cin>=(sexM?102:88))S.push(`circunferencia de cintura de ${cin} cm (elevada)`);else if(cin)S.push(`circunferencia de cintura de ${cin} cm`);if(num(c.graso))S.push(`${c.graso} % de grasa corporal`);
+  if(x.prev&&x.prev.w){const d=num(c.peso)-x.prev.w;if(Math.abs(d)>=.05)S.push(`${d<0?'descenso':'aumento'} de ${fx(Math.abs(d))} kg desde el ${dm(x.prev.d)}`)}
+  const P1=bajo?'Bajo peso':minor?'Exceso de peso ('+cl+')':cl,g1=gd(P1);out.push(`${P1} ${g1[0]} con ${et(bajo?(an&&an.N<3?['registro de solo '+an.N+' tiempo(s) de comida']:[]):tags)} ${g1[1]} por ${J(S.concat(labs.slice(0,2)))}.`)}
+ G.forEach(g=>{if(out.length<3){const gg=gd(g[0]);out.push(`${g[0]} ${gg[0]} con ${et(g[1])} ${gg[1]} por ${J(g[2].filter(Boolean))}.`)}});
+ if(an&&!gm.ver&&!gm.fru&&out.length<3)out.push('Ingesta inadecuada de verduras y frutas (fibra) relacionada con [completar etiología: preferencias, acceso o conocimientos] evidenciada por recordatorio de 24 h sin verduras ni frutas.');
+ if(!out.length)out.push(c?`Estado nutricional adecuado (IMC de ${fx(imc)} kg/m², ${cl}) sin alteraciones bioquímicas registradas; riesgo a vigilar: [completar].`:'[completar]: faltan peso y talla para formular el diagnóstico.');
+ return{out:out.slice(0,3),e,minor,sexM,c,imc,cl,exceso,bajo,ayuno,tags,G,gm,an,labs}}
+const pesTxt=r=>r.out.map((s,i)=>(r.out.length>1?(i+1)+') ':'')+s).join('\n');
+function planHC(x,r){const c=r.c,w=c?num(c.peso):null,hh=c?num(c.est):null,pat=nz(x.pat),gm=r.gm,L=[];let en;
+ if(!r.minor&&w&&hh&&r.e){const get=(10*w+6.25*hh-5*r.e.a+(r.sexM?5:-161))*(/^s/i.test(String(x.hab.af||''))?1.375:1.2),R=v=>Math.round(v/50)*50;let k=get,rz='mantenimiento';
+  if(r.exceso){k=Math.max(get-500,r.sexM?1500:1200);rz='déficit moderado'}else if(r.bajo){k=get+400;rz='superávit moderado'}
+  en=`Energía ≈ ${R(k)} kcal/día (${rz}; GET estimado ${R(get)} kcal con Mifflin-St Jeor y factor de actividad ${/^s/i.test(String(x.hab.af||''))?'1.375':'1.2'}; ajustar según evolución).`}
+ else en=r.minor?'Energía y macronutrimentos individualizados según edad, sexo y percentil, sin restricciones; priorizar calidad de la dieta y el crecimiento.':'Energía: [completar; faltan peso, talla o edad].';
+ const hc=/diabet|prediabet|resistencia a la insulina/.test(pat)?'carbohidratos 45–50 % (complejos y distribuidos en el día)':'carbohidratos 50–55 %';
+ L.push(`**Prescripción dietética:** ${en} Distribución: ${hc}, proteínas 15–20 %, lípidos 25–30 % (grasa saturada < 10 %). Fibra 25–30 g/día${r.minor?'':' y agua simple ≥ 2 L/día'}. Distribuir en 3 comidas y 2 colaciones con horarios regulares${r.ayuno?', sin pasar más de 5–6 h sin comer':''}.${/hipertens|hta|presion alta/.test(pat)?' Sodio < 2 g/día (≈ 5 g de sal), sin salero en la mesa.':''}`);
+ const by={};((x.rc&&x.rc.list)||[]).forEach(g=>(by[g.a]=by[g.a]||[]).push(g.g));const gr=OR.filter(a=>by[a]).map(a=>`${a}: ${by[a].join(', ')}`);
+ if(gr.length||(x.rc&&x.rc.notes.length))L.push(`**Grupos de alimentos:** ${gr.join('. ')}${gr.length?'.':''}${x.rc.notes.length?' '+x.rc.notes.join(' '):''}`);
+ const s=[];if(gm.baz||/ref|jug|ene/.test(Object.keys(x.I).filter(k=>/^beb\./.test(k)&&x.I[k]).join(' ')))s.push('Sustituir bebidas azucaradas por agua simple.');if(r.an&&!gm.ver)s.push('Incluir verduras en al menos 2 tiempos de comida al día.');if(r.ayuno)s.push('Respetar horarios y no pasar más de 5–6 h sin comer.');
+ if(!r.minor&&/^no/i.test(String(x.hab.af||'')))s.push('Iniciar actividad física gradual (caminata de 20–30 min, 3 veces por semana).');if(gm.ult)s.push('Reducir fritos, embutidos y ultraprocesados.');
+ L.push(`**Metas a corto plazo (4 semanas):** ${s.length?s.join(' '):'Registrar alimentos y mantener horarios regulares.'}`);
+ const md=[];if(r.exceso&&!r.minor&&w)md.push(`Pérdida gradual de 5–10 % del peso (${fx(w*.05)}–${fx(w*.10)} kg) a un ritmo de 0.25–0.5 kg/semana.`);else if(r.exceso)md.push('Mantener o desacelerar la ganancia de peso mientras crece en talla.');else if(r.bajo)md.push('Ganancia gradual de peso hasta alcanzar un IMC normal.');
+ if(r.G.length)md.push('Normalizar '+J(r.G.map(g=>g[0].toLowerCase()))+' en el siguiente control.');
+ L.push(`**Metas a mediano plazo (3–6 meses):** ${md.length?md.join(' '):'Mantener el estado nutricional y consolidar hábitos saludables.'}`);
+ L.push('**Educación nutricional:** Porciones y equivalentes (SMAE), lectura de etiquetas, plato del bien comer y técnicas de preparación sin frituras.'+(r.minor?' Involucrar a la familia en los cambios.':''));
+ L.push('**Suplementación:** '+(r.G.some(g=>g[0]==='Hemoglobina baja')?'Valorar con el médico suplementación de hierro tras confirmar con laboratorio.':'No se indica por el momento.'));
+ L.push('**Seguimiento:** Próxima cita en 2–4 semanas: [completar fecha].');return L.join('\n')}
+function notaHC(x,r){const I=x.I,p=x.p,c=r.c,L=[],ck=(a,pf)=>a.filter(([k])=>I[pf+k]).map(a=>a[1].toLowerCase()),pat=patS(p);
+ L.push(`**Ficha:** Paciente ${r.sexM?'hombre':'mujer'} de ${edTxt(r.e)}${I.ocup?', '+I.ocup:''}, acude a primera consulta de nutrición. Patología de base: ${pat||'ninguna referida'}.`);
+ const hf=FAMS.map((f,i)=>{const d=HF_COLS.filter(([k])=>I[`hf.${i}.${k}`]).map(a=>a[1]),o=I[`hf.${i}.otros`];return d.length||o?`${f.toLowerCase()}: ${J(d.concat(o?[o]:[]))}`:''}).filter(Boolean);
+ const sy=[...ck(DIG,'dg.'),...ck(SIGNOS,'sf.')],em=ck(EMO,'emo.'),vd=[];
+ if(I.af)vd.push(/^s/i.test(I.af)?`actividad física: ${I['af.c']||'sí'}${I['af.f']?' ('+I['af.f']+')':''}`:'sin actividad física');if(I.sue)vd.push('sueño: '+I.sue+' h');if(I.sent&&/^s/i.test(I.sent))vd.push('sedentarismo'+(I['sent.h']?' ('+I['sent.h']+' h)':''));
+ if(I.alc)vd.push('alcohol: '+I.alc+(I['alc.f']?', '+I['alc.f']:''));if(I.tab)vd.push('tabaco: '+I.tab+(I['tab.f']?', '+I['tab.f']:''));if(I.sus&&/^s/i.test(I.sus))vd.push('otras sustancias'+(I['sus.c']?': '+I['sus.c']:''));
+ const di=[];if(I.agua)di.push('agua: '+I.agua);const bb=[...ck(BEB,'beb.'),...(I['beb.o']?[I['beb.o']]:[])];if(bb.length)di.push('bebidas: '+J(bb));if(I.sal&&/^s/i.test(I.sal))di.push('añade sal a los alimentos');if(I.ncom)di.push(I.ncom+' comidas al día'+(I.ncol?' ('+I.ncol+' colaciones)':''));
+ if(I.afrec)di.push('consume con frecuencia: '+I.afrec);if(I.aevita)di.push('evita: '+I.aevita);if(I.alerg&&/^s/i.test(I.alerg))di.push('alergias: '+(I['alerg.c']||'sí'));const it=ck(INTOL,'int.').filter(z=>z!=='ninguna');if(it.length)di.push('intolerancias: '+J(it));if(I.fuera&&I.fuera!=='Nunca')di.push('come fuera de casa: '+I.fuera);
+ L.push(`**S (Subjetivo):** AHF: ${hf.length?hf.join('; '):'sin antecedentes heredofamiliares registrados'}. Síntomas y signos referidos: ${sy.length?J(sy):'ninguno registrado'}${I['dg.f']?' ('+I['dg.f']+')':''}. Energía: ${(I.nrg||'no registrada').toLowerCase()}${em.length?'; estado emocional: '+J(em):''}. Estilo de vida: ${vd.length?vd.join('; '):'sin datos'}. Hábitos dietéticos: ${di.length?di.join('; '):'sin datos'}.`);
+ const an=[];if(c){const pa=(x.prev&&x.prev.w)?` (peso previo ${x.prev.w} kg el ${dm(x.prev.d)})`:'';an.push(`peso ${c.peso} kg, talla ${c.est} cm, IMC ${fx(r.imc)} kg/m² (${r.cl})${pa}${num(c.cin)?', cintura '+c.cin+' cm':''}${num(c.abd)?', abdominal '+c.abd+' cm':''}${num(c.bra)?', brazo '+c.bra+' cm':''}${num(c.graso)?', grasa '+c.graso+' %':''}`)}
+ const bq=BQ.filter(([id])=>x.bq[id]!=null).map(([id,n])=>`${n} ${x.bq[id]} ${U[id]||''}${bqOut(id,x.bq[id],p)?' (fuera de rango)':''}`);
+ let r24='sin recordatorio capturado';if(r.an){const f=r.an.f.filter(z=>z.lv==='bad'||z.lv==='warn').slice(0,4).map(z=>z.txt.replace(/\.$/,''));r24=`${r.an.N} tiempos registrados${f.length?'; '+f.join('; '):''}`}
+ L.push(`**O (Objetivo):** Antropométricos: ${an.length?an[0]:'[completar]'}. Bioquímicos: ${bq.length?bq.join('; '):'sin resultados registrados'}. Dietéticos (R24): ${r24}.`);
+ L.push(`**A (Análisis):** ${r.c?`Estado nutricional: ${r.cl}`:'Estado nutricional: [completar]'}${r.labs.length?'; '+J(r.labs):''}. Ver diagnóstico PES.`);L.push('**P (Plan):** Ver plan nutricional de trabajo.');return L.join('\n')}
+function ctxHC(p){const I=p.hci||{},cs=csort(p).filter(c=>num(c.peso)&&num(c.est)),c=cs[cs.length-1]||null,pc=cs.length>1?cs[cs.length-2]:null,bq={};
+ BQ.forEach(([id])=>{for(let i=2;i>=0;i--){const v=num(I['bq.'+id+'.'+i]);if(v!=null){bq[id]=v;break}}});const an=N.r24(p),ped=N.pedNow(p);
+ return{p,I,c,prev:pc?{d:pc.fecha,w:num(pc.peso)}:null,bq,an,rc:N.recs(p,ped,an),hab:{af:I.af,sue:I.sue},pat:patS(p)+' '+(I.pdig||'')}}
+const gv=k=>{const e=document.getElementById('mf-'+k);return e?String(e.value||'').trim():''};
+function ctxNote(p){const np=!p,tod=new Date().toISOString().slice(0,10),fecha=gv('date')||tod,hc=(p&&p.hci)||{},
+  tmp={id:'live',nac:np?gv('pnac'):p.nac,sexo:np?(gv('ps')==='Hombre'?'M':'F'):p.sexo,pat:np?[]:p.pat,antec:np?'':p.antec,hist:np?'':p.hist,est:np?'':p.est,
+  cons:[{id:'live',fecha,peso:gv('peso'),est:gv('talla')||(p&&p.est)||'',cin:gv('cin'),abd:gv('abd')}],
+  hci:Object.assign({},hc,{'rc.des.ali':gv('des'),'rc.des.hr':gv('hdes'),'rc.alm.ali':gv('com'),'rc.alm.hr':gv('hcom'),'rc.cen.ali':gv('cen'),'rc.cen.hr':gv('hcen'),'rc.cm.ali':gv('col'),'rc.cm.hr':gv('hcol'),'off.cm':gv('col')?'':1,'off.cv':1})};
+ const all=[];if(p){csort(p).forEach(c=>{if(num(c.peso))all.push({d:c.fecha,w:num(c.peso)})});((p.mod&&p.mod.notas)||[]).forEach(n=>{if(num(n.peso)&&n.date&&(!MF||n.id!==MF.id))all.push({d:n.date,w:num(n.peso)})})}
+ const prev=all.filter(a=>a.d<fecha).sort((a,b)=>a.d.localeCompare(b.d)).pop()||null,an=N.r24(tmp),ped=N.pedNow(tmp),bq={};
+ [['glu','glu'],['hb','hb'],['colt','col'],['ldl','ldl'],['tg','tg'],['cre','cre']].forEach(([a,b])=>{const v=num(gv(a));if(v!=null)bq[b]=v});
+ return{p:tmp,I:hc,c:num(tmp.cons[0].peso)&&num(tmp.cons[0].est)?tmp.cons[0]:null,prev,bq,an,rc:N.recs(tmp,ped,an),hab:{af:hc.af,sue:hc.sue},pat:patS(tmp)}}
+function recNote(x,r){const gm=r.gm,L=[],c=r.c;
+ if(c){const w=num(c.peso),pv=x.prev;let t=`Peso actual ${w} kg (IMC ${fx(r.imc)}, ${r.cl})`;
+  if(pv){const d=w-pv.w;t+=Math.abs(d)<.05?`; sin cambio respecto al ${dm(pv.d)}.`:`; ${d<0?'descenso':'aumento'} de ${fx(Math.abs(d))} kg respecto al ${dm(pv.d)} (${fx(pv.w)} kg).`;if(r.exceso)t+=d<0?' Evolución favorable; continuar con el plan.':d>0?' Reforzar adherencia y revisar porciones.':'';else if(r.bajo)t+=d>0?' Evolución favorable.':' Reforzar el aporte energético.'}else t+='.';
+  L.push('**Evolución:** '+t)}
+ const rec=[];if(gm.baz)rec.push('Sustituir bebidas azucaradas por agua simple o infusiones sin azúcar.');if(gm.ult)rec.push('Reducir fritos, embutidos y ultraprocesados; preferir cocidos, asados o al vapor.');if(gm.dul&&!gm.baz)rec.push('Limitar azúcares y dulces; preferir fruta entera como postre.');
+ if(r.an&&!gm.ver)rec.push('Incluir verduras en la comida y la cena (½ plato).');if(r.an&&!gm.fru)rec.push('Incluir 2 porciones de fruta entera al día.');if(r.an&&!gm.aoa)rec.push('Incluir una fuente de proteína (huevo, pollo, pescado o leguminosas) en cada comida principal.');
+ if(r.ayuno)rec.push('Respetar horarios y no pasar más de 5–6 h sin comer.');if(r.G.some(g=>g[0].startsWith('Alteración de la glucemia')))rec.push('Distribuir los carbohidratos en el día, preferir integrales y dar seguimiento a la glucosa con su médico.');
+ if(r.G.some(g=>g[0].startsWith('Perfil')))rec.push('Aumentar fibra (avena, leguminosas, verduras) y dar seguimiento al perfil de lípidos con su médico.');if(r.G.some(g=>g[0]==='Hemoglobina baja'))rec.push('Combinar alimentos ricos en hierro con vitamina C y valorar suplementación con su médico.');
+ if(r.exceso&&!r.minor)rec.push('Mantener porciones del plan y actividad física ≥ 150 min/semana.');if(r.bajo)rec.push('Fraccionar en 5–6 tiempos y aumentar la densidad energética de las comidas.');rec.push('Mantener hidratación con agua simple (≥ 2 L/día).');
+ L.push('**Recomendaciones:**\n'+rec.slice(0,7).map(z=>'• '+z).join('\n'));L.push('**Seguimiento:** Continuar con el plan nutricional y acudir a su próxima cita.');return L.join('\n')}
+function put(sel,val){const ta=document.querySelector(sel);if(!ta)return;ta.value=val;ta.style.height='auto';ta.style.height=Math.max(ta.scrollHeight,40)+'px';ta.dispatchEvent(new Event('input',{bubbles:true}))}
+function genHC(){const p=hcPat();if(!p)return;const I=p.hci||{};
+ if(['nota1','nota','plan'].some(k=>String(I[k]||'').trim())&&!confirm('Ya hay texto en la nota, el PES o el plan. ¿Reemplazarlo con el borrador generado?'))return;
+ const x=ctxHC(p),r=core(x);put('textarea[data-i="nota1"]',notaHC(x,r));put('textarea[data-i="nota"]',pesTxt(r));put('textarea[data-i="plan"]',planHC(x,r));
+ toast(x.c||x.an?'Borrador generado: revísalo y completa lo que diga [completar]':'Faltan datos (peso, talla, R24): revisa los [completar]')}
+function genNote(){const p=cur();if(!p&&!gv('peso'))return toast('Captura primero los datos de la nota');
+ if((gv('dx')||gv('pl'))&&!confirm('Ya hay texto en el PES o en el plan. ¿Reemplazarlo con el borrador generado?'))return;
+ const x=ctxNote(p),r=core(x);put('#mf-dx',pesTxt(r));put('#mf-pl',recNote(x,r));toast('Borrador generado: revísalo y ajústalo. Los pendientes no se llenan.')}
+function mk(t,fn){const w=document.createElement('span');w.className='genwrap noprint';w.innerHTML='<button type="button" class="s">✨ '+t+'</button> <span class="bnt">Borrador con los datos capturados; revísalo y ajústalo.</span><br>';w.querySelector('button').onclick=fn;return w}
+function add(){const a=document.querySelector('textarea[data-i="nota1"]'),sc=a&&a.closest('.hs');if(sc&&!document.querySelector('.genwrap[data-hc]')){const w=mk('Generar nota, PES y plan',genHC);w.dataset.hc='1';w.style.cssText='display:block;margin:6px 0';const br=w.querySelector('br');if(br)br.remove();sc.parentNode.insertBefore(w,sc)}
+ const d=document.getElementById('mf-dx');if(d&&!d.parentNode.querySelector('.genwrap'))d.parentNode.insertBefore(mk('Generar PES y recomendaciones',genNote),d)}
+let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;add()})}).observe(document.getElementById('view'),{childList:true,subtree:true});
+const st=document.createElement('style');st.textContent='@media print{.genwrap{display:none!important}}';document.head.appendChild(st);add();
+})();
 </script>
 </body>
 </html>
