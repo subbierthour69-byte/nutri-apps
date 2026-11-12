@@ -2066,18 +2066,22 @@ function build(){const lv=liveCtx();if(lv)return buildLive(lv);const x=ctxP();if
  if(route()!=='hc'&&!pd&&!ad)return null;                  // fuera de la Historia clínica aparece si hay un menor o peso y talla de un adulto
  const an=r24(p),has=!!(p.nac||an||Object.keys(I).some(k=>/^(rc|bq|beb|sf|dg|hf)\./.test(k)&&I[k]));if(!has&&!ad)return null;
  return{p,pd,ad,an,rc:recs(p,pd,an)}}
-function paint(){const a=$('#asst');if(!a)return;
- if(a.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;   // no interrumpir el cálculo rápido
- const d=build();if(!d){a.hidden=true;return}
+function paint(force){const a=$('#asst');if(!a)return;
+ if(!force&&a.contains(document.activeElement)&&/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))return;   // no interrumpir el cálculo rápido ni la escritura del chat
+ const bt=$('#iabtn'),d=build(),co=!d&&ASS.chat;
+ if(!d&&!co){a.hidden=true;if(bt)bt.style.display='';return}
+ if(bt)bt.style.display='none';
+ if(co){ASS.tab='chat';a.hidden=false;a.classList.toggle('min',ASS.min);a.innerHTML=`<div class="ah" id="ahd"><span>💬 Chat IA</span><span style="flex:1"></span><button class="g s" data-am="min" aria-label="Minimizar">${ASS.min?'▢':'—'}</button><button class="g s" data-am="close" aria-label="Cerrar">✕</button></div><div class="ab">${window.IACHAT?IACHAT.html():''}</div><div class="anp">No se imprime</div>`;if(window.IACHAT)IACHAT.after(a);return}
  if(ASS.qp!==d.p.id){ASS.qp=d.p.id;ASS.qw='';ASS.qh=''}
- const tabs=[...(d.pd?[['ped','Percentil']]:[]),...(d.ad?[['ad','IMC']]:[]),...(d.form?[]:[['r24','R24'],['rec','Recomendación']])];
+ const tabs=[...(d.pd?[['ped','Percentil']]:[]),...(d.ad?[['ad','IMC']]:[]),...(d.form?[]:[['r24','R24'],['rec','Recomendación']]),['chat','💬 Chat']];
  if(!tabs.some(t=>t[0]===ASS.tab))ASS.tab=tabs[0][0];
  {const sk=d.key||d.p.id;if((d.pd||d.ad)&&!ASS.seen[sk]){ASS.seen[sk]=1;ASS.tab=d.pd?'ped':'ad';ASS.min=false}}   // se abre solo al detectar peso y talla (menor o adulto)
- const body=ASS.tab==='ped'?secPed(d.pd,d.p,d.live):ASS.tab==='ad'?secAd(d.ad):ASS.tab==='r24'?secR24(d.an):secRec(d.rc);
+ const body=ASS.tab==='chat'?(window.IACHAT?IACHAT.html():''):ASS.tab==='ped'?secPed(d.pd,d.p,d.live):ASS.tab==='ad'?secAd(d.ad):ASS.tab==='r24'?secR24(d.an):secRec(d.rc);
  const bm=d.pd&&d.pd.rows.find(r=>r.k==='bmi'&&r.pc!=null),sub=bm?'IMC/edad P'+pcs(bm.pc)+' · '+bm.dx:(d.pd?'Menor detectado':(d.ad?'IMC '+fx(d.ad.imc,1)+' · '+d.ad.cl:''));
  a.hidden=false;a.classList.toggle('min',ASS.min);
  a.innerHTML=`<div class="ah" id="ahd"><span>🧠 Asistente clínico${sub?' · '+sub:''}</span><span style="flex:1"></span><button class="g s" data-am="min" aria-label="Minimizar">${ASS.min?'▢':'—'}</button></div>
   ${tabs.length>1?`<div class="atb">${tabs.map(([k,l])=>`<button class="${ASS.tab===k?'on':''}" data-at="${k}">${l}</button>`).join('')}</div>`:''}<div class="ab">${body}</div><div class="anp">No se imprime</div>`;
+ if(window.IACHAT)IACHAT.after(a);
 }
 const st=document.createElement('style');st.textContent=`#asst{position:fixed;right:14px;bottom:14px;width:370px;max-width:calc(100vw - 16px);max-height:76vh;display:flex;flex-direction:column;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 34px #0005;z-index:70;font-size:13px}
 #asst[hidden]{display:none}#asst .ah{cursor:default;display:flex;gap:8px;align-items:center;padding:8px 10px;background:linear-gradient(135deg,#0e8f78,#2563eb);color:#fff;border-radius:11px 11px 0 0;font-weight:700;user-select:none}
@@ -2098,12 +2102,12 @@ document.head.appendChild(st);
 document.body.insertAdjacentHTML('beforeend','<div id="asst" class="noprint" hidden></div>');
 const a=$('#asst');
 a.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
- if(b.dataset.at){ASS.tab=b.dataset.at;paint()}else if(b.dataset.am){ASS.min=!ASS.min;paint()}});
+ if(b.dataset.at){ASS.tab=b.dataset.at;if(ASS.tab==='chat')ASS.chat=true;paint(true)}else if(b.dataset.am==='close'){ASS.chat=false;ASS.tab='r24';paint(true)}else if(b.dataset.am){ASS.min=!ASS.min;paint(true)}});
 a.addEventListener('input',e=>{const t=e.target;if(t.id==='aq-w'||t.id==='aq-h'){if(t.id==='aq-w')ASS.qw=t.value;else ASS.qh=t.value;const d=build();if(d&&route()==='hc')qSync(d.p,t.id==='aq-w'?'peso':'est',t.value);const r=$('#aqr');if(d&&r)r.innerHTML=quickRows(d.p)}});
 let tm=null;const sched=()=>{clearTimeout(tm);tm=setTimeout(paint,280)};
 document.addEventListener('input',sched);document.addEventListener('change',sched);
 const _render=render;render=function(){const x=_render.apply(this,arguments);paint();return x};
-window.NCA={pedNow,r24,recs,build,paint,pcOf,pcInfo,resetLive:()=>{Object.keys(ASS.seen).forEach(k=>{if(k.startsWith('n|'))delete ASS.seen[k]})}};
+window.NCA={openChat:()=>{ASS.chat=true;ASS.tab='chat';ASS.min=false;paint(true)},pedNow,r24,recs,build,paint,pcOf,pcInfo,resetLive:()=>{Object.keys(ASS.seen).forEach(k=>{if(k.startsWith('n|'))delete ASS.seen[k]})}};
 })();
 
 /* =====================================================================
@@ -2948,7 +2952,7 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
 {const _a=agAfterNote;agAfterNote=function(tp,sid){NS.last={pid:tp.id,nid:sid};return _a.apply(this,arguments)}}
 
 /* =====================================================================
-   v3.0 — CHAT DE IA (lado derecho)
+   v3.0 — CHAT DE IA (pestaña dentro del Asistente clínico)
    · Con internet + llave gratuita de Google AI Studio (Gemini): IA avanzada.
    · Sin internet / sin llave: base local de nutrición + tu Biblioteca guardada.
    · Todo lo que preguntas se guarda en DB.ia (entra al respaldo .json). La llave NO entra al respaldo.
@@ -3010,38 +3014,43 @@ function local(q){const nq=' '+nz(q)+' ',tk=toks(q),pre=imcCalc(q);
 async function ask(q){let note='';
  if(navigator.onLine&&okIA()){try{return{a:await gem(q,patCtx(q)),src:'ia',note:'IA en línea (Gemini)'}}catch(e){note=' · IA no disponible ('+e.message.slice(0,80)+')'}}
  const x=local(q);x.note=(x.note||'')+(note||(!okIA()&&navigator.onLine?' · sin llave de IA':!navigator.onLine?' · sin conexión':''));return x}
-/* ---------- interfaz ---------- */
-const S={open:false,tab:'chat',M:[{r:'a',t:'Hola. Pregúntame lo que quieras de nutrición. Con internet y tu llave gratuita respondo con IA; sin internet uso la base local y lo que ya guardé. Escribe «este paciente…» para usar los datos (sin nombre) del paciente abierto.',src:'kb'}],q:''};
-const st=document.createElement('style');st.textContent=`#iabtn{position:fixed;right:0;top:42%;z-index:150;border-radius:10px 0 0 10px;padding:10px 8px;font-size:18px;background:var(--pri);color:#fff;border:0;box-shadow:0 4px 14px #0003}
-#iap{position:fixed;right:0;top:0;bottom:0;width:380px;max-width:100vw;z-index:160;background:var(--card);color:var(--tx);border-left:1px solid var(--bd);display:flex;flex-direction:column;box-shadow:-8px 0 28px #0003}#iap[hidden]{display:none}
-#iap .ih{display:flex;gap:6px;align-items:center;padding:8px 10px;background:linear-gradient(135deg,#0e8f78,#2563eb);color:#fff;font-weight:700}#iap .ih button{background:#ffffff30;color:#fff;border:0;padding:2px 9px}
-#iap .it{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--bd)}#iap .it button{background:transparent;color:var(--tx);border:1px solid var(--bd);padding:3px 10px;font-size:12px}#iap .it button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
-#iap .ib{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}#iap .m{max-width:92%;padding:7px 10px;border-radius:12px;font-size:13px;line-height:1.4}#iap .m.u{align-self:flex-end;background:var(--pri);color:#fff}#iap .m.a{align-self:flex-start;background:var(--bg);border:1px solid var(--bd)}
-#iap .m small{display:block;color:var(--mut);font-size:10px;margin-top:4px}#iap .if{display:flex;gap:6px;padding:8px;border-top:1px solid var(--bd)}#iap .if textarea{flex:1;resize:none;height:44px;min-width:0}
-#iap .lc{border:1px solid var(--bd);border-radius:8px;padding:6px 8px;font-size:12px}#iap .lc summary{cursor:pointer}#iap input{width:100%;box-sizing:border-box}#iap .nt{font-size:11px;color:var(--mut)}
-body.iaopen{padding-right:384px}body.iaopen #asst{right:394px}@media(max-width:1000px){body.iaopen{padding-right:0}body.iaopen #asst{right:14px}}@media print{#iap,#iabtn{display:none!important}body.iaopen{padding-right:0}}`;document.head.appendChild(st);
-document.body.insertAdjacentHTML('beforeend','<button id="iabtn" class="noprint" title="Chat de IA" aria-label="Abrir chat de IA">💬</button><div id="iap" class="noprint" hidden><div class="ih"><span>💬 Chat IA</span><span id="ist" style="flex:1;font-weight:400;font-size:11px"></span><button data-i="new" title="Borrar la conversación y empezar una nueva">🗑 Nuevo chat</button><button data-i="x" aria-label="Cerrar">✕</button></div><div class="it"><button data-t="chat">Chat</button><button data-t="lib">📚 Biblioteca</button><button data-t="cfg">⚙</button></div><div class="ib" id="ibd"></div><div class="if" id="iff"><textarea id="iai" placeholder="Pregunta lo que quieras…"></textarea><button data-i="send">Enviar</button></div></div>');
-const P=$('#iap');
-function paint(){const on=navigator.onLine,k=okIA();$('#ist').textContent=on?(k?'● IA en línea':'● sin llave · modo local'):'● sin internet · modo local';
- P.querySelectorAll('.it button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));$('#iff').style.display=S.tab==='chat'?'flex':'none';const B=$('#ibd');let h='';
- if(S.tab==='chat'){h=S.M.map(m=>`<div class="m ${m.r}">${fmt(m.t)}${m.note?`<small>${esc(m.note)}</small>`:''}</div>`).join('')}
- else if(S.tab==='lib'){const L=IA().lib,Pd=IA().pend;h=`<input id="ilq" placeholder="Buscar en lo guardado…" value="${esc(S.q)}">`+(L.length?'<button class="s d" data-i="clr">Vaciar biblioteca</button>':'')+(Pd.length?`<div class="nt"><b>Pendientes (${Pd.length}):</b> ${Pd.map(e=>esc(e.q)).join(' · ')}</div>`:'')+
+/* ---------- interfaz (pestaña «💬 Chat» dentro del Asistente clínico) ---------- */
+const S={tab:'chat',M:[{r:'a',t:'Hola. Pregúntame lo que quieras de nutrición. Con internet y tu llave gratuita respondo con IA; sin internet uso la base local y lo que ya guardé. Escribe «este paciente…» para usar los datos (sin nombre) del paciente abierto.',src:'kb'}],q:'',draft:'',focus:false};
+const st=document.createElement('style');st.textContent=`#iabtn{position:fixed;right:14px;bottom:14px;z-index:70;border-radius:99px;padding:10px 14px;font-size:18px;background:var(--pri);color:#fff;border:0;box-shadow:0 4px 14px #0004}
+#asst .icsub{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:4px}#asst .icsub button{background:transparent;color:var(--tx);border:1px solid var(--bd);padding:2px 8px;font-size:11px}#asst .icsub button.on{background:var(--pri);color:#fff!important;border-color:var(--pri)}
+#asst .m{max-width:94%;padding:6px 9px;border-radius:11px;font-size:12.5px;line-height:1.4;margin:0 0 6px}#asst .m.u{margin-left:auto;background:var(--pri);color:#fff}#asst .m.a{background:var(--bg);border:1px solid var(--bd)}#asst .m small{display:block;color:var(--mut);font-size:10px;margin-top:3px}
+#asst .icin{position:sticky;bottom:-9px;display:flex;gap:6px;padding:6px 0 0;background:var(--card)}#asst .icin textarea{flex:1;resize:none;height:42px;min-width:0}
+#asst .lc{border:1px solid var(--bd);border-radius:8px;padding:5px 8px;font-size:12px;margin:5px 0}#asst .lc summary{cursor:pointer}#asst .nt{font-size:11px;color:var(--mut)}#asst .icf input{width:100%;box-sizing:border-box}
+@media print{#iabtn{display:none!important}}`;document.head.appendChild(st);
+document.body.insertAdjacentHTML('beforeend','<button id="iabtn" class="noprint" title="Chat de IA" aria-label="Abrir chat de IA">💬</button>');
+const A=$('#asst'),repaint=()=>{if(window.NCA&&NCA.paint)NCA.paint(true)};
+function html(){const on=navigator.onLine,k=okIA(),stt=on?(k?'● IA en línea':'● sin llave · modo local'):'● sin internet · modo local',T=(id,l)=>`<button data-ic="${id}" class="${S.tab===id?'on':''}">${l}</button>`;
+ const sub=`<div class="icsub">${T('chat','Chat')}${T('lib','📚 Biblioteca')}${T('cfg','⚙')}<button data-ic="new" title="Borrar la conversación y empezar una nueva">🗑 Nuevo chat</button></div><div class="nt" style="margin:0 0 6px">${stt}</div>`;
+ if(S.tab==='chat')return sub+S.M.map(m=>`<div class="m ${m.r}">${fmt(m.t)}${m.note?`<small>${esc(m.note)}</small>`:''}</div>`).join('')+`<div class="icin"><textarea id="iai" placeholder="Pregunta lo que quieras…" aria-label="Pregunta">${esc(S.draft)}</textarea><button data-ic="send">Enviar</button></div>`;
+ if(S.tab==='lib'){const L=IA().lib,Pd=IA().pend;return sub+`<input id="ilq" style="width:100%;box-sizing:border-box" placeholder="Buscar en lo guardado…" value="${esc(S.q)}">`+(L.length?'<p><button class="s d" data-ic="clr">Vaciar biblioteca</button></p>':'')+(Pd.length?`<div class="nt"><b>Pendientes (${Pd.length}):</b> ${Pd.map(e=>esc(e.q)).join(' · ')}</div>`:'')+
   (L.filter(e=>!S.q||nz(e.q+' '+e.a).includes(nz(S.q))).map(e=>`<details class="lc"><summary>${esc(e.q)} <span class="nt">· ${new Date(e.t).toLocaleDateString('es-MX')} · ${e.src==='ia'?'IA':'local'}</span></summary><div style="margin-top:6px">${fmt(e.a)}</div><button class="s d" data-del="${e.id}">Quitar</button></details>`).join('')||'<p class="nt">Aún no hay nada guardado.</p>')}
- else h=`<p><b>IA gratuita (Google Gemini)</b></p><p class="nt">1) Entra a aistudio.google.com/apikey con tu cuenta de Google y crea una llave (sin tarjeta). 2) Pégala aquí. Se guarda solo en este dispositivo y no entra al respaldo.</p><label class="nt">Llave</label><input id="ik" type="password" value="${esc(key())}" placeholder="AIza…"><label class="nt">Modelo</label><input id="im" value="${esc(model())}"><label class="nt">Servidor compartido (opcional, URL del Worker)</label><input id="ipx" value="${esc(localStorage.getItem('nutriclin_ia_proxy')||'')}" placeholder="${PROXY_URL?'ya configurado en la app':'https://…workers.dev'}"><label class="nt">Código de acceso (si tu servidor lo pide)</label><input id="icd" type="password" value="${esc(code())}"><p><button data-i="savecfg">Guardar</button> <button class="g" data-i="rmkey">Quitar llave</button></p>
- <p class="nt"><b>Privacidad:</b> en el plan gratuito Google puede usar lo que envías para mejorar sus productos y revisores humanos pueden leerlo. Por eso el chat nunca envía nombre, expediente ni teléfono: solo edad, sexo, medidas y patologías, y solo si escribes «este paciente». Evita escribir datos que identifiquen a alguien.</p><p class="nt">Los límites gratuitos de Google cambian; si da error de cuota, espera un rato. Esto es apoyo, no sustituye tu criterio clínico.</p>`;
- B.innerHTML=h;if(S.tab==='chat')B.scrollTop=B.scrollHeight}
-function toggle(v){S.open=v===undefined?!S.open:v;P.hidden=!S.open;$('#iabtn').style.display=S.open?'none':'';document.body.classList.toggle('iaopen',S.open);if(S.open)paint()}
-async function send(){const i=$('#iai'),q=i.value.trim();if(!q||busy)return;i.value='';busy=true;S.M.push({r:'u',t:q},{r:'a',t:'…'});paint();const x=await ask(q);S.M.pop();S.M.push({r:'a',t:x.a,note:x.note});busy=false;
- if(x.src==='ia'||x.src==='kb')addLib(q,x.a,x.src==='ia'?'ia':'kb');else if(x.src==='pend'){const Pd=IA().pend;if(!Pd.some(e=>nz(e.q)===nz(q))){Pd.push({id:uid(),q,t:Date.now()});safeSave()}}paint()}
-async function resolvePend(){if(!navigator.onLine||!okIA()||busy||!IA().pend.length)return;let n=0;for(const e of IA().pend.slice()){try{const a=await gem(e.q,'');IA().pend=IA().pend.filter(z=>z.id!==e.id);addLib(e.q,a,'ia');n++}catch(_){break}}if(n){safeSave();toast(n+' pregunta(s) pendiente(s) respondida(s)');if(S.open)paint()}}
-P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
- if(b.dataset.t){S.tab=b.dataset.t;paint()}else if(b.dataset.i==='x')toggle(false);else if(b.dataset.i==='new'){if(busy)return;H=[];S.M=[S.M[0]];S.tab='chat';paint();toast('Chat nuevo')}else if(b.dataset.i==='clr'){if(confirm('¿Vaciar toda la biblioteca y los pendientes?')){IA().lib=[];IA().pend=[];safeSave();paint()}}else if(b.dataset.i==='send')send();
- else if(b.dataset.i==='savecfg'){localStorage.setItem(KEYK,$('#ik').value.trim());localStorage.setItem('nutriclin_ia_proxy',$('#ipx').value.trim());localStorage.setItem('nutriclin_ia_code',$('#icd').value.trim());localStorage.setItem(MODK,$('#im').value.trim()||'gemini-flash-latest');toast('Configuración guardada');resolvePend();paint()}
- else if(b.dataset.i==='rmkey'){localStorage.removeItem(KEYK);toast('Llave quitada');paint()}
- else if(b.dataset.del){IA().lib=IA().lib.filter(z=>z.id!==b.dataset.del);safeSave();paint()}});
-P.addEventListener('input',e=>{if(e.target.id==='ilq'){S.q=e.target.value;const p=e.target.selectionStart;paint();const n=$('#ilq');if(n){n.focus();n.setSelectionRange(p,p)}}});
-P.addEventListener('keydown',e=>{if(e.target.id==='iai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-$('#iabtn').onclick=()=>toggle(true);addEventListener('online',()=>{paint();resolvePend()});addEventListener('offline',paint);setTimeout(resolvePend,4000);
+ return sub+`<div class="icf"><p><b>IA gratuita (Google Gemini)</b></p><p class="nt">1) Entra a aistudio.google.com/apikey con tu cuenta de Google y crea una llave (sin tarjeta). 2) Pégala aquí. Se guarda solo en este dispositivo y no entra al respaldo.</p><label class="nt">Llave</label><input id="ik" type="password" value="${esc(key())}" placeholder="AIza…"><label class="nt">Modelo</label><input id="im" value="${esc(model())}">
+ <label class="nt">Servidor compartido (opcional, URL del Worker)</label><input id="ipx" value="${esc(localStorage.getItem('nutriclin_ia_proxy')||'')}" placeholder="${PROXY_URL?'ya configurado en la app':'https://…workers.dev'}"><label class="nt">Código de acceso (si tu servidor lo pide)</label><input id="icd" type="password" value="${esc(code())}">
+ <p><button data-ic="savecfg">Guardar</button> <button class="g" data-ic="rmkey">Quitar llave</button></p>
+ <p class="nt"><b>Privacidad:</b> en el plan gratuito Google puede usar lo que envías para mejorar sus productos y revisores humanos pueden leerlo. Por eso el chat nunca envía nombre, expediente ni teléfono: solo edad, sexo, medidas y patologías, y solo si escribes «este paciente». Evita escribir datos que identifiquen a alguien.</p><p class="nt">Los límites gratuitos de Google cambian; si da error de cuota, espera un rato. Esto es apoyo, no sustituye tu criterio clínico.</p></div>`}
+function after(a){const ab=a.querySelector('.ab');if(S.tab==='chat'&&ab)ab.scrollTop=ab.scrollHeight;if(S.focus){S.focus=false;const t=a.querySelector('#iai');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
+async function send(){const q=S.draft.trim();if(!q||busy)return;S.draft='';busy=true;S.focus=true;S.M.push({r:'u',t:q},{r:'a',t:'…'});repaint();const x=await ask(q);S.M.pop();S.M.push({r:'a',t:x.a,note:x.note});busy=false;S.focus=true;
+ if(x.src==='ia'||x.src==='kb')addLib(q,x.a,x.src==='ia'?'ia':'kb');else if(x.src==='pend'){const Pd=IA().pend;if(!Pd.some(e=>nz(e.q)===nz(q))){Pd.push({id:uid(),q,t:Date.now()});safeSave()}}repaint()}
+async function resolvePend(){if(!navigator.onLine||!okIA()||busy||!IA().pend.length)return;let n=0;for(const e of IA().pend.slice()){try{const a=await gem(e.q,'');IA().pend=IA().pend.filter(z=>z.id!==e.id);addLib(e.q,a,'ia');n++}catch(_){break}}if(n){safeSave();toast(n+' pregunta(s) pendiente(s) respondida(s)');repaint()}}
+A.addEventListener('click',e=>{const b=e.target.closest('button[data-ic],button[data-del]');if(!b)return;const c=b.dataset.ic;
+ if(b.dataset.del){IA().lib=IA().lib.filter(z=>z.id!==b.dataset.del);safeSave();return repaint()}
+ if(c==='chat'||c==='lib'||c==='cfg'){S.tab=c;if(c==='chat')S.focus=true}
+ else if(c==='new'){if(busy)return;H=[];S.M=[S.M[0]];S.tab='chat';S.draft='';S.focus=true;toast('Chat nuevo')}
+ else if(c==='send'){const t=$('#iai');if(t)S.draft=t.value;return send()}
+ else if(c==='savecfg'){localStorage.setItem(KEYK,$('#ik').value.trim());localStorage.setItem('nutriclin_ia_proxy',$('#ipx').value.trim());localStorage.setItem('nutriclin_ia_code',$('#icd').value.trim());localStorage.setItem(MODK,$('#im').value.trim()||'gemini-flash-latest');toast('Configuración guardada');resolvePend()}
+ else if(c==='rmkey'){localStorage.removeItem(KEYK);toast('Llave quitada')}
+ else if(c==='clr'){if(!confirm('¿Vaciar toda la biblioteca y los pendientes?'))return;IA().lib=[];IA().pend=[];safeSave()}
+ repaint()});
+A.addEventListener('input',e=>{const t=e.target;if(t.id==='iai')S.draft=t.value;else if(t.id==='ilq'){S.q=t.value;const p=t.selectionStart;repaint();const n=$('#ilq');if(n){n.focus();n.setSelectionRange(p,p)}}});
+A.addEventListener('keydown',e=>{if(e.target.id==='iai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();S.draft=e.target.value;send()}});
+$('#iabtn').onclick=()=>{S.tab='chat';S.focus=true;NCA.openChat()};$('#iabtn').style.display=A.hidden?'':'none';
+addEventListener('online',()=>{repaint();resolvePend()});addEventListener('offline',repaint);setTimeout(resolvePend,4000);
+window.IACHAT={html,after};
 })();
 
 /* =====================================================================
