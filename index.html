@@ -3100,69 +3100,81 @@ add();
 
 /* =====================================================================
    v3.3 — GENERADOR DE BORRADORES CLÍNICOS (sin internet, con los datos capturados)
-   Historia clínica: Nota de primera vez (SOAP), Diagnóstico PES y Plan nutricional de trabajo.
+   Redacción narrativa profesional (SOAP), sin campos vacíos ni corchetes.
+   Historia clínica: Nota de primera vez, Diagnóstico PES y Plan nutricional de trabajo.
    Nota subsecuente: Diagnóstico PES y Plan / recomendaciones (los Pendientes NO se generan).
-   Usa el mismo análisis del Asistente (R24, grupos recomendados, IMC/percentil).
-   Siempre es un borrador editable: donde falte información queda «[completar]».
+   La fecha de seguimiento se calcula a 30 días (se recorre si cae en fin de semana).
    ===================================================================== */
 (function(){
 const N=window.NCA,nz=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const J=(a,s=', ',l=' y ')=>a.length<2?a.join(''):a.slice(0,-1).join(s)+l+a[a.length-1];
-const dm=d=>d?String(d).split('-').reverse().join('/'):'',patS=p=>Array.isArray(p.pat)?p.pat.filter(Boolean).join(', '):String(p.pat||'');
-const U={glu:'mg/dL',cre:'mg/dL',hba:'%',hb:'g/dL',alt:'U/L',tg:'mg/dL',ldl:'mg/dL',col:'mg/dL'};
-const OR=['Aumentar','Incluir','Ajustar','Moderar','Limitar','Vigilar'];
+const low=t=>String(t||'').replace(/^([A-ZÁÉÍÓÚÑ])(?![A-ZÁÉÍÓÚÑ0-9])/,m=>m.toLowerCase()),dm=d=>d?String(d).split('-').reverse().join('/'):'',patS=p=>Array.isArray(p.pat)?p.pat.filter(Boolean).join(', '):String(p.pat||'');
+const U={glu:'mg/dL',cre:'mg/dL',hba:'%',hb:'g/dL',alt:'U/L',tg:'mg/dL',ldl:'mg/dL',col:'mg/dL'},LN={glu:'glucosa en ayuno',cre:'creatinina',hba:'hemoglobina glucosilada',hb:'hemoglobina',alt:'ALT',tg:'triglicéridos',ldl:'colesterol LDL',col:'colesterol total'};
+const VB={Aumentar:'aumentar',Incluir:'incluir',Ajustar:'ajustar',Moderar:'moderar',Limitar:'limitar',Vigilar:'vigilar'},OR=Object.keys(VB);
+function fu(base){let d=new Date();const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(base||''));if(m){const b=new Date(+m[1],m[2]-1,+m[3]);if(b>=new Date(new Date().setHours(0,0,0,0)))d=b}
+ d.setDate(d.getDate()+30);const w=d.getDay();if(w===0)d.setDate(d.getDate()+1);if(w===6)d.setDate(d.getDate()+2);return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(',','')}
 function core(x){const p=x.p,e=edad(p.nac),minor=!!(e&&e.a<18),sexM=p.sexo==='M',c=x.c,imc=c?imcOf(c):null,cl=c?clasifIMC(c,p):'',an=x.an,gm=(an&&an.gm)||{},h=x.hab||{},q=x.bq||{};
  const exceso=/Sobrepeso|Obesidad/.test(cl),bajo=cl==='Bajo peso',ayuno=!!(an&&an.f.some(f=>/Ayuno|Primera comida tarde|Última comida/.test(f.txt))),tags=[];
  if(gm.baz)tags.push('consumo de bebidas azucaradas');if(gm.ult)tags.push('consumo de fritos, embutidos o ultraprocesados');if(gm.dul&&!gm.baz)tags.push('consumo de azúcares y dulces');
  if(an&&!gm.ver)tags.push('baja ingesta de verduras');if(ayuno)tags.push('horarios irregulares o ayunos prolongados');if(gm.alc)tags.push('consumo de alcohol');
  if(/^no/i.test(String(h.af||'')))tags.push('inactividad física');const m=String(h.sue||'').match(/\d+([.,]\d+)?/),sue=m?parseFloat(m[0].replace(',','.')):null;if(sue!=null&&sue<6)tags.push('sueño insuficiente ('+sue+' h)');
- const T=(...k)=>tags.filter(t=>k.some(z=>t.includes(z))),et=a=>a.length?J(a.slice(0,4)):'[completar etiología]',O=(id)=>q[id]!=null&&bqOut(id,q[id],p);
- const G=[];
- if(O('glu')||O('hba'))G.push(['Alteración de la glucemia',[...T('bebidas','azúcares'),...(exceso?['exceso de peso']:[])],[O('glu')&&`glucosa en ayuno de ${q.glu} mg/dL`,O('hba')&&`HbA1c de ${q.hba} %`]]);
- if(O('tg')||O('ldl')||O('col'))G.push(['Perfil de lípidos alterado',[...T('ultra','verduras','alcohol'),...(exceso?['exceso de peso']:[])],[O('tg')&&`triglicéridos de ${q.tg} mg/dL`,O('ldl')&&`LDL de ${q.ldl} mg/dL`,O('col')&&`colesterol total de ${q.col} mg/dL`]]);
- if(O('hb'))G.push(['Hemoglobina baja',an&&!gm.aoa?['ingesta insuficiente de alimentos fuente de hierro (sin proteína animal en el recordatorio)']:[],[`hemoglobina de ${q.hb} g/dL`]]);
- if(O('alt')||O('cre'))G.push(['Alteración de pruebas de función hepática o renal',[],[O('alt')&&`ALT de ${q.alt} U/L`,O('cre')&&`creatinina de ${q.cre} mg/dL`]]);
+ const T=(...k)=>tags.filter(t=>k.some(z=>t.includes(z))),et=(a,fb)=>a.length?J(a.slice(0,4)):fb,O=id=>q[id]!=null&&bqOut(id,q[id],p),G=[];
+ if(O('glu')||O('hba'))G.push(['Alteración de la glucemia',[...T('bebidas','azúcares'),...(exceso?['exceso de peso']:[])],[O('glu')&&`glucosa en ayuno de ${q.glu} mg/dL`,O('hba')&&`HbA1c de ${q.hba} %`],'un patrón alimentario con distribución inadecuada de carbohidratos']);
+ if(O('tg')||O('ldl')||O('col'))G.push(['Perfil de lípidos alterado',[...T('ultra','verduras','alcohol'),...(exceso?['exceso de peso']:[])],[O('tg')&&`triglicéridos de ${q.tg} mg/dL`,O('ldl')&&`LDL de ${q.ldl} mg/dL`,O('col')&&`colesterol total de ${q.col} mg/dL`],'un patrón alimentario de alta densidad energética y bajo aporte de fibra']);
+ if(O('hb'))G.push(['Hemoglobina baja',an&&!gm.aoa?['ingesta insuficiente de alimentos fuente de hierro (sin proteína animal en el recordatorio)']:[],[`hemoglobina de ${q.hb} g/dL`],'una ingesta insuficiente de hierro biodisponible']);
+ if(O('alt')||O('cre'))G.push(['Alteración de pruebas de función hepática o renal',[],[O('alt')&&`ALT de ${q.alt} U/L`,O('cre')&&`creatinina de ${q.cre} mg/dL`],'factores metabólicos y de estilo de vida que requieren seguimiento']);
  const labs=G.flatMap(g=>g[2].filter(Boolean)),out=[],gd=l=>/^(Alteración|Obesidad|Hemoglobina)/.test(l)?['relacionada','evidenciada']:['relacionado','evidenciado'];
- if(c&&(exceso||bajo)){const S=[`IMC de ${fx(imc)} kg/m²`];if(minor)S.push('clasificación: '+cl);const cin=num(c.cin);if(!minor&&cin&&cin>=(sexM?102:88))S.push(`circunferencia de cintura de ${cin} cm (elevada)`);else if(cin)S.push(`circunferencia de cintura de ${cin} cm`);if(num(c.graso))S.push(`${c.graso} % de grasa corporal`);
+ if(c&&(exceso||bajo)){const S=[`IMC de ${fx(imc)} kg/m²`];if(minor)S.push('clasificación: '+low(cl));const cin=num(c.cin);if(!minor&&cin&&cin>=(sexM?102:88))S.push(`circunferencia de cintura de ${cin} cm (elevada)`);else if(cin)S.push(`circunferencia de cintura de ${cin} cm`);if(num(c.graso))S.push(`${c.graso} % de grasa corporal`);
   if(x.prev&&x.prev.w){const d=num(c.peso)-x.prev.w;if(Math.abs(d)>=.05)S.push(`${d<0?'descenso':'aumento'} de ${fx(Math.abs(d))} kg desde el ${dm(x.prev.d)}`)}
-  const P1=bajo?'Bajo peso':minor?'Exceso de peso ('+cl+')':cl,g1=gd(P1);out.push(`${P1} ${g1[0]} con ${et(bajo?(an&&an.N<3?['registro de solo '+an.N+' tiempo(s) de comida']:[]):tags)} ${g1[1]} por ${J(S.concat(labs.slice(0,2)))}.`)}
- G.forEach(g=>{if(out.length<3){const gg=gd(g[0]);out.push(`${g[0]} ${gg[0]} con ${et(g[1])} ${gg[1]} por ${J(g[2].filter(Boolean))}.`)}});
- if(an&&!gm.ver&&!gm.fru&&out.length<3)out.push('Ingesta inadecuada de verduras y frutas (fibra) relacionada con [completar etiología: preferencias, acceso o conocimientos] evidenciada por recordatorio de 24 h sin verduras ni frutas.');
- if(!out.length)out.push(c?`Estado nutricional adecuado (IMC de ${fx(imc)} kg/m², ${cl}) sin alteraciones bioquímicas registradas; riesgo a vigilar: [completar].`:'[completar]: faltan peso y talla para formular el diagnóstico.');
+  const P1=bajo?'Bajo peso':minor?'Exceso de peso ('+low(cl)+')':cl,g1=gd(P1),fb=bajo?'una ingesta energética insuficiente para sus requerimientos':'un balance energético positivo sostenido (ingesta superior al gasto)';
+  out.push(`${P1} ${g1[0]} con ${et(bajo?(an&&an.N<3?['registro de solo '+an.N+' tiempo(s) de comida']:[]):tags,fb)} ${g1[1]} por ${J(S.concat(labs.slice(0,2)))}.`)}
+ G.forEach(g=>{if(out.length<3){const gg=gd(g[0]);out.push(`${g[0]} ${gg[0]} con ${et(g[1],g[3])} ${gg[1]} por ${J(g[2].filter(Boolean))}.`)}});
+ if(an&&!gm.ver&&!gm.fru&&out.length<3)out.push('Ingesta inadecuada de verduras y frutas (fibra) relacionada con un patrón de consumo con escasa presencia de vegetales y frutas, evidenciada por un recordatorio de 24 h sin verduras ni frutas.');
+ if(!out.length)out.push(c?`Estado nutricional adecuado (IMC de ${fx(imc)} kg/m², ${low(cl)}) sin alteraciones bioquímicas registradas, con riesgo asociado al mantenimiento de hábitos saludables a largo plazo.`:'Sin mediciones antropométricas registradas, el estado nutricional queda por determinar en la siguiente consulta.');
  return{out:out.slice(0,3),e,minor,sexM,c,imc,cl,exceso,bajo,ayuno,tags,G,gm,an,labs}}
 const pesTxt=r=>r.out.map((s,i)=>(r.out.length>1?(i+1)+') ':'')+s).join('\n');
-function planHC(x,r){const c=r.c,w=c?num(c.peso):null,hh=c?num(c.est):null,pat=nz(x.pat),gm=r.gm,L=[];let en;
- if(!r.minor&&w&&hh&&r.e){const get=(10*w+6.25*hh-5*r.e.a+(r.sexM?5:-161))*(/^s/i.test(String(x.hab.af||''))?1.375:1.2),R=v=>Math.round(v/50)*50;let k=get,rz='mantenimiento';
-  if(r.exceso){k=Math.max(get-500,r.sexM?1500:1200);rz='déficit moderado'}else if(r.bajo){k=get+400;rz='superávit moderado'}
-  en=`Energía ≈ ${R(k)} kcal/día (${rz}; GET estimado ${R(get)} kcal con Mifflin-St Jeor y factor de actividad ${/^s/i.test(String(x.hab.af||''))?'1.375':'1.2'}; ajustar según evolución).`}
- else en=r.minor?'Energía y macronutrimentos individualizados según edad, sexo y percentil, sin restricciones; priorizar calidad de la dieta y el crecimiento.':'Energía: [completar; faltan peso, talla o edad].';
- const hc=/diabet|prediabet|resistencia a la insulina/.test(pat)?'carbohidratos 45–50 % (complejos y distribuidos en el día)':'carbohidratos 50–55 %';
- L.push(`**Prescripción dietética:** ${en} Distribución: ${hc}, proteínas 15–20 %, lípidos 25–30 % (grasa saturada < 10 %). Fibra 25–30 g/día${r.minor?'':' y agua simple ≥ 2 L/día'}. Distribuir en 3 comidas y 2 colaciones con horarios regulares${r.ayuno?', sin pasar más de 5–6 h sin comer':''}.${/hipertens|hta|presion alta/.test(pat)?' Sodio < 2 g/día (≈ 5 g de sal), sin salero en la mesa.':''}`);
- const by={};((x.rc&&x.rc.list)||[]).forEach(g=>(by[g.a]=by[g.a]||[]).push(g.g));const gr=OR.filter(a=>by[a]).map(a=>`${a}: ${by[a].join(', ')}`);
- if(gr.length||(x.rc&&x.rc.notes.length))L.push(`**Grupos de alimentos:** ${gr.join('. ')}${gr.length?'.':''}${x.rc.notes.length?' '+x.rc.notes.join(' '):''}`);
- const s=[];if(gm.baz||/ref|jug|ene/.test(Object.keys(x.I).filter(k=>/^beb\./.test(k)&&x.I[k]).join(' ')))s.push('Sustituir bebidas azucaradas por agua simple.');if(r.an&&!gm.ver)s.push('Incluir verduras en al menos 2 tiempos de comida al día.');if(r.ayuno)s.push('Respetar horarios y no pasar más de 5–6 h sin comer.');
- if(!r.minor&&/^no/i.test(String(x.hab.af||'')))s.push('Iniciar actividad física gradual (caminata de 20–30 min, 3 veces por semana).');if(gm.ult)s.push('Reducir fritos, embutidos y ultraprocesados.');
- L.push(`**Metas a corto plazo (4 semanas):** ${s.length?s.join(' '):'Registrar alimentos y mantener horarios regulares.'}`);
- const md=[];if(r.exceso&&!r.minor&&w)md.push(`Pérdida gradual de 5–10 % del peso (${fx(w*.05)}–${fx(w*.10)} kg) a un ritmo de 0.25–0.5 kg/semana.`);else if(r.exceso)md.push('Mantener o desacelerar la ganancia de peso mientras crece en talla.');else if(r.bajo)md.push('Ganancia gradual de peso hasta alcanzar un IMC normal.');
- if(r.G.length)md.push('Normalizar '+J(r.G.map(g=>g[0].toLowerCase()))+' en el siguiente control.');
- L.push(`**Metas a mediano plazo (3–6 meses):** ${md.length?md.join(' '):'Mantener el estado nutricional y consolidar hábitos saludables.'}`);
- L.push('**Educación nutricional:** Porciones y equivalentes (SMAE), lectura de etiquetas, plato del bien comer y técnicas de preparación sin frituras.'+(r.minor?' Involucrar a la familia en los cambios.':''));
- L.push('**Suplementación:** '+(r.G.some(g=>g[0]==='Hemoglobina baja')?'Valorar con el médico suplementación de hierro tras confirmar con laboratorio.':'No se indica por el momento.'));
- L.push('**Seguimiento:** Próxima cita en 2–4 semanas: [completar fecha].');return L.join('\n')}
-function notaHC(x,r){const I=x.I,p=x.p,c=r.c,L=[],ck=(a,pf)=>a.filter(([k])=>I[pf+k]).map(a=>a[1].toLowerCase()),pat=patS(p);
- L.push(`**Ficha:** Paciente ${r.sexM?'hombre':'mujer'} de ${edTxt(r.e)}${I.ocup?', '+I.ocup:''}, acude a primera consulta de nutrición. Patología de base: ${pat||'ninguna referida'}.`);
- const hf=FAMS.map((f,i)=>{const d=HF_COLS.filter(([k])=>I[`hf.${i}.${k}`]).map(a=>a[1]),o=I[`hf.${i}.otros`];return d.length||o?`${f.toLowerCase()}: ${J(d.concat(o?[o]:[]))}`:''}).filter(Boolean);
- const sy=[...ck(DIG,'dg.'),...ck(SIGNOS,'sf.')],em=ck(EMO,'emo.'),vd=[];
- if(I.af)vd.push(/^s/i.test(I.af)?`actividad física: ${I['af.c']||'sí'}${I['af.f']?' ('+I['af.f']+')':''}`:'sin actividad física');if(I.sue)vd.push('sueño: '+I.sue+' h');if(I.sent&&/^s/i.test(I.sent))vd.push('sedentarismo'+(I['sent.h']?' ('+I['sent.h']+' h)':''));
- if(I.alc)vd.push('alcohol: '+I.alc+(I['alc.f']?', '+I['alc.f']:''));if(I.tab)vd.push('tabaco: '+I.tab+(I['tab.f']?', '+I['tab.f']:''));if(I.sus&&/^s/i.test(I.sus))vd.push('otras sustancias'+(I['sus.c']?': '+I['sus.c']:''));
- const di=[];if(I.agua)di.push('agua: '+I.agua);const bb=[...ck(BEB,'beb.'),...(I['beb.o']?[I['beb.o']]:[])];if(bb.length)di.push('bebidas: '+J(bb));if(I.sal&&/^s/i.test(I.sal))di.push('añade sal a los alimentos');if(I.ncom)di.push(I.ncom+' comidas al día'+(I.ncol?' ('+I.ncol+' colaciones)':''));
- if(I.afrec)di.push('consume con frecuencia: '+I.afrec);if(I.aevita)di.push('evita: '+I.aevita);if(I.alerg&&/^s/i.test(I.alerg))di.push('alergias: '+(I['alerg.c']||'sí'));const it=ck(INTOL,'int.').filter(z=>z!=='ninguna');if(it.length)di.push('intolerancias: '+J(it));if(I.fuera&&I.fuera!=='Nunca')di.push('come fuera de casa: '+I.fuera);
- L.push(`**S (Subjetivo):** AHF: ${hf.length?hf.join('; '):'sin antecedentes heredofamiliares registrados'}. Síntomas y signos referidos: ${sy.length?J(sy):'ninguno registrado'}${I['dg.f']?' ('+I['dg.f']+')':''}. Energía: ${(I.nrg||'no registrada').toLowerCase()}${em.length?'; estado emocional: '+J(em):''}. Estilo de vida: ${vd.length?vd.join('; '):'sin datos'}. Hábitos dietéticos: ${di.length?di.join('; '):'sin datos'}.`);
- const an=[];if(c){const pa=(x.prev&&x.prev.w)?` (peso previo ${x.prev.w} kg el ${dm(x.prev.d)})`:'';an.push(`peso ${c.peso} kg, talla ${c.est} cm, IMC ${fx(r.imc)} kg/m² (${r.cl})${pa}${num(c.cin)?', cintura '+c.cin+' cm':''}${num(c.abd)?', abdominal '+c.abd+' cm':''}${num(c.bra)?', brazo '+c.bra+' cm':''}${num(c.graso)?', grasa '+c.graso+' %':''}`)}
- const bq=BQ.filter(([id])=>x.bq[id]!=null).map(([id,n])=>`${n} ${x.bq[id]} ${U[id]||''}${bqOut(id,x.bq[id],p)?' (fuera de rango)':''}`);
- let r24='sin recordatorio capturado';if(r.an){const f=r.an.f.filter(z=>z.lv==='bad'||z.lv==='warn').slice(0,4).map(z=>z.txt.replace(/\.$/,''));r24=`${r.an.N} tiempos registrados${f.length?'; '+f.join('; '):''}`}
- L.push(`**O (Objetivo):** Antropométricos: ${an.length?an[0]:'[completar]'}. Bioquímicos: ${bq.length?bq.join('; '):'sin resultados registrados'}. Dietéticos (R24): ${r24}.`);
- L.push(`**A (Análisis):** ${r.c?`Estado nutricional: ${r.cl}`:'Estado nutricional: [completar]'}${r.labs.length?'; '+J(r.labs):''}. Ver diagnóstico PES.`);L.push('**P (Plan):** Ver plan nutricional de trabajo.');return L.join('\n')}
+function planHC(x,r){const c=r.c,w=c?num(c.peso):null,hh=c?num(c.est):null,pat=nz(x.pat),gm=r.gm,L=[],act=/^s/i.test(String(x.hab.af||'')),R=v=>Math.round(v/50)*50;let en,tipo='normocalórica y balanceada';
+ if(r.minor){tipo='completa, equilibrada y adecuada para la edad';en='con un aporte energético ajustado a su edad, sexo y percentil, sin restricciones calóricas'}
+ else if(w&&hh&&r.e){const get=(10*w+6.25*hh-5*r.e.a+(r.sexM?5:-161))*(act?1.375:1.2);let k=get;if(r.exceso){k=Math.max(get-500,r.sexM?1500:1200);tipo='hipocalórica y balanceada'}else if(r.bajo){k=get+400;tipo='hipercalórica y balanceada'}
+  en=`con un aporte aproximado de ${R(k)} kcal/día (gasto energético estimado de ${R(get)} kcal con la fórmula de Mifflin-St Jeor y factor de actividad ${act?'1.375':'1.2'})`}
+ else en='con un aporte energético ajustado a sus requerimientos';
+ const hc=/diabet|prediabet|resistencia a la insulina/.test(pat)?'carbohidratos de 45 a 50 % (complejos y distribuidos en el día)':'carbohidratos de 50 a 55 %';
+ L.push(`**Prescripción dietética.** Se indica una dieta ${tipo}, ${en}. La distribución de macronutrimentos será de ${hc}, proteínas de 15 a 20 % y lípidos de 25 a 30 % (grasa saturada menor al 10 %), con fibra de 25 a 30 g al día${r.minor?'':' e ingesta de agua simple de al menos 2 litros diarios'}. Se fraccionará en tres comidas principales y dos colaciones con horarios regulares${r.ayuno?', evitando pasar más de 5 a 6 horas sin comer':''}.${/hipertens|hta|presion alta/.test(pat)?' Se limitará el sodio a menos de 2 g al día (aproximadamente 5 g de sal), sin salero en la mesa.':''}`);
+ const by={};((x.rc&&x.rc.list)||[]).forEach(g=>(by[g.a]=by[g.a]||[]).push(low(g.g)));const gr=OR.filter(a=>by[a]).map(a=>`${VB[a]} ${J(by[a])}`),nt=(x.rc&&x.rc.notes)||[];
+ if(gr.length||nt.length)L.push(`**Grupos de alimentos.** ${gr.length?`Se recomienda ${J(gr,'; ',' y ')}.`:''}${nt.length?' '+nt.join(' '):''}`.trim());
+ const s=[];if(gm.baz||/ref|jug|ene/.test(Object.keys(x.I).filter(k=>/^beb\./.test(k)&&x.I[k]).join(' ')))s.push('Se sustituirán las bebidas azucaradas por agua simple.');if(r.an&&!gm.ver)s.push('Se incluirán verduras en al menos dos tiempos de comida al día.');if(r.ayuno)s.push('Se respetarán los horarios de comida sin pasar más de 5 a 6 horas en ayuno.');
+ if(!r.minor&&/^no/i.test(String(x.hab.af||'')))s.push('Se iniciará actividad física gradual, con caminata de 20 a 30 minutos tres veces por semana.');if(gm.ult)s.push('Se reducirá el consumo de fritos, embutidos y ultraprocesados.');
+ const md=[];if(r.exceso&&!r.minor&&w)md.push(`Se buscará una pérdida gradual de 5 a 10 % del peso (${fx(w*.05)} a ${fx(w*.10)} kg) a un ritmo de 0.25 a 0.5 kg por semana.`);else if(r.exceso)md.push('Se buscará mantener o desacelerar la ganancia de peso mientras continúa su crecimiento en talla.');else if(r.bajo)md.push('Se buscará una ganancia gradual de peso hasta alcanzar un IMC normal.');
+ if(r.G.length)md.push('Se pretende mejorar los parámetros de laboratorio alterados ('+J(r.G.map(g=>/glucemia/.test(g[0])?'glucemia':/^Perfil/.test(g[0])?'perfil de lípidos':/^Hemoglobina/.test(g[0])?'hemoglobina':'función hepática o renal'))+') en el siguiente control.');
+ L.push(`**Metas.** A corto plazo (4 semanas): ${s.length?low(s.join(' ')):'se establecerá el registro de alimentos y la regularidad de los horarios de comida.'} A mediano plazo (3 a 6 meses): ${md.length?low(md.join(' ')):'se mantendrá el estado nutricional y se consolidarán los hábitos saludables.'}`);
+ L.push('**Educación nutricional.** Se brindará orientación sobre porciones y equivalentes (SMAE), lectura de etiquetas, plato del bien comer y técnicas de preparación sin frituras.'+(r.minor?' Se involucrará a la familia en los cambios.':''));
+ L.push('**Suplementación.** '+(r.G.some(g=>g[0]==='Hemoglobina baja')?'Se valorará con el médico la suplementación de hierro tras confirmar con estudios de laboratorio.':'No se indica suplementación por el momento.'));
+ L.push(`**Seguimiento.** Se programa la próxima cita para el ${fu()}, aproximadamente a los 30 días, para valorar la adherencia, la evolución del peso y los ajustes necesarios al plan.`);return L.join('\n')}
+function notaHC(x,r){const I=x.I,p=x.p,c=r.c,pat=patS(p),oc=String(I.ocup||'').trim(),ck=(a,pf)=>a.filter(([k])=>I[pf+k]).map(a=>low(a[1]));
+ const S1=[],S2=[],O=[];
+ const ficha=`Paciente ${r.sexM?'masculino':'femenina'}${r.e?' de '+edTxt(r.e).replace(/(años?) (\d)/,'$1 y $2'):''}${oc?', '+low(oc):''}, acude a primera consulta de nutrición${pat?' con antecedente de '+low(pat):' y refiere no tener patologías de base'}.`;
+ const hf=FAMS.map((f,i)=>{const d=HF_COLS.filter(([k])=>I[`hf.${i}.${k}`]).map(a=>low(a[1])),o=I[`hf.${i}.otros`];return d.length||o?`${low(f)} con ${J(d.concat(o?[low(o)]:[]))}`:''}).filter(Boolean);
+ S1.push(hf.length?`Entre sus antecedentes heredofamiliares destacan ${J(hf,'; ',' y ')}.`:'No se registran antecedentes heredofamiliares de relevancia.');
+ const sy=[...ck(DIG,'dg.'),...ck(SIGNOS,'sf.')],em=ck(EMO,'emo.');
+ S1.push(sy.length?`Refiere ${J(sy)}${I['dg.f']?', con frecuencia '+low(I['dg.f']):''}.`:'No refiere síntomas digestivos ni signos físicos de relevancia.');
+ if(I.nrg||em.length)S1.push(`Describe su nivel de energía como ${low(I.nrg||'habitual')}${em.length?' y su estado emocional como '+J(em):''}.`);
+ const vd=[];if(I.af)vd.push(/^s/i.test(I.af)?`realiza actividad física${I['af.c']?' ('+low(I['af.c'])+')':''}${I['af.f']?' con frecuencia '+low(I['af.f']):''}`:'no realiza actividad física');
+ if(I.sue)vd.push(`duerme ${I.sue} horas por noche`);if(I.sent&&/^s/i.test(I.sent))vd.push('refiere sedentarismo'+(I['sent.h']?' ('+I['sent.h']+' h al día)':''));
+ if(I.alc)vd.push(/^n/i.test(I.alc)?'niega consumo de alcohol':`consume alcohol (${low(I.alc)}${I['alc.f']?', '+low(I['alc.f']):''})`);if(I.tab)vd.push(/^n/i.test(I.tab)?'niega tabaquismo':`refiere tabaquismo (${low(I.tab)}${I['tab.f']?', '+low(I['tab.f']):''})`);if(I.sus&&/^s/i.test(I.sus))vd.push('refiere consumo de otras sustancias'+(I['sus.c']?' ('+low(I['sus.c'])+')':''));
+ if(vd.length)S2.push(`En cuanto a su estilo de vida, ${J(vd,'; ',' y ')}.`);
+ const di=[];if(I.agua)di.push(`su consumo de agua es de ${low(I.agua)}`);const bb=[...ck(BEB,'beb.'),...(I['beb.o']?[low(I['beb.o'])]:[])];if(bb.length)di.push(`acostumbra beber ${J(bb)}`);if(I.sal&&/^s/i.test(I.sal))di.push('agrega sal a los alimentos');
+ if(I.ncom)di.push(`realiza ${I.ncom} comidas al día${I.ncol?' y '+I.ncol+' colaciones':''}`);if(I.afrec)di.push(`consume con frecuencia ${low(I.afrec)}`);if(I.aevita)di.push(`evita ${low(I.aevita)}`);
+ if(I.alerg&&/^s/i.test(I.alerg))di.push(`presenta alergia a ${low(I['alerg.c']||'algunos alimentos')}`);const it=ck(INTOL,'int.').filter(z=>z!=='ninguna');if(it.length)di.push(`presenta intolerancia a ${J(it)}`);if(I.fuera&&I.fuera!=='Nunca')di.push(`come fuera de casa ${low(I.fuera)}`);
+ if(di.length)S2.push(`Respecto a sus hábitos alimentarios, ${J(di,'; ',' y ')}.`);
+ if(c){const ex=[];if(num(c.cin))ex.push(`cintura de ${c.cin} cm`);if(num(c.abd))ex.push(`circunferencia abdominal de ${c.abd} cm`);if(num(c.bra))ex.push(`brazo de ${c.bra} cm`);if(num(c.graso))ex.push(`${c.graso} % de grasa corporal`);
+  O.push(`En la valoración antropométrica presenta un peso de ${c.peso} kg, talla de ${c.est} cm e IMC de ${fx(r.imc)} kg/m², lo que corresponde a ${low(r.cl)}${ex.length?'; se registran además '+J(ex):''}.${x.prev&&x.prev.w?` Su peso previo era de ${x.prev.w} kg (${dm(x.prev.d)}), con ${num(c.peso)-x.prev.w<0?'un descenso':'un aumento'} de ${fx(Math.abs(num(c.peso)-x.prev.w))} kg.`:''}`)}
+ else O.push('No se cuenta con mediciones antropométricas en esta valoración.');
+ const bq=BQ.filter(([id])=>x.bq[id]!=null).map(([id,n])=>`${LN[id]||low(n)} de ${x.bq[id]} ${U[id]||''}${bqOut(id,x.bq[id],p)?' (fuera de rango)':''}`.replace(/\s+\(/,' ('));
+ O.push(bq.length?`En los estudios de laboratorio se reporta ${J(bq,'; ',' y ')}.`:'No se cuenta con resultados de laboratorio recientes.');
+ if(r.an){const f=r.an.f.filter(z=>z.lv==='bad'||z.lv==='warn').slice(0,4).map(z=>low(z.txt.replace(/\.$/,'')));O.push(`El recordatorio de 24 horas registra ${r.an.N} tiempos de comida${f.length?'; entre los hallazgos destacan los siguientes: '+J(f,'; ',' y ')+'':''}.`)}else O.push('No se registró recordatorio de 24 horas.');
+ const A=`Con base en la información recabada, el paciente presenta ${c?low(r.cl):'un estado nutricional por precisar'}${r.labs.length?', con '+J(r.labs):''}. Los diagnósticos nutricionales se formulan en el apartado de Diagnóstico PES.`;
+ const P=`Se establece el plan nutricional de trabajo que se detalla en el apartado correspondiente, con seguimiento programado para el ${fu()}.`;
+ return [ficha,'','**S (Subjetivo)**',...S1,...S2,'','**O (Objetivo)**',...O,'','**A (Análisis)**',A,'','**P (Plan)**',P].join('\n')}
 function ctxHC(p){const I=p.hci||{},cs=csort(p).filter(c=>num(c.peso)&&num(c.est)),c=cs[cs.length-1]||null,pc=cs.length>1?cs[cs.length-2]:null,bq={};
  BQ.forEach(([id])=>{for(let i=2;i>=0;i--){const v=num(I['bq.'+id+'.'+i]);if(v!=null){bq[id]=v;break}}});const an=N.r24(p),ped=N.pedNow(p);
  return{p,I,c,prev:pc?{d:pc.fecha,w:num(pc.peso)}:null,bq,an,rc:N.recs(p,ped,an),hab:{af:I.af,sue:I.sue},pat:patS(p)+' '+(I.pdig||'')}}
@@ -3174,22 +3186,23 @@ function ctxNote(p){const np=!p,tod=new Date().toISOString().slice(0,10),fecha=g
  const all=[];if(p){csort(p).forEach(c=>{if(num(c.peso))all.push({d:c.fecha,w:num(c.peso)})});((p.mod&&p.mod.notas)||[]).forEach(n=>{if(num(n.peso)&&n.date&&(!MF||n.id!==MF.id))all.push({d:n.date,w:num(n.peso)})})}
  const prev=all.filter(a=>a.d<fecha).sort((a,b)=>a.d.localeCompare(b.d)).pop()||null,an=N.r24(tmp),ped=N.pedNow(tmp),bq={};
  [['glu','glu'],['hb','hb'],['colt','col'],['ldl','ldl'],['tg','tg'],['cre','cre']].forEach(([a,b])=>{const v=num(gv(a));if(v!=null)bq[b]=v});
- return{p:tmp,I:hc,c:num(tmp.cons[0].peso)&&num(tmp.cons[0].est)?tmp.cons[0]:null,prev,bq,an,rc:N.recs(tmp,ped,an),hab:{af:hc.af,sue:hc.sue},pat:patS(tmp)}}
-function recNote(x,r){const gm=r.gm,L=[],c=r.c;
- if(c){const w=num(c.peso),pv=x.prev;let t=`Peso actual ${w} kg (IMC ${fx(r.imc)}, ${r.cl})`;
-  if(pv){const d=w-pv.w;t+=Math.abs(d)<.05?`; sin cambio respecto al ${dm(pv.d)}.`:`; ${d<0?'descenso':'aumento'} de ${fx(Math.abs(d))} kg respecto al ${dm(pv.d)} (${fx(pv.w)} kg).`;if(r.exceso)t+=d<0?' Evolución favorable; continuar con el plan.':d>0?' Reforzar adherencia y revisar porciones.':'';else if(r.bajo)t+=d>0?' Evolución favorable.':' Reforzar el aporte energético.'}else t+='.';
-  L.push('**Evolución:** '+t)}
- const rec=[];if(gm.baz)rec.push('Sustituir bebidas azucaradas por agua simple o infusiones sin azúcar.');if(gm.ult)rec.push('Reducir fritos, embutidos y ultraprocesados; preferir cocidos, asados o al vapor.');if(gm.dul&&!gm.baz)rec.push('Limitar azúcares y dulces; preferir fruta entera como postre.');
- if(r.an&&!gm.ver)rec.push('Incluir verduras en la comida y la cena (½ plato).');if(r.an&&!gm.fru)rec.push('Incluir 2 porciones de fruta entera al día.');if(r.an&&!gm.aoa)rec.push('Incluir una fuente de proteína (huevo, pollo, pescado o leguminosas) en cada comida principal.');
- if(r.ayuno)rec.push('Respetar horarios y no pasar más de 5–6 h sin comer.');if(r.G.some(g=>g[0].startsWith('Alteración de la glucemia')))rec.push('Distribuir los carbohidratos en el día, preferir integrales y dar seguimiento a la glucosa con su médico.');
- if(r.G.some(g=>g[0].startsWith('Perfil')))rec.push('Aumentar fibra (avena, leguminosas, verduras) y dar seguimiento al perfil de lípidos con su médico.');if(r.G.some(g=>g[0]==='Hemoglobina baja'))rec.push('Combinar alimentos ricos en hierro con vitamina C y valorar suplementación con su médico.');
- if(r.exceso&&!r.minor)rec.push('Mantener porciones del plan y actividad física ≥ 150 min/semana.');if(r.bajo)rec.push('Fraccionar en 5–6 tiempos y aumentar la densidad energética de las comidas.');rec.push('Mantener hidratación con agua simple (≥ 2 L/día).');
- L.push('**Recomendaciones:**\n'+rec.slice(0,7).map(z=>'• '+z).join('\n'));L.push('**Seguimiento:** Continuar con el plan nutricional y acudir a su próxima cita.');return L.join('\n')}
+ return{p:tmp,I:hc,fecha,c:num(tmp.cons[0].peso)&&num(tmp.cons[0].est)?tmp.cons[0]:null,prev,bq,an,rc:N.recs(tmp,ped,an),hab:{af:hc.af,sue:hc.sue},pat:patS(tmp)}}
+function recNote(x,r){const gm=r.gm,c=r.c,L=[];
+ if(c){const w=num(c.peso),pv=x.prev;let t=`El paciente presenta un peso actual de ${w} kg e IMC de ${fx(r.imc)} kg/m² (${low(r.cl)})`;
+  if(pv){const d=w-pv.w;t+=Math.abs(d)<.05?`, sin cambios respecto al ${dm(pv.d)}.`:`, con ${d<0?'un descenso':'un aumento'} de ${fx(Math.abs(d))} kg respecto al ${dm(pv.d)} (${fx(pv.w)} kg).`;
+   if(r.exceso)t+=d<0?' La evolución es favorable y se recomienda continuar con el plan.':d>0?' Se refuerza la adherencia al plan y se revisan las porciones.':'';else if(r.bajo)t+=d>0?' La evolución es favorable.':' Se refuerza el aporte energético.'}else t+='.';
+  L.push('**Evolución.** '+t)}
+ const rec=[];if(gm.baz)rec.push('Se sustituirán las bebidas azucaradas por agua simple o infusiones sin azúcar.');if(gm.ult)rec.push('Se reducirán los fritos, embutidos y ultraprocesados, prefiriendo preparaciones cocidas, asadas o al vapor.');if(gm.dul&&!gm.baz)rec.push('Se limitarán los azúcares y dulces, prefiriendo la fruta entera como postre.');
+ if(r.an&&!gm.ver)rec.push('Se incluirán verduras en la comida y la cena, ocupando la mitad del plato.');if(r.an&&!gm.fru)rec.push('Se incluirán dos porciones de fruta entera al día.');if(r.an&&!gm.aoa)rec.push('Se incluirá una fuente de proteína (huevo, pollo, pescado o leguminosas) en cada comida principal.');
+ if(r.ayuno)rec.push('Se respetarán los horarios de comida sin pasar más de 5 a 6 horas en ayuno.');if(r.G.some(g=>g[0].startsWith('Alteración de la glucemia')))rec.push('Se distribuirán los carbohidratos a lo largo del día, prefiriendo los integrales, y se dará seguimiento a la glucosa con su médico.');
+ if(r.G.some(g=>g[0].startsWith('Perfil')))rec.push('Se aumentará el consumo de fibra (avena, leguminosas y verduras) y se dará seguimiento al perfil de lípidos con su médico.');if(r.G.some(g=>g[0]==='Hemoglobina baja'))rec.push('Se combinarán los alimentos ricos en hierro con vitamina C y se valorará la suplementación con su médico.');
+ if(r.exceso&&!r.minor)rec.push('Se mantendrán las porciones del plan y la actividad física de al menos 150 minutos por semana.');if(r.bajo)rec.push('Se fraccionará la alimentación en cinco o seis tiempos aumentando la densidad energética de las comidas.');rec.push('Se mantendrá una hidratación adecuada con al menos 2 litros de agua simple al día.');
+ L.push('**Recomendaciones.** '+rec.slice(0,6).join(' '));L.push(`**Seguimiento.** Se continúa con el plan nutricional y se programa control para el ${fu(x.fecha)}, aproximadamente a los 30 días.`);return L.join('\n')}
 function put(sel,val){const ta=document.querySelector(sel);if(!ta)return;ta.value=val;ta.style.height='auto';ta.style.height=Math.max(ta.scrollHeight,40)+'px';ta.dispatchEvent(new Event('input',{bubbles:true}))}
 function genHC(){const p=hcPat();if(!p)return;const I=p.hci||{};
  if(['nota1','nota','plan'].some(k=>String(I[k]||'').trim())&&!confirm('Ya hay texto en la nota, el PES o el plan. ¿Reemplazarlo con el borrador generado?'))return;
  const x=ctxHC(p),r=core(x);put('textarea[data-i="nota1"]',notaHC(x,r));put('textarea[data-i="nota"]',pesTxt(r));put('textarea[data-i="plan"]',planHC(x,r));
- toast(x.c||x.an?'Borrador generado: revísalo y completa lo que diga [completar]':'Faltan datos (peso, talla, R24): revisa los [completar]')}
+ toast(x.c||x.an?'Borrador generado: revísalo y ajústalo si lo necesitas':'Borrador generado con pocos datos: captura peso, talla y R24 para mejorarlo')}
 function genNote(){const p=cur();if(!p&&!gv('peso'))return toast('Captura primero los datos de la nota');
  if((gv('dx')||gv('pl'))&&!confirm('Ya hay texto en el PES o en el plan. ¿Reemplazarlo con el borrador generado?'))return;
  const x=ctxNote(p),r=core(x);put('#mf-dx',pesTxt(r));put('#mf-pl',recNote(x,r));toast('Borrador generado: revísalo y ajústalo. Los pendientes no se llenan.')}
