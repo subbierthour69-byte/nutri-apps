@@ -1368,7 +1368,9 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  let HN=0;const phd=()=>{const g=k=>{const lg=DB.logos||{},u=(k in lg)?lg[k]:LOGO_DEF[k];return u?`<img src="${u}" alt="">`:'<span></span>'};return `<div class="phdr"><div class="hdr">${g('l1')}${g('r1')}</div><div class="ht">HISTORIA CLÍNICA<span>NUTRICIONAL</span></div><i class="hrl"></i></div>`};
  const sec=(t,b)=>{const n=++HN,pb=n===7||n===10;return `<div class="card hcc hs${pb?' pbk':''}">${pb?phd():''}<h2><span class="hn">${String(n).padStart(2,'0')}</span><span class="hts">${t}</span></h2>${b}</div>`};
  const SP=w=>typeof w==='string'?` style="grid-column:span ${w.slice(1)}"`:w?` style="width:${w}px"`:'';
+ if(I.nacion==null)I.nacion='Mexicana';
  const T=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-i="${k}" type="${t}" value="${esc(I[k])}"></div>`;
+ const SL=(k,l,o,w)=>`<div${SP(w)}><label>${l}</label><select data-i="${k}"><option value=""></option>${o.map(v=>`<option${I[k]===v?' selected':''}>${v}</option>`).join('')}</select></div>`;
  const P=(k,l,t='text',w)=>`<div${SP(w)}><label>${l}</label><input data-p="${k}" type="${t}" value="${esc(p[k])}"></div>`;
  /* --- Antropometría: columnas = consultas (editables, ligadas a la Consulta) --- */
  const antro=`<div id="antro">${antroBlock(p)}</div>`;
@@ -1392,7 +1394,7 @@ function instH(){let p=hcPat();if(!p){HS.draft=newDraft();p=HS.draft}const I=p.h
  sec('Ficha de Identificación',`<div class="fic"><div style="grid-column:span 8"><label>Nombre</label><input data-p="nombre" value="${esc(pn(p))}"></div><div style="grid-column:span 2"><label>Edad</label><input id="hc-edad" readonly value="${edTxt(edad(p.nac))}"></div>
   <div style="grid-column:span 2"><label>Sexo</label><select data-p="sexo"><option value="F"${p.sexo==='F'?' selected':''}>Mujer</option><option value="M"${p.sexo==='M'?' selected':''}>Hombre</option></select></div>
   ${P('nac','Fecha de nacimiento','date','s2')}<div style="grid-column:span 4"><label>Patología de base</label><textarea data-pp="pat" rows="1" style="height:46px;min-height:46px;resize:vertical" oninput="this.style.height='auto';this.style.height=Math.max(46,this.scrollHeight)+'px'" onfocus="this.style.height='auto';this.style.height=Math.max(46,this.scrollHeight)+'px'">${esc((p.pat||[]).join(', '))}</textarea></div>
-  ${T('ec','Estado civil','text','s3')}${T('ocup','Ocupación','text','s3')}${T('esc','Escolaridad','text','s3')}${P('tel','Tel.','tel','s2')}${T('nacion','Nacionalidad','text','s3')}</div>`)+
+  ${SL('ec','Estado civil',['Soltero','Casado','Divorciado','Viudo'],'s3')}${T('ocup','Ocupación','text','s3')}${SL('esc','Escolaridad',['Primaria','Secundaria','Licenciatura','Posgrado'],'s3')}${P('tel','Tel.','tel','s2')}${T('nacion','Nacionalidad','text','s3')}</div>`)+
  sec('Antecedentes heredofamiliares',hf)+
  sec('Indicadores clínicos',`<div class="ic">`+q('Patologías actuales del sistema digestivo:',ti('pdig'))+`<p style="margin:10px 0 2px"><b>Signos físicos</b> <span class="note">(marcar si hay)</span></p><div>${cx(SIGNOS,'sf')}</div></div>`)+
  sec('Estado emocional y conductual',`<div class="ic">${q('Nivel de energía:',ox('nrg',['Bajo','Medio','Alto']))}${q('Estado emocional percibido:',cx(EMO,'emo'))}</div>`)+
@@ -3154,48 +3156,203 @@ function core(x){const p=x.p,e=edad(p.nac),minor=!!(e&&e.a<18),sexM=p.sexo==='M'
  if(!out.length)out.push(c?`Estado nutricional adecuado (IMC de ${fx(imc)} kg/m², ${low(cl)}) sin alteraciones bioquímicas registradas, con riesgo asociado al mantenimiento de hábitos saludables a largo plazo.`:'Sin mediciones antropométricas registradas, el estado nutricional queda por determinar en la siguiente consulta.');
  return{out:out.slice(0,3),e,minor,sexM,c,imc,cl,exceso,bajo,ayuno,tags,G,gm,an,labs}}
 const pesTxt=r=>r.out.map((s,i)=>(r.out.length>1?(i+1)+') ':'')+s).join('\n');
-function planHC(x,r){const c=r.c,w=c?num(c.peso):null,hh=c?num(c.est):null,pat=nz(x.pat),gm=r.gm,L=[],act=/^s/i.test(String(x.hab.af||'')),R=v=>Math.round(v/50)*50;let en,tipo='normocalórica y balanceada';
- if(r.minor){tipo='completa, equilibrada y adecuada para la edad';en='con un aporte energético ajustado a su edad, sexo y percentil, sin restricciones calóricas'}
- else if(w&&hh&&r.e){const get=(10*w+6.25*hh-5*r.e.a+(r.sexM?5:-161))*(act?1.375:1.2);let k=get;if(r.exceso){k=Math.max(get-500,r.sexM?1500:1200);tipo='hipocalórica y balanceada'}else if(r.bajo){k=get+400;tipo='hipercalórica y balanceada'}
-  en=`con un aporte aproximado de ${R(k)} kcal/día (gasto energético estimado de ${R(get)} kcal con la fórmula de Mifflin-St Jeor y factor de actividad ${act?'1.375':'1.2'})`}
- else en='con un aporte energético ajustado a sus requerimientos';
- const hc=/diabet|prediabet|resistencia a la insulina/.test(pat)?'carbohidratos de 45 a 50 % (complejos y distribuidos en el día)':'carbohidratos de 50 a 55 %';
- L.push(`Prescripción dietética. Se indica una dieta ${tipo}, ${en}. La distribución de macronutrimentos será de ${hc}, proteínas de 15 a 20 % y lípidos de 25 a 30 % (grasa saturada menor al 10 %), con fibra de 25 a 30 g al día${r.minor?'':' e ingesta de agua simple de al menos 2 litros diarios'}. Se fraccionará en tres comidas principales y dos colaciones con horarios regulares${r.ayuno?', evitando pasar más de 5 a 6 horas sin comer':''}.${/hipertens|hta|presion alta/.test(pat)?' Se limitará el sodio a menos de 2 g al día (aproximadamente 5 g de sal), sin salero en la mesa.':''}`);
- const by={};((x.rc&&x.rc.list)||[]).forEach(g=>(by[g.a]=by[g.a]||[]).push(low(g.g)));const gr=OR.filter(a=>by[a]).map(a=>`${VB[a]} ${J(by[a])}`),nt=(x.rc&&x.rc.notes)||[];
- if(gr.length||nt.length)L.push(`Grupos de alimentos. ${gr.length?`Se recomienda ${J(gr,'; ',' y ')}.`:''}${nt.length?' '+nt.join(' '):''}`.trim());
- const s=[];if(gm.baz||/ref|jug|ene/.test(Object.keys(x.I).filter(k=>/^beb\./.test(k)&&x.I[k]).join(' ')))s.push('Se sustituirán las bebidas azucaradas por agua simple.');if(r.an&&!gm.ver)s.push('Se incluirán verduras en al menos dos tiempos de comida al día.');if(r.ayuno)s.push('Se respetarán los horarios de comida sin pasar más de 5 a 6 horas en ayuno.');
- if(!r.minor&&/^no/i.test(String(x.hab.af||'')))s.push('Se iniciará actividad física gradual, con caminata de 20 a 30 minutos tres veces por semana.');if(gm.ult)s.push('Se reducirá el consumo de fritos, embutidos y ultraprocesados.');
- const md=[];if(r.exceso&&!r.minor&&w)md.push(`Se buscará una pérdida gradual de 5 a 10 % del peso (${fx(w*.05)} a ${fx(w*.10)} kg) a un ritmo de 0.25 a 0.5 kg por semana.`);else if(r.exceso)md.push('Se buscará mantener o desacelerar la ganancia de peso mientras continúa su crecimiento en talla.');else if(r.bajo)md.push('Se buscará una ganancia gradual de peso hasta alcanzar un IMC normal.');
- if(r.G.length)md.push('Se pretende mejorar los parámetros de laboratorio alterados ('+J(r.G.map(g=>/glucemia/.test(g[0])?'glucemia':/^Perfil/.test(g[0])?'perfil de lípidos':/^Hemoglobina/.test(g[0])?'hemoglobina':'función hepática o renal'))+') en el siguiente control.');
- L.push(`Metas. A corto plazo (4 semanas): ${s.length?low(s.join(' ')):'se establecerá el registro de alimentos y la regularidad de los horarios de comida.'} A mediano plazo (3 a 6 meses): ${md.length?low(md.join(' ')):'se mantendrá el estado nutricional y se consolidarán los hábitos saludables.'}`);
- L.push('Educación nutricional. Se brindará orientación sobre porciones y equivalentes (SMAE), lectura de etiquetas, plato del bien comer y técnicas de preparación sin frituras.'+(r.minor?' Se involucrará a la familia en los cambios.':''));
- L.push('Suplementación. '+(r.G.some(g=>g[0]==='Hemoglobina baja')?'Se valorará con el médico la suplementación de hierro tras confirmar con estudios de laboratorio.':'No se indica suplementación por el momento.'));
- L.push(`Seguimiento. Se programa la próxima cita para el ${fu()}, aproximadamente a los 30 días, para valorar la adherencia, la evolución del peso y los ajustes necesarios al plan.`);return L.join('\n')}
-function notaHC(x,r){const I=x.I,p=x.p,c=r.c,pat=patS(p),oc=String(I.ocup||'').trim(),ck=(a,pf)=>a.filter(([k])=>I[pf+k]).map(a=>low(a[1]));
- const S1=[],S2=[],O=[],cls=c?(/^normal/i.test(r.cl)?'un estado nutricional normal':low(r.cl)):'',cl2=t=>String(t).split(/\s*,\s*/).filter(Boolean).join(', ');
- const ficha=`Paciente ${r.sexM?'masculino':'femenina'}${r.e?' de '+edTxt(r.e).replace(/(años?) (\d)/,'$1 y $2'):''}${oc?', '+low(oc):''}, acude a primera consulta de nutrición${pat?' con antecedente de '+low(pat):' y refiere no tener patologías de base'}.`;
- const hf=FAMS.map((f,i)=>{const d=HF_COLS.filter(([k])=>I[`hf.${i}.${k}`]).map(a=>low(a[1])),o=I[`hf.${i}.otros`];return d.length||o?`${low(f)} con ${J(d.concat(o?[low(o)]:[]))}`:''}).filter(Boolean);
- S1.push(hf.length?`Entre sus antecedentes heredofamiliares destacan ${J(hf,'; ',' y ')}.`:'No se registran antecedentes heredofamiliares de relevancia.');
- const sy=[...ck(DIG,'dg.'),...ck(SIGNOS,'sf.')],em=ck(EMO,'emo.');
- S1.push(sy.length?`Refiere ${J(sy)}${I['dg.f']?', con frecuencia '+low(I['dg.f']):''}.`:'No refiere síntomas digestivos ni signos físicos de relevancia.');
- if(I.nrg||em.length)S1.push(`Describe su nivel de energía como ${low(I.nrg||'habitual')}${em.length?' y su estado emocional como '+J(em):''}.`);
- const vd=[];if(I.af)vd.push(/^s/i.test(I.af)?`realiza actividad física${I['af.c']?' ('+low(I['af.c'])+')':''}${I['af.f']?' con frecuencia '+low(I['af.f']):''}`:'no realiza actividad física');
- if(I.sue)vd.push(`duerme ${/[a-zA-Z]/.test(I.sue)?I.sue:I.sue+' horas'} por noche`);if(I.sent&&/^s/i.test(I.sent))vd.push('refiere sedentarismo'+(I['sent.h']?' ('+(/[a-zA-Z]/.test(I['sent.h'])?I['sent.h']:I['sent.h']+' h')+' al día)':''));
- if(I.alc)vd.push(/^n/i.test(I.alc)?'niega consumo de alcohol':`consume alcohol (${low(I.alc)}${I['alc.f']?', '+low(I['alc.f']):''})`);if(I.tab)vd.push(/^n/i.test(I.tab)?'niega tabaquismo':`refiere tabaquismo (${low(I.tab)}${I['tab.f']?', '+low(I['tab.f']):''})`);if(I.sus&&/^s/i.test(I.sus))vd.push('refiere consumo de otras sustancias'+(I['sus.c']?' ('+low(I['sus.c'])+')':''));
- if(vd.length)S2.push(`En cuanto a su estilo de vida, ${J(vd,'; ',' y ')}.`);
- const di=[];if(I.agua)di.push(`su consumo de agua es de ${low(I.agua)}`);const bb=[...ck(BEB,'beb.'),...(I['beb.o']?[low(I['beb.o'])]:[])];if(bb.length)di.push(`acostumbra beber ${J(bb)}`);if(I.sal&&/^s/i.test(I.sal))di.push('agrega sal a los alimentos');
- if(I.ncom)di.push(`realiza ${I.ncom} comidas al día${/^\d+$/.test(String(I.ncol||'').trim())?' y '+I.ncol+' colaciones':/^(no|ning|0)/i.test(String(I.ncol||'').trim())?' sin colaciones':''}`);if(I.afrec)di.push(`consume con frecuencia ${low(cl2(I.afrec))}`);if(I.aevita)di.push(`evita ${low(cl2(I.aevita))}`);
- if(I.alerg&&/^s/i.test(I.alerg))di.push(`presenta alergia a ${low(I['alerg.c']||'algunos alimentos')}`);const it=ck(INTOL,'int.').filter(z=>z!=='ninguna');if(it.length)di.push(`presenta intolerancia a ${J(it)}`);if(I.fuera&&I.fuera!=='Nunca')di.push(`come fuera de casa ${low(I.fuera)}`);
- if(di.length)S2.push(`Respecto a sus hábitos alimentarios, ${J(di,'; ',' y ')}.`);
- if(c){const ex=[];if(num(c.cin))ex.push(`cintura de ${c.cin} cm`);if(num(c.abd))ex.push(`circunferencia abdominal de ${c.abd} cm`);if(num(c.bra))ex.push(`brazo de ${c.bra} cm`);if(num(c.graso))ex.push(`${c.graso} % de grasa corporal`);
-  O.push(`En la valoración antropométrica presenta un peso de ${c.peso} kg, talla de ${c.est} cm e IMC de ${fx(r.imc)} kg/m², lo que corresponde a ${cls}${ex.length?'; se registran además '+J(ex):''}.${x.prev&&x.prev.w?` Su peso previo era de ${x.prev.w} kg (${dm(x.prev.d)}), con ${num(c.peso)-x.prev.w<0?'un descenso':'un aumento'} de ${fx(Math.abs(num(c.peso)-x.prev.w))} kg.`:''}`)}
- else O.push('No se cuenta con mediciones antropométricas en esta valoración.');
+const yes=v=>/^s/i.test(String(v==null?'':v).trim()),no=v=>/^n/i.test(String(v==null?'':v).trim());
+const sv=(I,k)=>String(I[k]==null?'':I[k]).trim(),cap=t=>t?t.charAt(0).toUpperCase()+t.slice(1):t;
+const ckI=(I,a,pf)=>a.filter(([k])=>I[pf+k]).map(z=>low(z[1]));
+const edTx=e=>!e?'':e.a>=2?e.a+' años':e.a===1?'1 año':e.m+(e.m===1?' mes':' meses');
+const taOf=I=>{const m=/(\d{2,3})\s*[\/\\-]\s*(\d{2,3})/.exec(sv(I,'ta'));return m?{s:+m[1],d:+m[2]}:null};
+function gastoLab(oc){const t=nz(oc);if(!t)return'';
+ if(/alba|obrer|campes|agricult|cargad|carpint|solda|mecanic|pescad|jardiner|herrer|minero|construc|estibad|panader|repartidor/.test(t))return'alto';
+ if(/comerci|vended|enfermer|mesero|cociner|limpieza|intendent|ama de casa|hogar|policia|estilista|peluquer|bombero/.test(t))return'moderado';
+ if(/oficin|administr|contad|secretar|ingenier|program|estudiant|abogad|medic|nutri|arquitect|diseñ|disen|chofer|conductor|taxista|recepcion|cajer|analista|gerente|psicolog|odontolog|dentista|docente|maestr|profesor|jubilad|desemplead/.test(t))return'ligero';return''}
+function fu2(n,base){let d=new Date();const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(base||''));if(m){const b=new Date(+m[1],m[2]-1,+m[3]);if(b>=new Date(new Date().setHours(0,0,0,0)))d=b}
+ d.setDate(d.getDate()+n);const w=d.getDay();if(w===0)d.setDate(d.getDate()+1);if(w===6)d.setDate(d.getDate()+2);return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(',','')}
+const MEDX=[[/metformina/,'metformina (vigilar vitamina B12 y tomarla con alimentos)'],
+ [/levotiroxina|eutirox/,'levotiroxina (tomarla en ayunas y separarla 4 h de calcio, hierro, fibra y soya)'],
+ [/warfarina|acenocumarol|sintrom/,'anticoagulantes antagonistas de vitamina K (mantener constante el consumo de verduras de hoja verde)'],
+ [/enalapril|captopril|lisinopril|losartan|valsartan|telmisartan|irbesartan|candesartan|espironolactona/,'IECA, ARA-II o espironolactona (vigilar potasio y evitar sustitutos de sal con potasio)'],
+ [/furosemida|hidroclorotiazida|clortalidona|indapamida/,'diuréticos (vigilar sodio, potasio y magnesio)'],
+ [/atorvastatina|simvastatina|lovastatina/,'estatinas (evitar el consumo excesivo de toronja)'],
+ [/omeprazol|pantoprazol|esomeprazol|lansoprazol|rabeprazol/,'inhibidores de bomba de protones (riesgo de déficit de vitamina B12, hierro, calcio y magnesio)'],
+ [/insulina|glibenclamida|glimepirida|gliclazida|glipizida/,'insulina o sulfonilureas (riesgo de hipoglucemia: mantener horarios y carbohidratos regulares)'],
+ [/ibuprofeno|naproxeno|diclofenaco|aspirina|acido acetilsalicilico/,'AINE (tomarlos con alimentos por riesgo de irritación gástrica)']];
+/* ---- Base de conocimiento (guías Sannafarm): condición → PES modelo y plan ---- */
+const KBX=[
+ {id:'disfagia',n:'disfagia',rx:/disfagia/,P:'Dificultad para la deglución',E:'alteración neuromuscular esofágica',gk:[1.2,1.5],pl:'Por disfagia se adaptan las texturas según IDDSI (puré, molida o blanda) con espesantes para los líquidos, aumentando la densidad calórica y proteica en volúmenes pequeños y valorando soporte enteral si la vía oral cubre menos del 60 % de los requerimientos.'},
+ {id:'pancreatitis',n:'pancreatitis',rx:/pancreatitis|insuficiencia pancrea/,P:'Malabsorción de lípidos y micronutrimentos',E:'insuficiencia pancreática exocrina',kk:[35,35],gk:[1.2,1.5],av:['alcohol','tabaco'],pl:'Por patología pancreática se mantienen lípidos moderados acompañados de enzimas pancreáticas, con abstinencia absoluta de alcohol y tabaco y suplementación de vitaminas A, D, E y K.'},
+ {id:'cirrosis',n:'cirrosis hepática',rx:/cirrosis|ascitis/,P:'Desnutrición proteico-calórica',E:'hipercatabolismo hepático y saciedad temprana por ascitis',kk:[30,35],gk:[1.2,1.5],t:6,pl:'Por cirrosis se fracciona la dieta en 5 a 6 comidas con una colación nocturna de 50 g de hidratos de carbono complejos y se limita el sodio a menos de 2,000 mg/día si hay ascitis o edema.'},
+ {id:'eii',n:'enfermedad inflamatoria intestinal',rx:/crohn|colitis ulcerosa|cuci|enfermedad inflamatoria intestinal|\beii\b/,P:'Aumento del gasto energético y proteico',E:'estado inflamatorio activo y pérdidas gastrointestinales',kk:[30,35],gk:[1.2,1.5],t:6,pl:'Por enfermedad inflamatoria intestinal, en brote activo se indica dieta baja en residuo en 5 a 6 tomas y, en remisión, patrón mediterráneo rico en fibra soluble y omega-3 con proteína de 1 g/kg/día, vigilando hierro y vitamina D.'},
+ {id:'celiaca',n:'enfermedad celíaca',rx:/celiaca|celiaquia|gluten/,P:'Absorción alterada de nutrimentos',E:'atrofia de vellosidades intestinales por exposición al gluten',kk:[30,35],gk:[1.2,1.5],av:['trigo, cebada, centeno y derivados (dieta libre de gluten de por vida, sin contaminación cruzada)'],pl:'Por enfermedad celíaca se restringe temporalmente la lactosa y se suplementan hierro, folato, B12, vitamina D y calcio según laboratorios.'},
+ {id:'gastroparesia',n:'gastroparesia',rx:/gastroparesia/,P:'Utilización alterada de nutrimentos',E:'retraso en el vaciamiento gástrico secundario a neuropatía autonómica',t:6,pl:'Por gastroparesia se indican 5 a 6 comidas pequeñas de consistencia líquida o blanda, con lípidos menores a 40-50 g/día y fibra insoluble de 10 a 15 g/día, optimizando el control glucémico.'},
+ {id:'biliar',n:'patología biliar',rx:/colelitiasis|colecistitis|vesicula|biliar|calculos biliares|colecistectomia/,P:'Ingesta excesiva de lípidos',E:'selección inadecuada de alimentos fritos y embutidos',mac:{lp:22},t:5,av:['frituras y alimentos muy grasosos','embutidos','yema de huevo','lácteos enteros','carnes grasas'],pl:'Por patología biliar se indica dieta hipograsa en 5 tiempos pequeños, evitando ayunos prolongados; tras colecistectomía se reintroducen las grasas saludables de forma progresiva durante 4 a 6 semanas.'},
+ {id:'masld',n:'hígado graso',rx:/higado graso|esteatosis|masld|ehna|esteatohepatitis/,P:'Ingesta excesiva de energía e hidratos de carbono simples',E:'consumo frecuente de fructosa industrial y sedentarismo',pt:1,mac:{pp:22,hp:43,defk:600},gk:[1.1,1.2],s7:1,av:['refrescos y jugos industrializados','jarabe de maíz de alta fructosa','panadería dulce','alcohol'],pl:'Por hígado graso se busca una pérdida de 7 a 10 % del peso con patrón mediterráneo, grasas ricas en monoinsaturados y omega-3, y ejercicio aeróbico más fuerza.'},
+ {id:'erge',n:'ERGE o reflujo',rx:/erge|reflujo|esofagitis|pirosis/,fn:c=>c.dg('ref'),P:'Alteración de la función gastrointestinal',E:'relajación del esfínter esofágico inferior y comidas copiosas altas en grasa',mac:{lp:25},t:5,av:['cafeína (café y té)','chocolate','menta','alcohol','tabaco','cítricos','picante','bebidas gasificadas','frituras y alimentos muy grasosos'],pl:'Por ERGE o reflujo se indican 5 tiempos de comida de volumen reducido, cenar 2 a 3 horas antes de acostarse, beber los líquidos entre comidas y elevar 15 cm la cabecera de la cama si hay síntomas nocturnos.'},
+ {id:'gastritis',n:'gastritis o úlcera péptica',rx:/gastritis|ulcera|helicobacter/,P:'Ingesta oral subóptima',E:'dolor epigástrico y ayunos prolongados',mac:{lp:28},gk:[1,1.2],t:5,av:['alcohol','cafeína (café y té)','picante','alimentos muy ácidos','temperaturas extremas'],pl:'Por gastritis se indica dieta de protección gástrica (blanda) en 5 tomas pequeñas, vigilando vitamina B12 y hierro si hay gastritis atrófica o uso prolongado de IBP.'},
+ {id:'sibo',n:'SIBO',rx:/sibo|sobrecrecimiento bacteriano/,P:'Alteración de la función gastrointestinal',E:'fermentación bacteriana excesiva en intestino delgado',pl:'Por SIBO se indica dieta baja en FODMAP durante 4 a 6 semanas junto con el tratamiento médico, con reintroducción gradual y espacios de 3.5 a 4 horas entre comidas.'},
+ {id:'sii',n:'síndrome de intestino irritable',rx:/intestino irritable|colon irritable|\bsii\b|distension|colitis nerviosa/,P:'Alteración de la función gastrointestinal',E:'hipersensibilidad visceral e ingesta elevada de carbohidratos fermentables',av:['cafeína (café y té)','alcohol','picante','grasas en exceso'],pl:'Por intestino irritable se indican horarios regulares y dieta baja en FODMAP en 3 fases (restricción de 4 a 6 semanas, reintroducción y personalización), priorizando fibra soluble (avena cocida, chía hidratada, zanahoria cocida) y evitando popotes y goma de mascar.'},
+ {id:'diverticular',n:'enfermedad diverticular',rx:/diverticul/,P:'Ingesta deficiente de fibra dietética',E:'bajo consumo de vegetales y cereales integrales',pl:'Por enfermedad diverticular se indica dieta alta en fibra con hidratación de 2.0 a 2.5 L/día y actividad física regular; en diverticulitis aguda se requiere valoración médica con líquidos claros por 2 a 3 días y dieta baja en residuo.'},
+ {id:'diarrea',n:'diarrea',rx:/diarrea|colitis/,fn:c=>c.dg('dia'),P:'Alteración de la función gastrointestinal',E:'tránsito intestinal acelerado',t:6,av:['lácteos','fibra insoluble','grasas','refrescos y jugos comerciales','cafeína (café y té)','alcohol'],pl:'Por diarrea se indica rehidratación oral con suero oral en sorbos frecuentes (200 a 400 mL tras cada evacuación líquida; 10 mL/kg en niños), sin ayuno prolongado y con 5 a 6 comidas pequeñas astringentes (arroz blanco, pollo sin piel, manzana cocida, plátano, zanahoria cocida), reintroduciendo alimentos al mantener Bristol 3 o 4 por 48 horas; se valorará zinc 20 mg/día por 10 a 14 días y se enviará a valoración médica si hay fiebre mayor a 38.5 °C, sangre, deshidratación grave, dolor severo o más de 48 horas sin mejoría en lactantes y adultos mayores.'},
+ {id:'estre',n:'estreñimiento',rx:/estre[nñ]imiento/,fn:c=>c.dg('est'),P:'Ingesta deficiente de fibra y líquidos',E:'hábitos alimentarios inadecuados y sedentarismo',pt:1,pl:'Por estreñimiento se aumenta gradualmente la fibra combinando insoluble (cereales integrales) y soluble (ciruela pasa, papaya, avena, linaza), con agua simple de 35 mL/kg/día (mínimo 2.0 L), aceite de oliva, actividad aeróbica diaria y un horario fijo para evacuar 15 a 20 minutos después del desayuno.'},
+ {id:'lactosa',n:'intolerancia a la lactosa',rx:/lactosa|lactasa/,P:'Ingesta inadecuada de hidratos de carbono específicos',E:'déficit de actividad de lactasa intestinal',pl:'Por intolerancia a la lactosa se restringe la lactosa según tolerancia (lácteos deslactosados, bebidas vegetales fortificadas o enzima lactasa), asegurando calcio de 1,000 a 1,200 mg/día y vitamina D.'},
+ {id:'dm',n:'diabetes mellitus',rx:/diabet|\bdm\b|dm1|dm2/,P:'Ingesta inconsistente de hidratos de carbono',E:'desconocimiento del conteo de equivalentes e impacto glucémico de los alimentos',mac:{pp:17,hp:48},s7:1,av:['azúcares añadidos','bebidas azucaradas'],pl:'Por diabetes se indica conteo de hidratos de carbono por equivalentes de 15 g, grasas sin trans, fibra de 14 g por cada 1,000 kcal, orden de ingestión (primero verduras, luego proteínas y grasas saludables y al final cereales o frutas), nunca carbohidratos solos, sin ayunos mayores a 6-7 horas y con horarios sincronizados a su esquema farmacológico para prevenir hipoglucemias.'},
+ {id:'ri',n:'resistencia a la insulina',rx:/resistencia a la insulina|sindrome metabolico|prediabet/,fn:c=>(c.glu>=100)||(c.hba>=5.7)||(c.tg>150&&c.cinR),P:'Ingesta excesiva de hidratos de carbono simples y energía',E:'horarios irregulares de alimentación y alto consumo de bebidas azucaradas',pt:1,mac:{pp:22,hp:43,defk:400},gk:[1,1.2],s7:1,t:5,av:['bebidas azucaradas'],pl:'Por resistencia a la insulina se priorizan hidratos complejos de bajo índice glucémico y fibra de 28 a 35 g/día en 4 a 5 tiempos, comiendo primero las verduras y acompañando siempre la fruta o el cereal con proteína o grasa saludable.'},
+ {id:'estim',n:'consumo de estimulantes',rx:null,fn:c=>/cristal|metanfet|cocain|piedra|crack/.test(c.sus),P:'Ingesta energético-proteica gravemente deficiente',E:'efecto anorexigénico y deterioro conductual secundario al consumo de estimulantes',kk:[30,40],gk:[1.3,1.6],t:6,pl:'Por consumo de estimulantes se indica repleción nutricional progresiva en 5 a 6 tomas pequeñas densas, con texturas suaves si hay xerostomía, hidratación de 35 a 45 mL/kg/día y suplementación de complejo B, vitamina C, zinc y magnesio.'},
+ {id:'cannabis',n:'consumo de cannabis',rx:null,fn:c=>/marihuana|cannabis|mota/.test(c.sus),P:'Ingesta excesiva de alimentos ultraprocesados y energía',E:'hiperfagia inducida por consumo de cannabis y falta de colaciones saludables',pl:'Por consumo de cannabis se planifican colaciones crujientes y bajas en densidad energética (jícama, pepino, palomitas naturales, zanahoria) antes del consumo, con control de porciones y reducción de azúcares refinados.'},
+ {id:'sueno',n:'alteración del sueño',rx:/insomnio/,fn:c=>c.sue>0&&c.sue<6,sec:1,P:'Ingesta nocturna excesiva de energía y estimulantes',E:'privación crónica de sueño y desincronización de horarios alimentarios',pl:'Por la alteración del sueño se concentra el 60 a 70 % de las calorías en las horas de luz, con desayuno en la primera hora tras despertar, cena ligera 2.5 a 3 horas antes de acostarse con alimentos ricos en triptófano y magnesio (pavo, huevo, plátano, avena, almendras), cafeína suspendida 8 a 10 horas antes de dormir y 80 % de la hidratación antes de las 19:00 h.'},
+ {id:'hierro',n:'deficiencia de hierro',rx:/anemia|ferropen/,fn:c=>c.lab('Hemoglobina baja'),sec:1,P:'Ingesta deficiente de hierro biodisponible',E:'bajo consumo de fuentes animales y exceso de inhibidores',pl:'Por deficiencia de hierro se priorizan hierro hemo (carnes rojas magras, hígado, moronga) y fuentes vegetales combinadas con vitamina C, alejando 2 horas el café, té, lácteos y calcio de las comidas principales.'},
+ {id:'b12',n:'riesgo de deficiencia de B12',rx:null,fn:c=>/metformina|omeprazol|pantoprazol|esomeprazol|lansoprazol|vegan/.test(c.txt),sec:1,P:'Ingesta o absorción inadecuada de vitamina B12',E:'uso crónico de metformina o IBP',pl:'Por uso de metformina o IBP se vigilará la vitamina B12 sérica, incluyendo huevo, lácteos, pescado, carnes o alimentos fortificados, y suplementación si hay déficit.'}];
+/* choques entre guías que no se resuelven solos: se avisa para criterio clínico */
+const KBCH=[[ids=>ids.includes('gastroparesia')&&(ids.includes('dm')||ids.includes('ri')),'fibra total (diabetes) frente a fibra insoluble de 10 a 15 g/día (gastroparesia)'],
+ [(ids,ren)=>ids.includes('cirrosis')&&ren,'proteína de 1.2 a 1.5 g/kg (cirrosis) frente a 0.8 g/kg (enfermedad renal)'],
+ [ids=>ids.includes('pancreatitis')&&ids.includes('biliar'),'lípidos moderados con enzimas (pancreatitis) frente a dieta hipograsa (patología biliar)'],
+ [ids=>ids.includes('diarrea')&&ids.includes('estre'),'fibra y laxantes naturales (estreñimiento) frente a dieta astringente (diarrea)'],
+ [(ids,ren)=>ids.includes('celiaca')&&ids.includes('dm'),'energía y carga glucémica (diabetes) frente a recuperación nutricional (celiaquía)']];
+function kbOf(x,r){const I=x.I,bq=x.bq||{},cin=r.c?num(r.c.cin):null,
+ ctx={txt:nz((x.pat||'')+' '+sv(I,'med')+' '+sv(I,'dg.f')),sue:num(sv(I,'sue'))||0,sus:nz(sv(I,'sus.c')),glu:num(bq.glu),hba:num(bq.hba),tg:num(bq.tg),cinR:!!(cin&&!r.minor&&cin>=(r.sexM?90:80)),dg:k=>!!I['dg.'+k],lab:n=>r.G.some(g=>g[0]===n)};
+ return KBX.map(k=>{const t=!!(k.rx&&k.rx.test(ctx.txt));return{k,t,m:t||!!(k.fn&&k.fn(ctx))}}).filter(o=>o.m).sort((a,b)=>b.t-a.t).map(o=>o.k).filter((k,_,A)=>!(k.id==='ri'&&A.some(z=>z.id==='dm')))}
+/* ---- Nota de primera vez (prosa corta; solo se redacta lo capturado) ---- */
+function notaHC(x,r){const I=x.I,p=x.p,c=r.c,sexM=r.sexM,P=[],pat=patS(p),oc=sv(I,'ocup'),mo=sv(I,'motivo'),gl=gastoLab(oc);
+ /* 1. Ficha de identificación y motivo */
+ let f=`Paciente ${sexM?'masculino':'femenino'}${r.e?' de '+edTx(r.e):''}`;
+ if(oc)f+=`, ${low(oc)}${gl?' (gasto energético laboral estimado '+gl+')':''}`;
+ f+=', acude a consulta de nutrición de primera vez'+(mo?' '+(/^(por|para|con|debido)\b/i.test(mo)?low(mo):'por '+low(mo)):'')+'.';P.push(f);
+ /* 2. Antecedentes médicos y farmacológicos (AHF × APP × medicamentos) */
+ const nm={ob:'obesidad',dm:'DM',hta:'HTA',dis:'dislipidemia',car:'cardiopatía',can:'cáncer'},fl={};
+ const hf=FAMS.map((fm,i)=>{const d=HF_COLS.filter(([k])=>I[`hf.${i}.${k}`]);d.forEach(([k])=>fl[k]=1);const o=sv(I,`hf.${i}.otros`),L=d.map(([k])=>nm[k]).concat(o?[low(o)]:[]);return L.length?`${low(fm)} con ${J(L)}`:''}).filter(Boolean);
+ const A=[];if(hf.length)A.push('AHF: '+J(hf,'; ',' y '));
+ const ap=[pat,sv(I,'pdig')].filter(Boolean);if(ap.length)A.push('APP: '+low(ap.join(', ')));
+ const cir=sv(I,'cir');if(cir)A.push('antecedente quirúrgico de '+low(cir));
+ if(yes(I.alerg))A.push('alergia a '+low(sv(I,'alerg.c')||'alimentos'));else if(no(I.alerg))A.push('niega alergias alimentarias');
+ const itl=ckI(I,INTOL,'int.').filter(z=>z!=='ninguna'),io=sv(I,'int.o');if(itl.length||io)A.push('intolerancia a '+J(itl.filter(z=>z!=='otro').concat(io?[low(io)]:[])));
+ const med=sv(I,'med');if(med)A.push('medicamentos activos: '+low(med));
+ let t=A.length?cap(A.join('; '))+'.':'';
+ const nz2=nz(pat+' '+sv(I,'pdig')),app=[/diabet|\bdm\b|dm2|prediabet/.test(nz2)&&'diabetes',/hipertens|\bhta\b/.test(nz2)&&'hipertensión',/dislipid|colesterol|trigliceri/.test(nz2)&&'dislipidemia'].filter(Boolean),
+  hfl=[fl.dm&&'diabetes',fl.hta&&'hipertensión',fl.dis&&'dislipidemias'].filter(Boolean);
+ if(hfl.length){const cf=[...app.map(a=>a+' actual'),...(r.exceso?['exceso de peso']:[]),...r.G.filter(g=>/glucemia|^Perfil/.test(g[0])).map(g=>low(g[0]))];
+  t+=` La carga familiar de ${J(hfl)}${cf.length?', junto con '+J(cf)+', incrementa el riesgo cardiometabólico':' obliga a vigilancia preventiva cardiometabólica'}.`}
+ const mx=MEDX.filter(([rx])=>rx.test(nz(med))).slice(0,3).map(a=>a[1]);
+ if(mx.length)t+=` Se identifica posible interacción fármaco-nutrimento con ${J(mx,'; ',' y ')}.`;
+ if(t.trim())P.push(t.trim());
+ /* 3. Estilo de vida y evaluación dietética */
+ const vd=[];if(I.af)vd.push(yes(I.af)?`realiza actividad física${sv(I,'af.c')?' ('+low(sv(I,'af.c'))+')':''}${sv(I,'af.f')?' con frecuencia '+low(sv(I,'af.f')):''}`:'no realiza actividad física');
+ if(sv(I,'sue'))vd.push(`duerme ${/[a-zA-Z]/.test(I.sue)?sv(I,'sue'):sv(I,'sue')+' horas'} por noche`);
+ if(yes(I.sent))vd.push('refiere sedentarismo'+(sv(I,'sent.h')?' ('+(/[a-zA-Z]/.test(I['sent.h'])?sv(I,'sent.h'):sv(I,'sent.h')+' h')+' al día)':''));
+ const em=ckI(I,EMO,'emo.').filter(z=>z!=='estable');if(em.length)vd.push('refiere '+J(em));else if(I['emo.est'])vd.push('refiere estado emocional estable');
+ if(I.nrg)vd.push('nivel de energía '+low(I.nrg));
+ if(I.tab)vd.push(no(I.tab)?'niega tabaquismo':`refiere tabaquismo (${low(I.tab)}${sv(I,'tab.f')?', '+low(sv(I,'tab.f')):''}${sv(I,'tab.c')?', '+low(sv(I,'tab.c')):''})`);
+ if(I.alc)vd.push(no(I.alc)?'niega consumo de alcohol':`consume alcohol (${low(I.alc)}${sv(I,'alc.f')?', '+low(sv(I,'alc.f')):''}${sv(I,'alc.c')?', '+low(sv(I,'alc.c')):''})`);
+ if(yes(I.sus))vd.push('refiere consumo de otras sustancias'+(sv(I,'sus.c')?' ('+low(sv(I,'sus.c'))+')':''));
+ if(vd.length)P.push(`En cuanto a su estilo de vida, ${J(vd,'; ',' y ')}.`);
+ const tm=REC.map(([k,n])=>{if(I['off.'+k])return'';const a=String(rcMerge(I,k)||'').trim().replace(/\s*\n+\s*/g,', '),hr=sv(I,'rc.'+k+'.hr');return a?`${low(n)}${hr?' ('+hr+' h)':''}: ${low(a)}`:''}).filter(Boolean);
+ let d1=tm.length?`En el R24H refiere ${tm.join('; ')}.`:'';
+ const hab=[];if(!tm.length){const hh=[['des','desayuno'],['alm','almuerzo'],['cen','cena'],['col','colaciones']].filter(([k])=>sv(I,'h.'+k)).map(([k,n])=>`${n} a las ${sv(I,'h.'+k)}`);if(hh.length)hab.push('sus horarios habituales son '+J(hh))}
+ if(sv(I,'ncom'))hab.push(`realiza ${sv(I,'ncom')} comidas al día${/^(no|ning|0+$)/i.test(sv(I,'ncol'))?' sin colaciones':/^\d+$/.test(sv(I,'ncol'))?' y '+sv(I,'ncol')+' colaciones':''}`);
+ if(yes(I.ayu))hab.push('refiere ayunos prolongados'+(sv(I,'ayu.h')?' ('+(/[a-zA-Z]/.test(I['ayu.h'])?sv(I,'ayu.h'):sv(I,'ayu.h')+' h sin comer')+')':''));else if(r.ayuno)hab.push('el R24H muestra ayunos o intervalos prolongados entre comidas');
+ if(sv(I,'agua')){const a=sv(I,'agua'),n=/^\d+([.,]\d+)?$/.test(a)?parseFloat(a.replace(',','.')):null;hab.push('su ingesta de agua simple es de '+(n==null?low(a):n<=5?a+' L al día':a+' vasos al día'))}
+ const bb=[...ckI(I,BEB,'beb.').filter(z=>z!=='otro'),...(sv(I,'beb.o')?[low(sv(I,'beb.o'))]:[])];if(bb.length)hab.push('acostumbra beber '+J(bb));
+ if(yes(I.sal))hab.push('agrega sal a los alimentos ya preparados');
+ if(sv(I,'afrec'))hab.push('consume con frecuencia '+low(sv(I,'afrec')));if(sv(I,'aevita'))hab.push('evita o consume poco '+low(sv(I,'aevita')));
+ if(I.fuera&&I.fuera!=='Nunca')hab.push('come fuera de casa '+low(I.fuera));
+ if(hab.length)d1+=(d1?' ':'')+`Respecto a sus hábitos alimentarios, ${J(hab,'; ',' y ')}.`;
+ if(r.an){const ff=r.an.f.filter(z=>z.lv==='bad'||z.lv==='warn').slice(0,3).map(z=>low(z.txt.replace(/\.$/,'')));if(ff.length)d1+=` El análisis del R24H señala lo siguiente: ${ff.join('; ')}.`}
+ if(d1.trim())P.push(d1.trim());
+ const gi=ckI(I,DIG,'dg.'),gs=[];if(gi.length)gs.push(`refiere ${J(gi)}${sv(I,'dg.f')?', con frecuencia '+low(sv(I,'dg.f')):''}`);
+ if(sv(I,'bristol'))gs.push(`reporta evacuaciones tipo ${sv(I,'bristol')} en la escala de Bristol`);if(sv(I,'mast'))gs.push('presenta problemas de masticación ('+low(sv(I,'mast'))+')');
+ if(gs.length)P.push(`A nivel gastrointestinal ${J(gs,'; ',' y ')}.`);
+ /* 4. Indicadores objetivos (ABCD) */
+ const O=[];
+ if(c){const w=num(c.peso),ph=num(sv(I,'phab')),dxT=/^normal/i.test(r.cl)?'peso normal':low(r.cl);
+  let a=`En la evaluación antropométrica registra peso actual de ${c.peso} kg`;
+  if(ph)a+=` frente a un peso habitual de ${ph} kg (${Math.abs(w-ph)<.05?'sin cambio':(w<ph?'descenso':'aumento')+' de '+fx(Math.abs(w-ph))+' kg'})`;
+  a+=`, estatura de ${c.est} cm e IMC de ${fx(r.imc)} kg/m², con diagnóstico de ${dxT}`;
+  const cin=num(c.cin),cad=num(c.cad),ex=[];
+  if(cin)ex.push(`cintura de ${cin} cm${!r.minor&&cin>=(sexM?90:80)?' (riesgo cardiometabólico)':''}`);if(cad)ex.push(`cadera de ${cad} cm`);
+  if(cin&&cad&&!r.minor){const ic=cin/cad;ex.push(`índice cintura-cadera de ${fx(ic,2)}${ic>(sexM?.9:.85)?' (elevado)':''}`)}
+  if(num(c.graso))ex.push(`${c.graso} % de grasa corporal`);if(num(c.musc))ex.push(`masa muscular de ${c.musc} kg`);
+  O.push(a+(ex.length?'; además se registran '+J(ex):'')+'.')}
  const bq=BQ.filter(([id])=>x.bq[id]!=null).map(([id,n])=>`${LN[id]||low(n)} de ${x.bq[id]} ${U[id]||''}${bqOut(id,x.bq[id],p)?' (fuera de rango)':''}`.replace(/\s+\(/,' ('));
- O.push(bq.length?`En los estudios de laboratorio se reporta ${J(bq,'; ',' y ')}.`:'No se cuenta con resultados de laboratorio recientes.');
- if(r.an){const f=r.an.f.filter(z=>z.lv==='bad'||z.lv==='warn').slice(0,4).map(z=>low(z.txt.replace(/\.$/,'')));O.push(`El recordatorio de 24 horas registra ${r.an.N} tiempos de comida${f.length?'; entre los hallazgos destacan los siguientes: '+J(f,'; ',' y ')+'':''}.`)}else O.push('No se registró recordatorio de 24 horas.');
- const A=`Con base en la información recabada, el paciente presenta ${c?cls:'un estado nutricional por precisar'}${r.labs.length?', con '+J(r.labs):''}. Los diagnósticos nutricionales se formulan en el apartado de Diagnóstico PES.`;
- const P=`Se establece el plan nutricional de trabajo que se detalla en el apartado correspondiente, con seguimiento programado para el ${fu()}.`;
- return [[ficha,...S1,...S2].join(' '),O.join(' '),A+' '+P].join('\n')}
+ if(bq.length)O.push(`En los estudios de laboratorio recientes se reporta ${J(bq,'; ',' y ')}.`);
+ const vt=[];if(sv(I,'ta')){const ta=taOf(I);vt.push(`TA de ${sv(I,'ta')} mmHg${ta&&!r.minor&&(ta.s>=130||ta.d>=80)?' (por arriba de lo esperado)':''}`)}if(sv(I,'fc'))vt.push(`FC de ${sv(I,'fc')} lpm`);
+ if(vt.length)O.push(`Signos vitales: ${J(vt)}.`);
+ const sg=[...ckI(I,SIGNOS,'sf.'),...(sv(I,'explo')?[low(sv(I,'explo'))]:[])];if(sg.length)O.push(`A la exploración física se observa ${J(sg,'; ',' y ')}.`);
+ if(O.length)P.push(O.join(' '));
+ return P.join('\n')}
+/* ---- Diagnóstico PES: una sola oración con "relacionado con" y "evidenciado por" ---- */
+function pesHC(x,r){const I=x.I,c=r.c,sexM=r.sexM,tags=r.tags.map(t=>t.replace(/^consumo de /,'alto consumo de ')),gis=ckI(I,DIG,'dg.'),S=[],ta=taOf(I);
+ if(yes(I.ayu)&&!tags.some(t=>/ayuno|horarios/.test(t)))tags.push('ayunos prolongados');
+ if(c){if(r.exceso||r.bajo)S.push(`IMC de ${fx(r.imc)} kg/m² (${low(r.cl)})`);const cin=num(c.cin);if(cin&&!r.minor&&cin>=(sexM?90:80))S.push(`circunferencia de cintura de ${cin} cm (de riesgo)`)}
+ r.labs.slice(0,3).forEach(l=>S.push(l));
+ if(ta&&!r.minor&&(ta.s>=130||ta.d>=80))S.push(`TA de ${sv(I,'ta')} mmHg`);
+ gis.filter(z=>/estre|reflujo|distens|diarrea|dolor|nausea|vomit/.test(nz(z))).forEach(z=>S.push(z+' referido'));
+ if(I.nrg==='Bajo')S.push('fatiga o nivel de energía bajo referido');
+ let Pn,E=[];const lab=r.G[0],k0=kbOf(x,r).find(k=>!k.sec||!(r.exceso||r.bajo||lab));
+ if(k0){Pn=k0.P;E=(k0.pt&&tags.length)?tags.slice(0,3):[k0.E];if(!S.length)S.push('antecedente de '+k0.n)}
+ else if(r.exceso){Pn='Ingesta excesiva de energía';E=tags.slice(0,3);if(!E.length)E=['un balance energético positivo sostenido (ingesta superior al gasto)']}
+ else if(r.bajo){Pn='Ingesta insuficiente de energía';E=[...(r.an&&r.an.N<3?['tiempos de comida insuficientes ('+r.an.N+' al día)']:[]),...tags].slice(0,3);if(!E.length)E=['una ingesta energética menor a sus requerimientos']}
+ else if(lab){Pn='Valores bioquímicos alterados ('+(/glucemia/.test(lab[0])?'glucemia':/^Perfil/.test(lab[0])?'perfil de lípidos':/^Hemoglobina/.test(lab[0])?'hemoglobina':'función hepática o renal')+')';E=(lab[1].length?lab[1]:tags).slice(0,3);if(!E.length)E=[lab[3]]}
+ else if(S.some(z=>/estre|reflujo|distens|diarrea/.test(nz(z)))){Pn='Alteración de la función gastrointestinal';E=tags.slice(0,3);if(!E.length)E=['ingesta insuficiente de fibra y de agua simple']}
+ else if(tags.length){const j=tags.join(' ');Pn=/ayuno|horarios/.test(j)?'Horarios de alimentación irregulares':/inactividad/.test(j)?'Sedentarismo':'Selección inadecuada de alimentos';E=tags.filter(t=>!(Pn[0]==='H'&&/ayuno|horarios/.test(t))).slice(0,3);if(!E.length)E=['falta de organización de los tiempos de comida'];if(!S.length)S.push(tags[0]+' referido')}
+ else if(c)return `Estado nutricional adecuado (IMC de ${fx(r.imc)} kg/m², ${low(r.cl)}) sin alteraciones bioquímicas ni hábitos de riesgo identificados en la entrevista.`;
+ else return 'Diagnóstico nutricional por establecer una vez capturados peso, talla y recordatorio de 24 horas.';
+ if(k0&&/^(erge|gastritis|sibo|sii|diarrea|estre|lactosa|celiaca|gastroparesia|disfagia|diverticular|eii)$/.test(k0.id))S.sort((a,b)=>(/ referido$/.test(b)?1:0)-(/ referido$/.test(a)?1:0));
+ return `${Pn} relacionado con ${J(E)}${S.length?' evidenciado por '+J(S.slice(0,5)):''}.`}
+/* ---- Plan de trabajo nutricional (prosa) ---- */
+function planHC(x,r){const I=x.I,c=r.c,p=x.p,e=r.e,w=c?num(c.peso):null,hh=c?num(c.est):null,minor=r.minor,sexM=r.sexM,gm=r.gm||{},L=[],pat=nz(x.pat+' '+sv(I,'med')),ta=taOf(I),R5=v=>Math.round(v/50)*50,
+ dmx=/diabet|\bdm\b|dm2|prediabet|resistencia a la insulina/.test(pat)||r.G.some(g=>/glucemia/.test(g[0])),
+ hta=/hipertens|\bhta\b|presion alta/.test(pat)||!!(ta&&!minor&&(ta.s>=130||ta.d>=80)),
+ dis=/dislipid|colesterol|trigliceri|hiperlipid/.test(pat)||r.G.some(g=>/^Perfil/.test(g[0])),ren=/renal|\berc\b/.test(pat),act=yes(I.af),gl=gastoLab(sv(I,'ocup')),kb=kbOf(x,r),kbm=minor?[]:kb;
+ let kcal=null,adj=0;
+ /* 1. Cálculo energético y meta ponderal */
+ if(w&&hh&&e){const f0=c.formula&&FM[c.formula]&&FM[c.formula][1](w,hh,e.a,p.sexo)!=null?c.formula:null,fm=f0||(minor?'sch':r.exceso?'mif':'hb'),
+   geb=FM[fm][1](w,hh,e.a,p.sexo),afv=num(c.af)||[1.2,1.375,1.55,1.725][Math.min(3,(gl==='alto'?2:gl==='moderado'?1:0)+(act?1:0))],etp=(c.eta===''||c.eta==null)?10:+c.eta,tot=geb*afv*(1+etp/100);
+  const dk=Math.max(0,...kbm.map(k=>k.mac&&k.mac.defk||0));
+  if(!minor){adj=r.exceso?-(dk||500):r.bajo?400:0;if(c.obj==='def')adj=-(num(c.objk)??500);else if(c.obj==='sup')adj=num(c.objk)??300}
+  kcal=R5(tot+adj);if(adj<0)kcal=Math.max(kcal,sexM?1500:1200);let dif=kcal-R5(tot);
+  const kkl=Math.max(0,...kbm.map(k=>k.kk?k.kk[0]:0));let kkUp=false;if(kkl&&kcal<kkl*w){kcal=R5(kkl*w);kkUp=true;dif=kcal-R5(tot)}
+  const m1=kbm.some(k=>k.id==='masld')?7:5;
+  const why=f0?'':minor?', por tratarse de edad pediátrica':r.exceso?', por ser la más adecuada en sobrepeso u obesidad':r.bajo?', por ser adecuada en bajo peso':', por ser adecuada en peso normal';
+  let t=`Para el cálculo energético se utiliza la fórmula de ${FM[fm][0].replace(/\s*\(.*\)/,'')}${why}, que estima un GEB de ${R5(geb)} kcal/día y un GET de ${R5(tot)} kcal/día (factor de actividad ${afv}${num(c.af)||!(gl||I.af)?'':', estimado según su ocupación y actividad física,'} y ETA de ${etp} %).`;
+  if(minor)t+=` Se prescribe una dieta normocalórica de ${kcal} kcal/día, sin restricción calórica, para favorecer el crecimiento y desarrollo adecuados.`;
+  else if(kkUp)t+=` Por la condición clínica se prescribe una dieta de ${kcal} kcal/día (al menos ${kkl} kcal/kg/día), priorizando la recuperación nutricional y proteica.`;
+  else if(dif<0)t+=` Con el objetivo clínico de reducción de peso se aplica un déficit de ${-dif} kcal/día (dieta hipocalórica de ${kcal} kcal/día), con meta ponderal de perder ${m1} a 10 % del peso actual (${fx(w*m1/100)} a ${fx(w*.1)} kg) en 3 a 6 meses, a un ritmo de 0.25 a 0.5 kg por semana.`;
+  else if(dif>0)t+=` Con el objetivo de recuperar peso se aplica un superávit de ${dif} kcal/día (dieta hipercalórica de ${kcal} kcal/día), con una ganancia gradual hasta alcanzar un IMC normal.`;
+  else t+=` Se prescribe una dieta normocalórica de ${kcal} kcal/día con la meta de mantener el peso actual.`;
+  L.push(t)}
+ else L.push('El cálculo energético se realizará con la fórmula predictiva más adecuada (Mifflin-St Jeor, Harris-Benedict o Valencia) una vez registrados peso, talla y edad.');
+ /* 2. Macronutrimentos, micronutrimentos, fibra, sodio e hidratación */
+ if(kcal){const ideal=22*(hh/100)**2,aj=r.imc>=30?ideal+.25*(w-ideal):null,ref=aj||w;
+  let pp=r.exceso&&!minor?20:15;const cap=ren?.8:minor?1.5:2,lo0=ren?0:.8;
+  if(kcal*pp/400/ref>cap)pp=Math.max(10,Math.round(cap*ref*4/kcal*100));else if(kcal*pp/400/ref<lo0)pp=Math.min(25,Math.round(lo0*ref*4/kcal*100));
+  const gkl=Math.max(0,...kbm.map(k=>k.gk?k.gk[0]:0)),ppl=kbm.map(k=>k.mac&&k.mac.pp||0);pp=Math.max(pp,...ppl);if(gkl&&!ren)pp=Math.max(pp,Math.round(gkl*ref*4/kcal*100));pp=Math.min(30,pp);{const his=kbm.filter(k=>k.gk).map(k=>k.gk[1]);if(his.length&&!ren&&!ppl.some(Boolean)){const gh=Math.max(gkl,Math.min(...his));if(kcal*pp/400/ref>gh+.05)pp=Math.max(10,Math.floor(gh*ref*4/kcal*100))}}if(kcal*pp/400/ref>2&&!ren)pp=Math.max(10,Math.floor(2*ref*4/kcal*100));
+   const lpr=kbm.map(k=>k.mac&&k.mac.lp||0).filter(Boolean),hpt=Math.min(100,...kbm.map(k=>k.mac&&k.mac.hp||100));let lp=dis?25:30;if(dmx)lp=Math.max(25,Math.min(35,100-pp-50));
+   if(hpt<100&&!lpr.length)lp=Math.max(25,Math.min(35,100-pp-hpt));if(lpr.length)lp=Math.min(...lpr);
+   if(lpr.length&&hpt<100&&100-pp-lp>hpt+2)pp=Math.min(Math.max(pp,25),100-lp-hpt);const pg=Math.round(kcal*pp/400),hp=100-pp-lp,
+   hg=Math.round(kcal*hp/400),lg=Math.round(kcal*lp/900),fib=minor?e.a+5:Math.max(kbm.some(k=>k.id==='ri')?28:25,Math.min(35,Math.round(14*kcal/1000)));
+  let t=`La distribución de macronutrimentos será de ${hp} % de hidratos de carbono (${hg} g), con azúcares simples menores al 10 % de la energía y predominio de complejos e integrales; ${pp} % de proteínas (${pg} g, equivalentes a ${fx(pg/ref)} g/kg de peso ${aj?'ajustado, '+fx(aj)+' kg':'actual'}); y ${lp} % de lípidos (${lg} g), priorizando grasas insaturadas (aceite de oliva, aguacate, oleaginosas y pescado) con grasa saturada menor al ${dis||kbm.some(k=>k.s7)?7:10} % de la energía.`;
+  t+=` Se ajusta la fibra a ${fib} g/día y el sodio a menos de ${hta?'2,000':'2,300'} mg/día${hta?' (aproximadamente 5 g de sal)':''}${minor?'.':`, con una hidratación de ${fx(w*.03)} a ${fx(w*.035)} L de agua simple al día (30 a 35 mL/kg).`}`;
+  if(r.G.some(g=>g[0]==='Hemoglobina baja'))t+=' Se reforzarán las fuentes de hierro hemo y vitamina C, y se valorará con el médico la suplementación.';
+  L.push(t)}
+ else L.push('Se prescribirán 50 a 55 % de hidratos de carbono, 15 a 20 % de proteínas y 25 a 30 % de lípidos, con fibra de 25 a 35 g/día, sodio moderado e hidratación de 30 a 35 mL/kg de agua simple.');
+ /* 3. Distribución y educación nutricional */
+ const des=sv(I,'rc.des.hr')||sv(I,'h.des'),cen=sv(I,'rc.cen.hr')||sv(I,'h.cen'),nc=parseInt(sv(I,'ncom'),10),tt=Math.max(0,...kb.map(k=>k.t||0)),cinco=tt>=5||minor||r.ayuno||yes(I.ayu)||dmx||(nc&&nc<3)||!!(r.an&&r.an.N<3),ed=[];
+ if(dmx)ed.push('índice glucémico y distribución de los hidratos de carbono');if(gm.baz||gm.ult||gm.dul)ed.push('lectura de etiquetas (azúcares añadidos, sodio y grasas)');ed.push('sistema de equivalentes y porciones');
+ if(r.an&&!gm.ver)ed.push('plato del bien comer, con énfasis en verduras');if(r.ayuno||yes(I.ayu))ed.push('importancia de los horarios regulares de comida');
+ L.push(`Se distribuirá la dieta en ${tt>=6?'tres comidas principales y tres colaciones':cinco?'tres comidas principales y dos colaciones':'tres comidas principales y una colación'}, con intervalos de 3 a 4 horas${des&&cen?', entre las '+des+' y las '+cen+' h, acorde con sus horarios habituales':''}. La educación nutricional se enfocará en ${J([...new Set(ed)].slice(0,3))}, de acuerdo con las fallas identificadas en su alimentación.`);
+ if(kb.length){const ids=kb.map(k=>k.id),pr0=kb.filter(k=>!k.sec),av=[...new Set(kb.flatMap(k=>k.av||[]))],ch=KBCH.filter(z=>z[0](ids,ren)).map(z=>z[1]);
+   let t=pr0.length>1?`Al coexistir ${J(pr0.map(k=>k.n))}, el plan integra las indicaciones de cada una y ajusta cada macronutrimento al valor más prudente. `:'';
+   t+=kb.slice(0,4).map(k=>k.pl).join(' ');if(av.length)t+=` Se evitarán ${J(av,av.some(z=>z.includes(','))?'; ':', ',' y ')}.`;if(ch.length)t+=` Ajustar según criterio clínico: ${ch.join('; ')}.`;L.push(t)}
+ {const ea=e?e.a:null,sed=no(I.af)||yes(I.sent),pr=[];if(dmx)pr.push('con diabetes, ingerir 15 g de carbohidrato de absorción rápida si la glucosa capilar es menor a 100 mg/dL antes de entrenar y posponer el ejercicio si es mayor a 250 mg/dL con cetonas');if(hta)pr.push('con hipertensión, evitar la maniobra de Valsalva y posponer la sesión si la TA en reposo supera 180/110 mmHg');if(r.imc>=35)pr.push('con obesidad grado II-III, priorizar ejercicio sin impacto (natación, bicicleta estática)');
+  if(ea!=null)L.push((ea<18?'En actividad física se indican 60 min/día de actividad moderada a vigorosa más 3 días/semana de fortalecimiento muscular y óseo, limitando las pantallas recreativas a menos de 2 horas/día.':ea>=65?'En actividad física se indican 150 min/semana de actividad aeróbica moderada, 2 días/semana de fuerza y 3 o más días/semana de ejercicio de equilibrio, evitando el reposo prolongado.':`En actividad física se indican 150 a 300 min/semana de actividad aeróbica moderada más fuerza al menos 2 días/semana${sed?', iniciando con 15 a 20 minutos de caminata 3 veces por semana y subiendo 5 minutos cada semana':''}, caminando 10 minutos tras las comidas principales`)+', con pausas activas de 2 a 3 minutos cada 30 a 60 minutos sentado'+(pr.length?'; precauciones: '+pr.join('; '):'')+'.')}
+ /* 4. Metas conductuales y seguimiento */
+ const mt=[];if(gm.baz||/ref|jug|ene/.test(Object.keys(I).filter(k=>/^beb\./.test(k)&&I[k]).join(' ')))mt.push('sustituir las bebidas azucaradas por agua simple');
+ if(gm.ult)mt.push('reducir el consumo de fritos, embutidos y ultraprocesados');if(r.ayuno||yes(I.ayu))mt.push('no pasar más de 5 a 6 horas sin comer');
+ if(!minor&&no(I.af))mt.push('caminar 20 a 30 minutos, tres veces por semana');if(r.an&&!gm.ver)mt.push('incluir verduras en al menos dos tiempos de comida al día');
+ if(mt.length<2)mt.push('llevar un registro de alimentos y respetar los horarios de comida');
+ const lbn=r.G.map(g=>/glucemia/.test(g[0])?'glucosa':/^Perfil/.test(g[0])?'perfil de lípidos':/^Hemoglobina/.test(g[0])?'hemoglobina':'pruebas de función hepática o renal'),
+  ind=['peso',...(num(c&&c.cin)||r.exceso?['circunferencia de cintura']:[]),'adherencia al plan (registro de alimentos y R24H)',...(lbn.length?['laboratorios de control ('+J(lbn)+')']:[])],
+  dias=(r.labs.length||dmx||r.bajo||minor)?14:(r.exceso?21:28);
+ L.push(`Como metas conductuales a corto plazo se establecen ${J(mt.slice(0,3))}. En la próxima consulta se evaluarán ${J(ind)}, y se programa el seguimiento para el ${fu2(dias,I.fecha)} (aproximadamente ${dias/7} semanas).`);
+ return L.join('\n')}
 function ctxHC(p){const I=p.hci||{},cs=csort(p).filter(c=>num(c.peso)&&num(c.est)),c=cs[cs.length-1]||null,pc=cs.length>1?cs[cs.length-2]:null,bq={};
  BQ.forEach(([id])=>{for(let i=2;i>=0;i--){const v=num(I['bq.'+id+'.'+i]);if(v!=null){bq[id]=v;break}}});const an=N.r24(p),ped=N.pedNow(p);
  return{p,I,c,prev:pc?{d:pc.fecha,w:num(pc.peso)}:null,bq,an,rc:N.recs(p,ped,an),hab:{af:I.af,sue:I.sue},pat:patS(p)+' '+(I.pdig||'')}}
@@ -3222,13 +3379,13 @@ function recNote(x,r){const gm=r.gm,c=r.c,L=[];
 function put(sel,val){const ta=document.querySelector(sel);if(!ta)return;ta.value=val;ta.style.height='auto';ta.style.height=Math.max(ta.scrollHeight,40)+'px';ta.dispatchEvent(new Event('input',{bubbles:true}))}
 function genHC(){const p=hcPat();if(!p)return;const I=p.hci||{};
  if(['nota1','nota','plan'].some(k=>String(I[k]||'').trim())&&!confirm('Ya hay texto en la nota, el PES o el plan. ¿Reemplazarlo con el borrador generado?'))return;
- const x=ctxHC(p),r=core(x);put('textarea[data-i="nota1"]',notaHC(x,r));put('textarea[data-i="nota"]',pesTxt(r));put('textarea[data-i="plan"]',planHC(x,r));
+ const x=ctxHC(p),r=core(x);put('textarea[data-i="nota1"]',notaHC(x,r));put('textarea[data-i="nota"]',pesHC(x,r));put('textarea[data-i="plan"]',planHC(x,r));
  toast(x.c||x.an?'Borrador generado: revísalo y ajústalo si lo necesitas':'Borrador generado con pocos datos: captura peso, talla y R24 para mejorarlo')}
 function genNote(){const p=cur();if(!p&&!gv('peso'))return toast('Captura primero los datos de la nota');
  if((gv('dx')||gv('pl'))&&!confirm('Ya hay texto en el PES o en el plan. ¿Reemplazarlo con el borrador generado?'))return;
  const x=ctxNote(p),r=core(x);put('#mf-dx',pesTxt(r));put('#mf-pl',recNote(x,r));toast('Borrador generado: revísalo y ajústalo. Los pendientes no se llenan.')}
 function mk(t,fn){const w=document.createElement('span');w.className='genwrap noprint';w.innerHTML='<button type="button" class="s">✨ '+t+'</button> <span class="bnt">Borrador con los datos capturados; revísalo y ajústalo.</span><br>';w.querySelector('button').onclick=fn;return w}
-function add(){const a=document.querySelector('textarea[data-i="nota1"]'),sc=a&&a.closest('.hs');if(sc&&!document.querySelector('.genwrap[data-hc]')){const w=mk('Generar nota, PES y plan',genHC);w.dataset.hc='1';w.style.cssText='display:block;margin:6px 0';const br=w.querySelector('br');if(br)br.remove();sc.parentNode.insertBefore(w,sc)}
+function add(){const a=document.querySelector('textarea[data-i="nota1"]'),sc=a&&a.closest('.hs');if(sc&&!document.querySelector('.genwrap[data-hc]')){const w=mk('Llenar',genHC);w.dataset.hc='1';w.style.cssText='display:block;margin:6px 0';const br=w.querySelector('br');if(br)br.remove();sc.parentNode.insertBefore(w,sc)}
  const d=document.getElementById('mf-dx');if(d&&!d.parentNode.querySelector('.genwrap'))d.parentNode.insertBefore(mk('Generar PES y recomendaciones',genNote),d.parentNode.querySelector('.bbwrap')||d)}
 let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;add()})}).observe(document.getElementById('view'),{childList:true,subtree:true});
 const st=document.createElement('style');st.textContent='@media print{.genwrap{display:none!important}}';document.head.appendChild(st);add();
