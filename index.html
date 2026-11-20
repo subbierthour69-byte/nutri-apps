@@ -3083,14 +3083,14 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
    h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button>'+nv+'</span>')}
   else if(MF&&MF.np)h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button><button class="g" data-nv="np" style="margin-left:24px" title="Escribe el nombre del paciente, o usa la última nota guardada">◀ Nota anterior</button></span>');
   return nhdr()+fbar(p,'notas')+h};
- document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&q.dataset.nv==='np'){const nom=(document.querySelector('#mf-pn')||{value:''}).value.trim();let pt=null;
+ document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&q.dataset.nv==='np'){window.NDR&&NDR.snap();const nom=(document.querySelector('#mf-pn')||{value:''}).value.trim();let pt=null;
    if(nom){const dp=findDup(nom,(document.querySelector('#mf-pe')||{value:''}).value.trim(),(document.querySelector('#mf-pnac')||{value:''}).value);pt=dp&&dp.p}
    if(!pt&&NS.last)pt=DB.p.find(x=>x.id===NS.last.pid);
    if(!pt)return toast('Escribe el nombre del paciente para ver su nota anterior');
    const L=nl(pt),lt=NS.last&&NS.last.pid===pt.id&&L.find(r=>r.id===NS.last.nid)||L[L.length-1];
    if(!lt)return toast('Ese paciente aún no tiene notas');
    DB.sel=pt.id;NS.pf=pt.id;NS.lst=false;MF={key:'notas',id:lt.id};fillSel();render();window.scrollTo(0,0);return}
-  if(q&&!q.disabled){const dirty=MF&&!MF.id&&[...document.querySelectorAll('#mform textarea,#mform input')].some(x=>x.value.trim()&&!/^(date|hora)$/.test((x.id||'').replace('mf-','')));if(dirty&&!confirm('Hay datos sin guardar en esta nota nueva. ¿Salir sin guardar?'))return;MF={key:'notas',id:q.dataset.nv==='new'?'':q.dataset.nv};render();window.scrollTo(0,0);return}const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
+  if(q&&!q.disabled){window.NDR&&NDR.snap();const dirty=MF&&!MF.id&&[...document.querySelectorAll('#mform textarea,#mform input')].some(x=>x.value.trim()&&!/^(date|hora)$/.test((x.id||'').replace('mf-','')));if(dirty)toast('Lo que escribiste queda como borrador: lo recuperas al volver a esta nota');MF={key:'notas',id:q.dataset.nv==='new'?'':q.dataset.nv};render();window.scrollTo(0,0);return}const b=e.target.closest('[data-fb]');if(!b)return;const a=b.dataset.fb;MF=null;NS.mode='con';
   if(a==='lista'){NS.lst=true;NS.q='';render();return}
   NS.lst=false;NS.pf=DB.sel;go(a)});
 }
@@ -3530,6 +3530,56 @@ function add(){const a=document.querySelector('textarea[data-i="nota1"]'),sc=a&&
 let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;add()})}).observe(document.getElementById('view'),{childList:true,subtree:true});
 const st=document.createElement('style');st.textContent='@media print{.genwrap{display:none!important}}';document.head.appendChild(st);add();
 })();
+/* =====================================================================
+   v3.3 — NOTAS SUBSECUENTES: lo que escribes ya no se pierde
+   · Borrador automático de la nota abierta (aunque imprimas, canceles, uses la flecha ← o «Nota anterior»).
+     Al volver a esa nota se recupera solo; se borra al Guardar o con «Descartar borrador».
+   · «Nota anterior» ya no pregunta «¿Salir sin guardar?»: tu texto queda guardado como borrador.
+   · La flecha ← desde una nota abierta lleva a la lista de notas (antes volvía a abrir una nota en blanco).
+   ===================================================================== */
+(function(){
+ const DK='nc_nd_'+KEY,MAXAGE=3*864e5;
+ let D={};try{D=JSON.parse(localStorage.getItem(DK)||'{}')||{}}catch(e){D={}}
+ const persist=()=>{try{Object.keys(D).forEach(k=>{if(!D[k]||Date.now()-D[k].t>MAXAGE)delete D[k]});
+  if(Object.keys(D).length)localStorage.setItem(DK,JSON.stringify(D));else localStorage.removeItem(DK)}catch(e){}};
+ const fkey=()=>MF&&MF.key==='notas'?(MF.np?'np':(DB.sel||''))+'|'+(MF.id||'new'):null;
+ const fields=()=>[...document.querySelectorAll('#view [id^="mf-"]')].filter(e=>!e.readOnly&&!e.disabled);
+ const readForm=()=>{const o={};fields().forEach(e=>{o[e.id.slice(3)]=String(e.value==null?'':e.value)});return o};
+ const same=(a,b)=>{const ka=Object.keys(a);return ka.length===Object.keys(b).length&&ka.every(k=>a[k]===b[k])};
+ let base=null,baseK=null,tm=0;
+ function snap(){clearTimeout(tm);const k=fkey();if(!k||!document.getElementById('mform')||baseK!==k||!base)return;
+  const v=readForm();if(same(v,base)){if(D[k]){delete D[k];persist()}return}
+  D[k]={t:Date.now(),v};persist()}
+ const later=()=>{clearTimeout(tm);tm=setTimeout(snap,250)};
+ ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.closest&&e.target.closest('#mform,#npid'))later()},true));
+ window.NDR={snap};
+
+ /* restaurar el borrador cada vez que se dibuja la nota (ya con fechas y editores listos) */
+ {const _i=V.notas.i;V.notas.i=function(){_i.apply(this,arguments);const k=fkey();base=null;baseK=null;if(!k)return;
+  setTimeout(()=>{if(fkey()!==k||!document.getElementById('mform'))return;base=readForm();baseK=k;
+   const d=D[k];if(!d||!d.v||Date.now()-d.t>MAXAGE)return;let n=0;
+   fields().forEach(e=>{const id=e.id.slice(3);if(!(id in d.v))return;const v=d.v[id];
+    if(String(e.value==null?'':e.value)!==v){e.value=v;n++;e.dispatchEvent(new Event('input',{bubbles:true}))}});
+   if(n){const f=document.getElementById('mform');
+    if(f&&!document.getElementById('ndbn'))f.insertAdjacentHTML('afterbegin','<div class="msg noprint" id="ndbn" style="margin:0 0 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:200px">♻ Recuperé lo que habías escrito en esta nota y no habías guardado.</span><button class="s g" type="button" data-nd="discard">Descartar borrador</button></div>')}
+  },90)}}
+ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-nd]');if(!b)return;
+  const k=fkey();if(k&&D[k]){delete D[k];persist()}base=null;baseK=null;render();toast('Borrador descartado')});
+
+ /* al guardar la nota, su borrador ya no hace falta */
+ {const _a=agAfterNote;agAfterNote=function(tp,sid){const r=_a.apply(this,arguments);const k=fkey();if(k&&D[k]){delete D[k];persist()}clearTimeout(tm);base=null;baseK=null;return r}}
+
+ /* flecha ←: desde una nota abierta vuelve a la lista de notas conservando el borrador */
+ {const _b=$('#back').onclick;$('#back').onclick=function(e){
+  if(location.hash==='#notas'&&MF&&MF.key==='notas'){snap();if(!NS.fromPac){NS.lst=true;MF=null;render();return}}
+  return _b.call(this,e)}}
+
+ /* impresión / cambio de pestaña: guardar el borrador justo antes */
+ addEventListener('beforeprint',snap,true);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)snap()});
+ addEventListener('pagehide',snap);
+})();
+
 </script>
 </body>
 </html>
