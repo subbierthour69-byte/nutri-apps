@@ -2825,7 +2825,7 @@ function notasRowsHTML(){const q=_nz(NS.q),L=notasRows().filter(x=>!q||_nz(pn(x.
  return L.map(({p,r})=>{const nm=`<b>${esc(pn(p))}</b>${pExp(p)?`<div class="note" style="margin:0">Exp. ${esc(pExp(p))}</div>`:''}`;
   if(!r)return `<tr class="clk" data-new="${p.id}"><td>${nm}<td colspan="8" style="color:var(--mut)">Sin notas · clic para crear la primera<td class="n"><button class="s" data-new="${p.id}">+ Nota</button>`;
   const o=imcDx(p,r.date,num(r.peso),num(r.talla));
-  return `<tr class="clk" data-open="${p.id}|${r.id}"><td>${nm}<td>${fd(r.date)}<td>${esc(r.hora||'—')}<td>${o.e?edShort(o.e):'—'}<td class="n">${fx(num(r.peso))}<td class="n">${o.imc!=null?fx(o.imc,1):'—'}<td>${esc(o.dx||'—')}<td>${esc(cut(String(r.dx||'').replace(/\*\*/g,''),48)||'—')}<td>${r.prox?fd(r.prox):'—'}<td class="n"><button class="s g" data-nprint="${p.id}|${r.id}">Imprimir</button> <button class="s d" data-ndel="${p.id}|${r.id}">✕</button>`}).join('')}
+  return `<tr class="clk" data-open="${p.id}|${r.id}"><td>${nm}<td>${fd(r.date)}<td>${esc(r.hora||'—')}<td>${o.e?edShort(o.e):'—'}<td class="n">${fx(num(r.peso))}<td class="n">${o.imc!=null?fx(o.imc,1):'—'}<td>${esc(o.dx||'—')}<td>${esc(cut(String(r.dx||'').replace(/\*\*/g,''),48)||'—')}<td>${r.prox?fd(r.prox):'—'}<td class="n"><button class="s" data-open="${p.id}|${r.id}">✎ Editar</button> <button class="s g" data-nprint="${p.id}|${r.id}">Imprimir</button> <button class="s d" data-ndel="${p.id}|${r.id}">✕</button>`}).join('')}
 function notasListHTML(){const con=NS.mode==='con',c=cur();
  const seg=`<div class="seg"><button data-nm="con" class="${con?'':'g'}">Con paciente</button><button data-nm="sin" class="${con?'g':''}">Sin paciente</button></div>`;
  if(!con)return seg+`<div class="card"><h2>Nota de paciente no registrado</h2><p class="note" style="margin-top:0">Para pacientes que ya tienen expediente en el trabajo pero aún no están en la app. Al guardar la nota, el paciente se registra automáticamente.</p><p><button data-x="newpat">+ Nota de paciente no registrado</button></p></div>`;
@@ -3079,9 +3079,9 @@ if(!sessionStorage.getItem('nc_ok'))showPicker();
  V.hc.h=function(){const h=_hh.apply(this,arguments),p=hcPat();return(p&&DB.p.includes(p)&&!HS.cfg?fbar(p,'hc'):'')+h};
  V.notas.h=function(){if(!MF&&NS.mode==='con'&&!NS.lst)MF=(NS.pf&&NS.pf===DB.sel&&cur())?{key:'notas',id:''}:{key:'notas',id:'',np:1};const p=MF&&MF.key==='notas'&&!MF.np?cur():null;dedupeN();const h0=_nh.apply(this,arguments);let h=h0.replace('<button data-x="saveprint">Guardar e imprimir</button>','<button data-x="saveprint" style="margin-left:24px">Imprimir</button>');
   if(p&&MF&&!MF.np){const L=nl(p),ix=MF.id?L.findIndex(r=>r.id===MF.id):L.length,pv=ix>0?L[ix-1]:null,nx=MF.id&&ix>=0&&ix<L.length-1?L[ix+1]:null;
-   const nv=`<button class="g" data-nv="${pv?pv.id:''}" ${pv?'':'disabled'} style="margin-left:24px">◀ Nota anterior${pv&&pv.date?' ('+fd(pv.date)+')':''}</button>`+(MF.id?(nx?`<button class="g" data-nv="${nx.id}">Nota siguiente ▶</button>`:`<button class="g" data-nv="new">＋ Nota nueva</button>`):'');
+   const nv=`<button class="g" data-nv="${pv?pv.id:''}" ${pv?'':'disabled'} style="margin-left:24px">${MF.id?'◀ Nota anterior':'✎ Editar nota anterior'}${pv&&pv.date?' ('+fd(pv.date)+')':''}</button>`+(MF.id?(nx?`<button class="g" data-nv="${nx.id}">Nota siguiente ▶</button>`:`<button class="g" data-nv="new">＋ Nota nueva</button>`):'');
    h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button>'+nv+'</span>')}
-  else if(MF&&MF.np)h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button><button class="g" data-nv="np" style="margin-left:24px" title="Escribe el nombre del paciente, o usa la última nota guardada">◀ Nota anterior</button></span>');
+  else if(MF&&MF.np)h=h.replace('<button class="g" data-x="cancel">Cancelar</button></span>','<button class="g" data-x="cancel">Cancelar</button><button class="g" data-nv="np" style="margin-left:24px" title="Escribe el nombre del paciente, o usa la última nota guardada">✎ Editar nota anterior</button></span>');
   return nhdr()+fbar(p,'notas')+h};
  document.addEventListener('click',e=>{const q=e.target.closest('[data-nv]');if(q&&q.dataset.nv==='np'){window.NDR&&NDR.snap();const nom=(document.querySelector('#mf-pn')||{value:''}).value.trim();let pt=null;
    if(nom){const dp=findDup(nom,(document.querySelector('#mf-pe')||{value:''}).value.trim(),(document.querySelector('#mf-pnac')||{value:''}).value);pt=dp&&dp.p}
@@ -3578,6 +3578,165 @@ const st=document.createElement('style');st.textContent='@media print{.genwrap{d
  addEventListener('beforeprint',snap,true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)snap()});
  addEventListener('pagehide',snap);
+})();
+
+/* =====================================================================
+   v3.4 — PLAN DE DIETA Y EJERCICIO (formato + seguimiento)
+   · Un plan por paciente (puedes tener varios y duplicarlos): objetivo, kcal y macros (se pueden traer de la última
+     consulta), comidas con horario (se puede traer el menú asignado), plan semanal de ejercicio y recomendaciones.
+   · Seguimiento semanal: días cumplidos, minutos, esfuerzo, apego a la dieta, peso y cintura → % de cumplimiento y gráfica.
+   · Se guarda solo al escribir. «Imprimir plan» usa una ventana aparte (no toca lo que tienes en pantalla) e incluye
+     una hoja de registro semanal para que el paciente la lleve.
+   ===================================================================== */
+(function(){
+ const DIAS=[['lun','Lunes'],['mar','Martes'],['mie','Miércoles'],['jue','Jueves'],['vie','Viernes'],['sab','Sábado'],['dom','Domingo']];
+ const ACTS=['Descanso','Caminata','Trote / correr','Ciclismo','Natación','Pesas / fuerza','Circuito funcional','HIIT','Yoga / estiramiento','Baile','Deporte de equipo','Caminadora / elíptica'];
+ const OBJ_D=['Pérdida de peso','Mantenimiento','Aumento de masa muscular','Control glucémico','Control de lípidos','Control de presión arterial','Crecimiento y desarrollo','Otro'];
+ const OBJ_E=['Pérdida de grasa','Ganancia de masa muscular','Salud cardiometabólica','Mantenimiento','Movilidad / rehabilitación'];
+ const NIV=['Principiante','Intermedio','Avanzado'],INTS=['Ligera','Moderada','Vigorosa'],HRS=['08:00','11:00','14:00','17:00','20:00'];
+ const PS={pid:null,sel:null,seg:null,sd:{}};
+ const plans=p=>{p.mod=p.mod||{};return p.mod.plan=p.mod.plan||[]};
+ const sorted=p=>plans(p).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id.localeCompare(a.id));
+ const curPlan=p=>plans(p).find(x=>x.id===PS.sel)||null;
+ const segs=pl=>(pl.seg=pl.seg||[]);
+ const g=(o,path)=>path.split('.').reduce((a,k)=>a==null?'':a[k],o);
+ function setPath(o,path,v){const ks=path.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]]=a[ks[i]]||{};a[ks[ks.length-1]]=v}
+ const isAct=d=>{const a=String((d&&d.act)||'').trim();return !!a&&!/^descanso$/i.test(a)};
+ const planned=pl=>DIAS.filter(([k])=>isAct(((pl.ex||{}).sem||{})[k])).length;
+ const plannedMin=pl=>DIAS.reduce((s,[k])=>{const d=((pl.ex||{}).sem||{})[k];return s+(isAct(d)?(num(d.min)||0):0)},0);
+ const hechos=r=>DIAS.filter(([k])=>r.dias&&r.dias[k]).length;
+ const cumpl=(pl,r)=>{const n=planned(pl);return n?Math.min(100,Math.round(hechos(r)/n*100)):null};
+ const col=q=>q==null?'var(--mut)':q>=80?'var(--ok)':q>=50?'#d99a00':'var(--bad)';
+
+ function blankPlan(p){const c=lastC(p),e=c&&en(c,p),m=c?metaOf(c,e):null,com={};MEALS.forEach((x,i)=>com[i]={h:HRS[i],t:''});
+  return{id:uid(),date:today(),rev:'',obj:'Pérdida de peso',dx:'',pi:c?(num(c.peso)??''):'',pm:'',kcal:m?m.k:'',prot:m?m.p:'',cho:m?m.hc:'',lip:m?m.l:'',agua:'',com,rec:'',lim:'',
+   ex:{obj:'Salud cardiometabólica',niv:'Principiante',meta:150,sem:{},cal:'5–10 min de calentamiento articular y caminata suave al inicio; 5 min de estiramientos al final.',prec:'',prog:''},seg:[]}}
+
+ const macTxt=(pl,html)=>{const k=num(pl.kcal);if(!k)return'';const a=num(pl.prot),b=num(pl.cho),c=num(pl.lip),s=(a||0)+(b||0)+(c||0),gr=(x,f)=>x?Math.round(k*x/100/f)+' g':'— g';
+  return`Proteínas ${a??'—'} % (${gr(a,4)}) · Hidratos de carbono ${b??'—'} % (${gr(b,4)}) · Lípidos ${c??'—'} % (${gr(c,9)})`+(s&&s!==100?(html?` <b style="color:var(--bad)">⚠ suman ${s} %</b>`:` (suman ${s} %)`):'')};
+ const exTxt=pl=>{const n=planned(pl),m=plannedMin(pl),meta=num((pl.ex||{}).meta);return`Sesiones por semana: <b>${n}</b> · Minutos planeados: <b>${m}</b>`+(meta?` · Meta: ${meta} min/sem → <b style="color:${m>=meta?'var(--ok)':'#d99a00'}">${m>=meta?'cumple la meta':'faltan '+(meta-m)+' min'}</b>`:'')};
+
+ /* ---------- campos ---------- */
+ const inp=(pl,path,l,type,x)=>`<div${x&&x.span?` style="grid-column:span ${x.span}"`:''}><label for="pl-${path}">${l}</label><input id="pl-${path}" data-f="${path}" ${type==='number'?'type="number" step="any" data-n="1"':'type="'+type+'"'} value="${esc(g(pl,path))}" ${x&&x.list?'list="'+x.list+'"':''} ${x&&x.ph?'placeholder="'+esc(x.ph)+'"':''} autocomplete="off"></div>`;
+ const sel=(pl,path,l,o,blank)=>{const v=g(pl,path);return`<div><label for="pl-${path}">${l}</label><select id="pl-${path}" data-f="${path}">${blank?'<option value=""></option>':''}${o.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`};
+ const area=(pl,path,l,ph)=>`<div style="grid-column:1/-1"><label for="pl-${path}">${l}</label><textarea id="pl-${path}" data-f="${path}" placeholder="${esc(ph||'')}">${esc(g(pl,path))}</textarea></div>`;
+
+ function segForm(pl){const d=PS.sd,D=d.dias||{};
+  return`<div class="card" id="pl-seg" style="border-left:6px solid var(--pri)"><h2>${PS.seg?'Editar semana':'Registrar semana de seguimiento'}</h2>
+  <div class="grid"><div><label for="sd-date">Semana que inicia (lunes)</label><input id="sd-date" data-sd="date" type="date" value="${esc(d.date||'')}"></div>
+  <div><label for="sd-min">Minutos totales de ejercicio</label><input id="sd-min" data-sd="min" type="number" step="any" value="${esc(d.min)}"></div>
+  <div><label for="sd-rpe">Esfuerzo percibido (1-10)</label><input id="sd-rpe" data-sd="rpe" type="number" min="1" max="10" step="1" value="${esc(d.rpe)}"></div>
+  <div><label for="sd-adh">Apego a la dieta (0-10)</label><input id="sd-adh" data-sd="adh" type="number" min="0" max="10" step="1" value="${esc(d.adh)}"></div>
+  <div><label for="sd-peso">Peso (kg)</label><input id="sd-peso" data-sd="peso" type="number" step="any" value="${esc(d.peso)}"></div>
+  <div><label for="sd-cin">Cintura (cm)</label><input id="sd-cin" data-sd="cin" type="number" step="any" value="${esc(d.cin)}"></div></div>
+  <label style="margin-top:10px">Días en que sí hizo el ejercicio (${planned(pl)} planeados por semana)</label>
+  <div class="gap" style="flex-wrap:wrap;margin:4px 0 10px">${DIAS.map(([k,l])=>`<label style="display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--tx);margin:0;padding:6px 10px;border:1px solid var(--bd);border-radius:8px${isAct(((pl.ex||{}).sem||{})[k])?';background:#0e8f7814':''}"><input type="checkbox" style="width:auto" data-sd="d.${k}" ${D[k]?'checked':''}> ${l}</label>`).join('')}</div>
+  <label for="sd-n">Observaciones (qué se le dificultó, lesiones, cambios)</label><textarea id="sd-n" data-sd="n">${esc(d.n)}</textarea>
+  <p style="margin-bottom:0"><button data-a="segsave">Guardar semana</button> <button class="g" data-a="segcancel">Cancelar</button></p></div>`}
+
+ function chart(pl){const L=segs(pl).filter(r=>r.date).sort((a,b)=>a.date.localeCompare(b.date)).slice(-12);if(L.length<2||!planned(pl))return'';
+  const W=Math.max(320,L.length*56+20),H=130,bw=34;
+  const bars=L.map((r,i)=>{const q=cumpl(pl,r)||0,h=Math.round(q/100*80),x=14+i*56;return`<rect x="${x}" y="${100-h}" width="${bw}" height="${h}" rx="3" fill="${col(q)}"/><text x="${x+bw/2}" y="${95-h}" text-anchor="middle" font-size="11" fill="currentColor">${q}%</text><text x="${x+bw/2}" y="116" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">${r.date.slice(8,10)}/${r.date.slice(5,7)}</text>`}).join('');
+  return`<h3 style="margin:14px 0 4px;font-size:13px">Cumplimiento del ejercicio por semana</h3><div class="wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Cumplimiento semanal"><line x1="8" y1="100" x2="${W-8}" y2="100" stroke="currentColor" opacity=".3"/>${bars}</svg></div>`}
+
+ function segSection(pl){const L=segs(pl).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')),n=planned(pl);
+  const cs=L.map(r=>cumpl(pl,r)).filter(q=>q!=null),avg=cs.length?Math.round(cs.reduce((a,b)=>a+b,0)/cs.length):null,last=L[0]?cumpl(pl,L[0]):null;
+  const mins=L.map(r=>num(r.min)).filter(v=>v!=null),mavg=mins.length?Math.round(mins.reduce((a,b)=>a+b,0)/mins.length):null,meta=num((pl.ex||{}).meta);
+  const pw=L.filter(r=>num(r.peso)!=null).map(r=>[r.date,+r.peso]),pi=num(pl.pi),pm=num(pl.pm),pa=pw.length?pw[0][1]:null;
+  const kp=(v,l,c)=>`<div class="card kpi" style="margin:0${c?';color:'+c:''}">${v}<small>${l}</small></div>`;
+  const kpis=L.length?`<div class="grid" style="margin-bottom:10px">${kp(avg==null?'—':avg+' %','Cumplimiento promedio',col(avg))}${kp(last==null?'—':last+' %','Última semana',col(last))}${kp(mavg==null?'—':mavg+' min','Minutos por semana (promedio)'+(meta?' · meta '+meta:''),mavg!=null&&meta?(mavg>=meta?'var(--ok)':'#d99a00'):'')}${kp(pa==null?'—':fx(pa,1)+' kg','Peso más reciente'+(pi!=null&&pa!=null?' · '+(pa-pi>0?'+':'')+fx(pa-pi,1)+' vs inicio':'')+(pm!=null?' · meta '+fx(pm,1):''))}</div>`:'';
+  return`<div class="card"><div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Seguimiento semanal del ejercicio y la dieta</h2>${PS.seg===null?'<button data-a="segnew">＋ Registrar semana</button>':''}</div>
+  ${n?'':'<div class="msg" style="margin-bottom:10px">Llena primero el plan semanal de ejercicio (días con actividad) para que el cumplimiento se calcule solo.</div>'}
+  ${kpis}${chart(pl)}
+  <div class="wrap" style="margin-top:8px"><table><tr><th>Semana<th>Días<th class="n">Sesiones<th class="n">Cumpl.<th class="n">Min<th class="n">Esfuerzo<th class="n">Dieta (0-10)<th class="n">Peso<th class="n">Cintura<th>Observaciones<th></tr>
+  ${L.map(r=>{const q=cumpl(pl,r);return`<tr><td>${fd(r.date)}<td style="white-space:nowrap">${DIAS.map(([k,l])=>`<span title="${l}" style="${r.dias&&r.dias[k]?'color:var(--ok);font-weight:700':'color:var(--mut)'}">${l[0]=='M'&&k==='mie'?'X':l[0]}</span>`).join(' ')}<td class="n">${hechos(r)}/${n||'—'}<td class="n"><b style="color:${col(q)}">${q==null?'—':q+' %'}</b><td class="n">${r.min!==''&&r.min!=null?fx(r.min,0):'—'}<td class="n">${r.rpe||'—'}<td class="n">${r.adh!==''&&r.adh!=null?r.adh:'—'}<td class="n">${r.peso?fx(r.peso,1):'—'}<td class="n">${r.cin?fx(r.cin,1):'—'}<td>${esc(String(r.n||'').slice(0,70))}<td class="n"><button class="s g" data-a="segedit" data-id="${r.id}">Editar</button> <button class="s d" data-a="segdel" data-id="${r.id}">✕</button>`}).join('')||'<tr><td colspan="11">Aún no hay semanas registradas.'}</table></div></div>`+(PS.seg!==null?segForm(pl):'')}
+
+ function planForm(p,pl){const ex=pl.ex||(pl.ex={sem:{}}),asg=lib('menus').filter(m=>m.asig&&m.asig[p.id]);
+  return`<div class="card"><h2>Datos del plan</h2><div class="grid">
+   ${inp(pl,'date','Fecha de inicio','date')}${inp(pl,'rev','Próxima revisión','date')}${sel(pl,'obj','Objetivo nutricional',OBJ_D)}${inp(pl,'dx','Diagnóstico / condición','text',{span:2,ph:'Ej. Obesidad grado I, prediabetes'})}
+   ${inp(pl,'pi','Peso inicial (kg)','number')}${inp(pl,'pm','Peso meta (kg)','number')}</div></div>
+  <div class="card"><div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Plan de alimentación</h2><button class="s g" data-a="meta" title="Toma kcal y macros de la última consulta del paciente">Traer meta de la última consulta</button></div>
+   <div class="grid">${inp(pl,'kcal','Energía (kcal/día)','number')}${inp(pl,'prot','Proteínas (%)','number')}${inp(pl,'cho','Hidratos de carbono (%)','number')}${inp(pl,'lip','Lípidos (%)','number')}${inp(pl,'agua','Agua (L/día)','number')}</div>
+   <p class="note" id="pl-mac" style="margin:6px 0 10px">${macTxt(pl,1)}</p>
+   <div class="gap" style="margin:0 0 8px;align-items:center;flex-wrap:wrap">${asg.length?`<select id="pl-menusel" style="max-width:300px">${asg.map(m=>`<option value="${m.id}">${esc(m.nombre)}${m.kcal?' · '+fx(m.kcal,0)+' kcal':''}</option>`).join('')}</select><button class="s g" data-a="menu">Traer menú asignado</button>`:'<span class="note" style="margin:0">Tip: si asignas un menú en «Dietas dinámicas», aquí puedes traerlo con un clic.</span>'}</div>
+   <div class="wrap"><table><tr><th style="width:130px">Comida<th style="width:110px">Horario<th>Menú / alimentos</tr>
+   ${MEALS.map((m,i)=>`<tr><td><b>${m}</b><td><input type="time" data-f="com.${i}.h" value="${esc(g(pl,'com.'+i+'.h'))}" aria-label="Horario ${m}"><td><textarea data-f="com.${i}.t" aria-label="Menú ${m}" style="min-height:78px" placeholder="Un alimento por línea">${esc(g(pl,'com.'+i+'.t'))}</textarea>`).join('')}</table></div>
+   <div class="grid" style="margin-top:10px">${area(pl,'rec','Recomendaciones','Ej. Tomar agua simple, masticar despacio, no saltar comidas…')}${area(pl,'lim','Alimentos a limitar o evitar','')}</div></div>
+  <div class="card"><h2>Plan de ejercicio</h2><div class="grid">${sel(pl,'ex.obj','Objetivo del ejercicio',OBJ_E)}${sel(pl,'ex.niv','Nivel actual',NIV)}${inp(pl,'ex.meta','Meta semanal (min)','number')}</div>
+   <p class="note" id="pl-etot" style="margin:6px 0 10px">${exTxt(pl)}</p>
+   <datalist id="pl-acts">${ACTS.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+   <div class="wrap"><table><tr><th style="width:110px">Día<th style="width:200px">Actividad<th style="width:90px" class="n">Minutos<th style="width:130px">Intensidad<th>Indicaciones (series, repeticiones, ritmo)</tr>
+   ${DIAS.map(([k,l])=>{const b='ex.sem.'+k;return`<tr><td><b>${l}</b><td><input data-f="${b}.act" list="pl-acts" value="${esc(g(pl,b+'.act'))}" aria-label="Actividad ${l}" autocomplete="off"><td><input type="number" step="any" data-n="1" data-f="${b}.min" value="${esc(g(pl,b+'.min'))}" aria-label="Minutos ${l}"><td><select data-f="${b}.int" aria-label="Intensidad ${l}"><option value=""></option>${INTS.map(x=>`<option ${x===g(pl,b+'.int')?'selected':''}>${x}</option>`).join('')}</select><td><input data-f="${b}.det" value="${esc(g(pl,b+'.det'))}" aria-label="Indicaciones ${l}" placeholder="Ej. 3 x 12 sentadilla, 20 min a ritmo cómodo" autocomplete="off">`}).join('')}</table></div>
+   <div class="grid" style="margin-top:10px">${area(pl,'ex.cal','Calentamiento y enfriamiento','')}${area(pl,'ex.prec','Precauciones / contraindicaciones','Ej. Evitar impacto por dolor de rodilla; suspender si hay mareo o dolor en el pecho')}${area(pl,'ex.prog','Progresión (cómo aumentar con las semanas)','Ej. Cada 2 semanas aumentar 5 min por sesión')}</div></div>`}
+
+ const V0={t:'Plan de dieta y ejercicio',
+  h(){const p=cur();if(!p)return noP;
+   if(PS.pid!==p.id){PS.pid=p.id;PS.sel=null;PS.seg=null;PS.sd={}}
+   const L=sorted(p);if(!L.find(x=>x.id===PS.sel))PS.sel=L[0]?L[0].id:null;const pl=curPlan(p);
+   let h=phead(p)+`<div class="card"><div class="gap" style="flex-wrap:wrap;align-items:end"><div style="min-width:240px;flex:1"><label for="pl-sel">Plan</label><select id="pl-sel">${L.map(x=>`<option value="${x.id}" ${x.id===PS.sel?'selected':''}>${fd(x.date)} · ${esc(x.obj||'Plan')}${x.kcal?' · '+fx(x.kcal,0)+' kcal':''}</option>`).join('')||'<option>Sin planes</option>'}</select></div>
+   <button data-a="new">＋ Nuevo plan</button>${pl?'<button class="g" data-a="dup">Duplicar</button><button class="g" data-a="print">🖨 Imprimir plan</button><button class="s d" data-a="del">Eliminar</button>':''}<span id="pl-st" class="note" style="margin:0">${pl?'Se guarda solo al escribir':''}</span></div></div>`;
+   if(!pl)return h+'<div class="card"><p style="margin:0">Este paciente aún no tiene plan. Pulsa <b>＋ Nuevo plan</b>: se llena con la meta de su última consulta y de ahí lo ajustas.</p></div>';
+   return h+planForm(p,pl)+segSection(pl)},
+  i(){const v=$('#view');let tm=0;
+   const st=t=>{const e=$('#pl-st');if(e)e.textContent=t};
+   const flush=()=>{if(tm){clearTimeout(tm);tm=0;save();st('Guardado ✓')}};
+   v.oninput=v.onchange=e=>{const t=e.target;
+    if(t.id==='pl-sel'){if(e.type==='change'){flush();PS.sel=t.value;PS.seg=null;render()}return}
+    if(t.dataset.sd!==undefined){const k=t.dataset.sd;if(k.startsWith('d.')){PS.sd.dias=PS.sd.dias||{};PS.sd.dias[k.slice(2)]=t.checked}else PS.sd[k]=t.type==='number'?(t.value===''?'':+t.value):t.value;return}
+    const f=t.dataset.f;if(!f)return;const p=cur(),pl=p&&curPlan(p);if(!pl)return;
+    let val=t.value;if(t.dataset.n)val=val===''?'':num(val);setPath(pl,f,val);
+    const m=$('#pl-mac');if(m)m.innerHTML=macTxt(pl,1);const x=$('#pl-etot');if(x)x.innerHTML=exTxt(pl);
+    st('Guardando…');clearTimeout(tm);tm=setTimeout(()=>{tm=0;save();st('Guardado ✓ '+new Date().toTimeString().slice(0,5))},500)};
+   addEventListener('pagehide',flush,{once:true});
+   v.onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,p=cur();if(!p)return;let pl=curPlan(p);flush();
+    if(a==='new'){const n=blankPlan(p);plans(p).push(n);PS.sel=n.id;PS.seg=null;save();render();toast('Plan creado: llena los campos, se guarda solo');return}
+    if(!pl)return;
+    if(a==='dup'){const n=JSON.parse(JSON.stringify(pl));n.id=uid();n.date=today();n.seg=[];plans(p).push(n);PS.sel=n.id;PS.seg=null;save();render();toast('Plan duplicado (sin seguimiento)');return}
+    if(a==='del'){if(!confirm('¿Eliminar este plan y todo su seguimiento? No se puede deshacer.'))return;p.mod.plan=plans(p).filter(x=>x!==pl);PS.sel=null;PS.seg=null;save();render();return}
+    if(a==='print'){planPrint(p,pl);return}
+    if(a==='meta'){const c=lastC(p);if(!c)return toast('El paciente no tiene consultas para tomar la meta');const m=metaOf(c,en(c,p));pl.kcal=m.k;pl.prot=m.p;pl.cho=m.hc;pl.lip=m.l;save();render();toast('Meta traída de la consulta del '+fd(c.fecha));return}
+    if(a==='menu'){const s=$('#pl-menusel'),m=s&&lib('menus').find(x=>x.id===s.value);if(!m)return;
+     if(MEALS.some((x,i)=>String(g(pl,'com.'+i+'.t')).trim())&&!confirm('Ya hay alimentos escritos. ¿Reemplazarlos con el menú «'+m.nombre+'»?'))return;
+     pl.com=pl.com||{};MEALS.forEach((x,i)=>{pl.com[i]=pl.com[i]||{h:HRS[i]};pl.com[i].t=(m.comidas&&m.comidas[x])||''});if(m.kcal&&!pl.kcal)pl.kcal=m.kcal;if(m.notas&&!String(pl.rec||'').trim())pl.rec=m.notas;save();render();toast('Menú traído');return}
+    if(a==='segnew'){PS.seg='';PS.sd={date:today(),dias:{}};render();const f=$('#pl-seg');f&&f.scrollIntoView({block:'center'});return}
+    if(a==='segedit'){const r=segs(pl).find(x=>x.id===b.dataset.id);if(r){PS.seg=r.id;PS.sd=JSON.parse(JSON.stringify(r));render();const f=$('#pl-seg');f&&f.scrollIntoView({block:'center'})}return}
+    if(a==='segdel'){if(!confirm('¿Eliminar esta semana del seguimiento?'))return;pl.seg=segs(pl).filter(x=>x.id!==b.dataset.id);save();render();return}
+    if(a==='segsave'){const d=PS.sd;if(!d.date)return toast('Captura la fecha de la semana');
+     if(PS.seg){const r=segs(pl).find(x=>x.id===PS.seg);if(r)Object.assign(r,JSON.parse(JSON.stringify(d)))}else segs(pl).push({...JSON.parse(JSON.stringify(d)),id:uid()});
+     PS.seg=null;PS.sd={};save();render();toast('Semana guardada');return}
+    if(a==='segcancel'){PS.seg=null;PS.sd={};render()}}}};
+
+ /* ---------- hoja imprimible ---------- */
+ function planDoc(p,pl){const lg=fmHead(),nu=NUT_D(),e=edad(p.nac),ex=pl.ex||{sem:{}},H=p.hci||{},fm=iso=>iso?iso.split('-').reverse().join('/'):'';
+  const css=`@page{size:letter;margin:11mm 12mm}*{box-sizing:border-box}body{margin:0;font:10pt/1.3 Aptos,Calibri,Carlito,Arial,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pg{page-break-after:always}.pg:last-child{page-break-after:auto}.hd{display:flex;justify-content:space-between;align-items:center;min-height:.45in}.hd img{max-height:.5in;max-width:2.6in}h1{font:700 15pt Georgia,'Times New Roman',serif;text-align:center;letter-spacing:.06em;margin:4px 0 0;color:#3f4a42;text-transform:uppercase}h1 small{display:block;font-size:10pt;letter-spacing:.1em}.rule{width:.9in;height:1.5pt;background:#b79c7d;margin:4px auto 8px}h3{background:#d3dbcd;color:#3f4a42;font:400 10.5pt Georgia,'Times New Roman',serif;text-transform:uppercase;letter-spacing:.04em;margin:9px 0 4px;padding:2px 8px;border-radius:3px}table{border-collapse:collapse;width:100%}th,td{border:.6pt solid #000;padding:2.5px 6px;vertical-align:top;text-align:left}th{background:#e6ebe1}.c{text-align:center}.box{border:.8pt solid #000;padding:5px 8px;margin-bottom:4px}.k{display:flex;gap:4px 18px;flex-wrap:wrap}.k span{white-space:nowrap}pre{white-space:pre-wrap;font:inherit;margin:0}.sig{margin-top:18px;text-align:right}.sig div{display:inline-block;min-width:3in;border-top:.7pt solid #000;text-align:center;padding-top:2px}.bx{display:inline-block;width:11pt;height:11pt;border:.9pt solid #000;vertical-align:-2pt}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}`;
+  const head=`<div class="hd"><div>${lg.l?`<img src="${lg.l}" alt="">`:''}</div><div>${lg.r?`<img src="${lg.r}" alt="">`:''}</div></div>`;
+  const pat=`<div class="box"><div class="k"><span><b>Paciente:</b> ${esc(pn(p))}</span><span><b>Edad:</b> ${e?esc(edShort(e)):'—'}</span><span><b>Expediente:</b> ${esc(pExp(p))||'—'}</span></div><div class="k"><span><b>Inicio:</b> ${fm(pl.date)||'—'}</span><span><b>Próxima revisión:</b> ${fm(pl.rev)||'—'}</span><span><b>Objetivo:</b> ${esc(pl.obj||'—')}</span>${pl.dx?`<span><b>Dx:</b> ${esc(pl.dx)}</span>`:''}</div><div class="k"><span><b>Peso inicial:</b> ${pl.pi!==''&&pl.pi!=null?fx(pl.pi,1)+' kg':'—'}</span><span><b>Peso meta:</b> ${pl.pm!==''&&pl.pm!=null?fx(pl.pm,1)+' kg':'—'}</span></div></div>`;
+  const meals=MEALS.map((m,i)=>`<tr><td><b>${m}</b><td class="c">${esc(g(pl,'com.'+i+'.h'))}<td><pre>${esc(g(pl,'com.'+i+'.t'))}</pre>`).join('');
+  const week=DIAS.map(([k,l])=>{const d=(ex.sem||{})[k]||{};return`<tr><td><b>${l}</b><td>${esc(d.act||'')}<td class="c">${d.min!==''&&d.min!=null?esc(d.min):''}<td>${esc(d.int||'')}<td>${esc(d.det||'')}`}).join('');
+  const opt=(t,v)=>v&&String(v).trim()?`<h3>${t}</h3><pre>${esc(v)}</pre>`:'';
+  const regRows=Array.from({length:8},()=>`<tr style="height:.42in"><td>${DIAS.map(()=>'<td class="c"><span class="bx"></span>').join('')}<td><td><td><td><td></tr>`).join('');
+  return`<!doctype html><html lang="es"><meta charset="utf-8"><title>Plan de dieta y ejercicio · ${esc(pn(p))}</title><style>${css}</style>
+  <div class="pg">${head}<h1>Plan de alimentación<small>y de ejercicio</small></h1><div class="rule"></div>${pat}
+  <h3>Plan de alimentación</h3>${pl.kcal?`<div class="box"><b>${esc(fx(pl.kcal,0))} kcal/día</b> · ${macTxt(pl,0)}${pl.agua?' · Agua: '+esc(pl.agua)+' L/día':''}</div>`:''}
+  <table><tr><th style="width:92px">Comida<th style="width:60px" class="c">Horario<th>Menú</tr>${meals}</table>
+  <div class="${pl.rec&&String(pl.rec).trim()&&pl.lim&&String(pl.lim).trim()?'g2':''}">${pl.rec&&String(pl.rec).trim()?`<div><h3>Recomendaciones</h3><pre>${esc(pl.rec)}</pre></div>`:''}${pl.lim&&String(pl.lim).trim()?`<div><h3>Limitar o evitar</h3><pre>${esc(pl.lim)}</pre></div>`:''}</div>
+  <h3>Plan de ejercicio</h3><div class="box"><div class="k"><span><b>Objetivo:</b> ${esc(ex.obj||'—')}</span><span><b>Nivel:</b> ${esc(ex.niv||'—')}</span><span><b>Meta semanal:</b> ${ex.meta?esc(ex.meta)+' min':'—'}</span><span><b>Sesiones por semana:</b> ${planned(pl)}</span></div></div>
+  <table><tr><th style="width:80px">Día<th style="width:150px">Actividad<th style="width:60px" class="c">Minutos<th style="width:80px">Intensidad<th>Indicaciones</tr>${week}</table>
+  ${opt('Calentamiento y enfriamiento',ex.cal)}${opt('Precauciones',ex.prec)}${opt('Progresión',ex.prog)}
+  <div class="sig"><div>${esc(nu.nut)}<br>Nutrióloga · CP: ${esc(nu.cp)}</div></div></div>
+  <div class="pg">${head}<h1>Registro de seguimiento<small>semanal</small></h1><div class="rule"></div>${pat}
+  <p style="margin:6px 0">Marca con una ✔ los días en que hiciste tu ejercicio y anota tus minutos, tu esfuerzo (1 = muy suave, 10 = máximo), qué tanto seguiste tu dieta (0-10) y tu peso. Lleva esta hoja a tu próxima consulta.</p>
+  <table><tr><th>Semana del<th class="c">L<th class="c">M<th class="c">X<th class="c">J<th class="c">V<th class="c">S<th class="c">D<th>Min. totales<th>Esfuerzo (1-10)<th>Dieta (0-10)<th>Peso (kg)<th>Notas</tr>${regRows}</table></html>`}
+ function planPrint(p,pl){const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  f.onload=()=>setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),4000)},350);f.srcdoc=planDoc(p,pl)}
+ window.PLN={doc:planDoc};
+
+ /* ---------- registrar la sección en el menú ---------- */
+ V.planes=V0;
+ {const A=NAV[0][1];if(!A.some(x=>x[0]==='planes')){const i=A.findIndex(x=>x[0]==='dietas');A.splice(i<0?A.length:i+1,0,['planes','Dieta y ejercicio','dumb']);
+  $('#nav').innerHTML=NAV.map(([s,l])=>`<div class="sec">${s}</div>`+l.map(([id,t,ic])=>`<a data-v="${id}" tabindex="0">${ico(ic)}${t}</a>`).join('')).join('')}}
+ if((location.hash||'')==='#planes')render();
+ else document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===(location.hash||'#hc').slice(1)));
 })();
 
 </script>
