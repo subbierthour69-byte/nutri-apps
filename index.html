@@ -3611,12 +3611,24 @@ const st=document.createElement('style');st.textContent='@media print{.genwrap{d
    W.forEach(n=>{const w=blankWeek();if(ex.sem)DIAS.forEach(([k])=>{if(oldAct(ex.sem[k]))w.d[k]=true});w.ej=acts;ex.w[n]=w})}
   if(!pl.s4){pl.s4={};const old=(pl.seg||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,4);
    W.forEach((n,i)=>{const r=old[i];pl.s4[n]=r?{d:Object.assign({},r.dias||{}),min:r.min==null?'':r.min,rpe:r.rpe==null?'':r.rpe,adh:r.adh==null?'':r.adh,peso:r.peso==null?'':r.peso,cin:r.cin==null?'':r.cin,n:r.n||''}:blankSeg()})}
-  if(pl.segtxt==null)pl.segtxt='';return pl}
+  if(pl.segtxt==null)pl.segtxt='';
+  if(!pl.compras)pl.compras={fv:'',pr:'',ce:'',la:'',gr:'',ot:''};return pl}
  const planned=(pl,n)=>DIAS.filter(([k])=>g(pl,'ex.w.'+n+'.d.'+k)).length;
  const hechos=(pl,n)=>DIAS.filter(([k])=>g(pl,'s4.'+n+'.d.'+k)).length;
  const cumpl=(pl,n)=>{const p=planned(pl,n);return p?Math.min(100,Math.round(hechos(pl,n)/p*100)):null};
  const hasReg=(pl,n)=>{const r=pl.s4[n];return hechos(pl,n)>0||['min','rpe','adh','peso','cin'].some(k=>r[k]!==''&&r[k]!=null)||!!String(r.n||'').trim()};
  const col=q=>q==null?'var(--mut)':q>=80?'var(--ok)':q>=50?'#d99a00':'var(--bad)';
+
+ const CATS=[['fv','Frutas y verduras','apple'],['pr','Proteínas','cut'],['ce','Cereales y tubérculos','bowl'],['la','Lácteos','drop'],['gr','Grasas y oleaginosas','nuts'],['ot','Otros / despensa','clip']];
+ const RX=[['pr',/pollo|pechuga|pescado|atun|huevo|carne|\bres\b|cerdo|pavo|lenteja|frijol|garbanzo|jamon|sardina|salmon|camaron|tofu|clara|bistec|filete|soya|molida/],['la',/leche|yogur|queso|requeson|panela|cottage|kefir/],['gr',/almendra|nuez|nueces|cacahuate|aguacate|aceite|semilla|chia|oleaginosa|mantequilla|pistache|aceituna|crema/],['ce',/avena|arroz|tortilla|\bpan\b|pasta|papa|camote|cereal|galleta|hot ?cake|quinoa|elote|palomita|tostada|amaranto|granola|bolillo|salvado|trigo|maiz/],['fv',/fruta|manzana|platano|naranja|papaya|melon|sandia|fresa|uva|pera|mango|guayaba|pina|jicama|pepino|zanahoria|jitomate|tomate|verdura|ensalada|nopal|espinaca|lechuga|brocoli|calabaz|chayote|cebolla|ajo|limon|mandarina|durazno|kiwi|champi|\bcol\b|coliflor|apio|betabel/]];
+ const nrm=t=>String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+ /* junta los alimentos de las 3 opciones de menú como artículos de compra (sin cantidades ni formas de preparación),
+    los clasifica por tipo y agrega solo los que aún no están */
+ const PREP=/\b(a la plancha|al horno|al vapor|a la mexicana|asad[oa]s?|cocid[oa]s?|hervid[oa]s?|picad[oa]s?|natural(?:es)?|al gusto|libre)\b/gi;
+ const articulos=raw=>String(raw).replace(/^[\s\-•·*]+/,'').replace(/\(.*?\)/g,' ').split(/\s+y\s+|\s+con\s+|\s*[,+;]\s*/i).map(x=>{x=x.replace(/\d+([\/.,]\d+)?\s*(g|gr|kg|ml|l|pzas?|pz|tazas?|cdas?|cditas?|cucharadas?|rebanadas?)?\b\s*(de\s+)?/gi,' ').replace(PREP,' ').replace(/\s+/g,' ').trim();return x?x[0].toUpperCase()+x.slice(1):''}).filter(Boolean);
+ function genCompras(pl){ensure(pl);const have=new Set();CATS.forEach(([k])=>String(pl.compras[k]||'').split('\n').forEach(l=>{if(l.trim())have.add(nrm(l))}));let n=0;
+  ML.forEach((m,i)=>['t','t2','t3'].forEach(k=>String(g(pl,'com.'+i+'.'+k)).split('\n').forEach(raw=>articulos(raw).forEach(l=>{const key=nrm(l);if(have.has(key))return;have.add(key);
+   const cat=(RX.find(([c,r])=>r.test(key))||['ot'])[0];pl.compras[cat]=(pl.compras[cat]?pl.compras[cat].replace(/\n+$/,'')+'\n':'')+l;n++}))));return n}
 
  function blankPlan(p){const c=lastC(p),e=c&&en(c,p),m=c?metaOf(c,e):null,com={};ML.forEach((x,i)=>com[i]={h:HRS[i],t:'',t2:'',t3:''});
   const ex={obj:'Salud cardiometabólica',niv:'Principiante',w:{},cal:'5–10 min de calentamiento articular y caminata suave al inicio; 5 min de estiramientos al final.',prec:'',prog:''};W.forEach(n=>ex.w[n]=blankWeek());
@@ -3665,7 +3677,11 @@ const st=document.createElement('style');st.textContent='@media print{.genwrap{d
    ${W.map(n=>{const b='s4.'+n,f=(k,l,t)=>`<input data-f="${b}.${k}" ${t==='n'?'type="number" step="any" data-n="1"':''} value="${esc(g(pl,b+'.'+k))}" aria-label="${l} semana ${n}" autocomplete="off">`;
     return`<tr><td class="c"><b style="font-size:18px">${n}</b><td>${chips(pl,b+'.d')}<td class="n" id="pl-pn-${n}">${planned(pl,n)}<td class="n" id="pl-cu-${n}">${cuHTML(pl,n)}<td>${f('min','Minutos','n')}<td>${f('rpe','Esfuerzo','n')}<td>${f('adh','Apego a la dieta','n')}<td>${f('peso','Peso','n')}<td>${f('cin','Cintura','n')}<td>${f('n','Observaciones')}`}).join('')}</table></div>
    <div id="pl-kpi">${kpiHTML(pl)}</div>
-   <div class="grid" style="margin-top:10px">${area(pl,'segtxt','Seguimiento (indicaciones de control, próxima cita)','')}</div></div>`}
+   <div class="grid" style="margin-top:10px">${area(pl,'segtxt','Seguimiento (indicaciones de control, próxima cita)','')}</div></div>
+  <div class="card" id="pl-comp"><div class="gap" style="margin-bottom:8px"><h2 style="margin:0;flex:1">Lista de compras</h2><button class="s g" data-a="gen" title="Agrega los alimentos de las 3 opciones de menú">Generar desde los menús</button></div>
+   <p class="note" style="margin:0 0 8px">Sale al final del plan impreso (última página). «Generar» junta los alimentos de las 3 opciones de menú y los ordena por tipo; después corrige, quita o agrega lo que quieras (un alimento por línea).</p>
+   <div class="grid">${CATS.map(([k,t])=>`<div><label for="pl-compras.${k}">${t}</label><textarea id="pl-compras.${k}" data-f="compras.${k}" style="min-height:100px" placeholder="Un alimento por línea">${esc(g(pl,'compras.'+k))}</textarea></div>`).join('')}</div>
+   <label style="display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--tx)"><input type="checkbox" style="width:auto" data-f="compInc" ${pl.compInc===false?'':'checked'}> Incluir la lista de compras al imprimir</label></div>`}
 
  const V0={t:'Plan integral de dieta y ejercicio',
   h(){const p=cur();if(!p)return noP;
@@ -3693,6 +3709,7 @@ const st=document.createElement('style');st.textContent='@media print{.genwrap{d
     if(a==='del'){if(!confirm('¿Eliminar este plan y todo su control de progreso? No se puede deshacer.'))return;p.mod.plan=plans(p).filter(x=>x!==pl);PS.sel=null;save();render();return}
     if(a==='print'){planPrint(p,ensure(pl));return}
     if(a==='meta'){const c=lastC(p);if(!c)return toast('El paciente no tiene consultas para tomar la meta');const m=metaOf(c,en(c,p));pl.kcal=m.k;pl.prot=m.p;pl.cho=m.hc;pl.lip=m.l;save();render();toast('Meta traída de la consulta del '+fd(c.fecha));return}
+    if(a==='gen'){const n=genCompras(pl);save();render();toast(n?n+' alimentos agregados a la lista':'No hay alimentos nuevos en los menús');const c=$('#pl-comp');c&&c.scrollIntoView({block:'start'});return}
     if(a==='menu'){const s=$('#pl-menusel'),o=($('#pl-menuopt')||{}).value||'t',m=s&&lib('menus').find(x=>x.id===s.value);if(!m)return;
      if(ML.some((x,i)=>String(g(pl,'com.'+i+'.'+o)).trim())&&!confirm('Ya hay alimentos escritos en esa opción. ¿Reemplazarlos con el menú «'+m.nombre+'»?'))return;
      ML.forEach((x,i)=>{pl.com[i]=pl.com[i]||{h:HRS[i]};pl.com[i][o]=(m.comidas&&m.comidas[MEALS[i]])||''});if(m.kcal&&!pl.kcal)pl.kcal=m.kcal;if(m.notas&&!String(pl.rec||'').trim())pl.rec=m.notas;save();render();toast('Menú traído a la '+({t:'opción 1',t2:'opción 2',t3:'opción 3'})[o])}}}};
@@ -3726,7 +3743,7 @@ const st=document.createElement('style');st.textContent='@media print{.genwrap{d
 table{border-collapse:collapse;width:100%}th,td{border:.6pt solid #9aa592;padding:3px 5px;vertical-align:top;font-size:8pt}th{background:#cfd6c4;font-weight:600;text-align:center}th small{display:block;font-weight:400;font-size:6.3pt}td.sn{background:#cfd6c4;text-align:center;font:600 14pt Georgia,'Times New Roman',serif;width:.62in;vertical-align:middle}td{height:.32in;white-space:pre-wrap}td.c{text-align:center}.xt{padding:3px 8px 4px;font-size:7pt;color:#33443a;border-top:.6pt solid #9aa592}
 .ft{display:grid;grid-template-columns:1.25fr .95fr 1.2fr 1.1fr;gap:.12in;margin-top:.12in;align-items:stretch}.bx2{background:#cfd6c4;border-radius:12px;padding:7px 11px;break-inside:avoid}.bx2 h4{margin:0 0 3px;font-size:9.4pt;font-weight:600;display:flex;align-items:center;gap:7px}.bx2 h4 svg{width:20px;height:20px}.bx2 .ln{border-bottom:.7pt solid #5d6b60;min-height:.19in;white-space:pre-wrap;font-size:8pt}
 .gl{display:flex;gap:3px;margin-top:5px}.gl svg{width:19px;height:25px}.sc{font:italic 14pt 'Brush Script MT','Segoe Script','Lucida Handwriting',cursive;color:#2f4a3a;text-align:center;transform:rotate(-6deg);line-height:1.15}.sg{text-align:center;font-size:7pt;color:#33443a;margin-top:4px}
-.dc{display:inline-flex;flex-direction:column;align-items:center;gap:1px;margin:0 2px;font-size:7pt;color:#8a9a82}.dc.p{color:#1f2d25;font-weight:600}.dc .bx{display:inline-block;width:13px;height:13px;border:.9pt solid #2f4a3a;border-radius:2px;font-size:9pt;line-height:11px;text-align:center;color:#2f4a3a;background:#fff}.dc:not(.p) .bx{border-color:#b9c2b1;background:transparent}`;
+.dc{display:inline-flex;flex-direction:column;align-items:center;gap:1px;margin:0 2px;font-size:7pt;color:#8a9a82}.dc.p{color:#1f2d25;font-weight:600}.dc .bx{display:inline-block;width:13px;height:13px;border:.9pt solid #2f4a3a;border-radius:2px;font-size:9pt;line-height:11px;text-align:center;color:#2f4a3a;background:#fff}.dc:not(.p) .bx{border-color:#b9c2b1;background:transparent}.cg{display:grid;grid-template-columns:repeat(3,1fr);gap:.12in .14in;margin-top:.16in}.cr{display:grid;grid-template-columns:15px 1fr;gap:6px;align-items:end;min-height:.265in}.cr .bx{width:12px;height:12px;border:.9pt solid #2f4a3a;border-radius:2px;background:#fff;align-self:center}.cr .tx{border-bottom:.7pt solid #5d6b60;min-height:.235in;display:flex;align-items:flex-end}.cr .tx span{white-space:pre-wrap;padding:0 2px 1px;font-size:8.4pt}.ch{display:flex;align-items:center;gap:7px;justify-content:center}.ch svg{width:15px;height:15px;stroke:#fff}`;
   const brand=`<div class="brand">${svg('apple','#2f4a3a',1.5)}<b>NUTRICIÓN</b><small>SALUD · EQUILIBRIO · BIENESTAR</small></div>`;
   const dec=`<div class="dec">${leaf('left:-.42in;top:-.5in;width:1.5in',-35)}${leaf('left:-.55in;top:.25in;width:1.1in',-15)}${leaf('right:-.6in;top:-.2in;width:1.6in',150)}${leaf('right:-.6in;bottom:-.8in;width:1.7in',200)}${leaf('left:-.6in;bottom:-1in;width:1.6in',-160)}</div>`;
   const pat=`<div class="pat"><div><span>Nombre:</span><i>${esc(pn(p))}</i></div><div><span>Edad:</span><i>${e?esc(edShort(e)):''}</i><span>Sexo:</span><i>${sexo}</i></div><div><span>Objetivo:</span><i>${esc(pl.obj||'')}</i></div><div><span>Fecha de inicio:</span><i>${fm(pl.date)}</i></div></div>`;
@@ -3749,7 +3766,12 @@ table{border-collapse:collapse;width:100%}th,td{border:.6pt solid #9aa592;paddin
   <div class="trn" style="margin-top:.2in"><div class="bar">${svg('clip','#fff',2)}<h3>Control de progreso – 4 semanas</h3><em>Marca tus días, anota tus resultados y llévalo a tu consulta</em></div>
   <table><tr><th style="width:.62in">Semana<th>Plan de la semana<th>Días cumplidos<small>(marca ✔ los días que entrenaste)</small><th>Sesiones<th>Minutos<th>Esfuerzo<small>(1-10)</small><th>Dieta<small>(0-10)</small><th>Peso<small>(kg)</small><th>Cintura<small>(cm)</small><th>Observaciones</tr>${W.map(prow).join('')}</table></div>
   <div class="ft" style="grid-template-columns:1.5fr 1fr 1.1fr;margin-top:.18in"><div class="bx2"><h4>${svg('clip')}¿Cómo me sentí? / Mis logros:</h4>${lines('',4)}</div><div class="bx2"><h4>${svg('drop')}Hidratación diaria:</h4><div class="gl">${svg('glass','#2f4a3a',1.5).repeat(8)}</div><div style="margin-top:8px"><b>Próxima cita:</b> ${pl.rev?fm(pl.rev):'____ / ____ / ________'}</div></div>${sig}</div></div></div>`;
-  return`<!doctype html><html lang="es"><meta charset="utf-8"><title>Plan integral · ${esc(pn(p))}</title><style>${css}</style>${p1}${p2}</html>`}
+  const ccard=([k,t,ic])=>{const it=String(g(pl,'compras.'+k)).split('\n').map(x=>x.trim()).filter(Boolean);while(it.length<7)it.push('');
+   return`<div class="mn"><div class="pill ch" style="font-size:11pt">${svg(ic,'#fff',2)}${t}</div>${it.map(x=>`<div class="cr"><span class="bx"></span><div class="tx"><span>${esc(x)}</span></div></div>`).join('')}</div>`};
+  const p3=`<div class="pg">${dec}<div class="in">${top('Lista de compras','Nutrición + Entrenamiento',27)}
+  <div class="cg">${CATS.map(ccard).join('')}</div>
+  <div class="ft" style="grid-template-columns:1.6fr 1fr;margin-top:.16in"><div class="bx2"><h4>${svg('apple')}Para recordar:</h4><div style="font-size:8.2pt">Marca ✔ lo que ya compraste. La lista reúne los alimentos de las 3 opciones de menú: elige la opción de cada comida y compra solo lo que vayas a usar.</div></div>${sig}</div></div></div>`;
+  return`<!doctype html><html lang="es"><meta charset="utf-8"><title>Plan integral · ${esc(pn(p))}</title><style>${css}</style>${p1}${p2}${pl.compInc===false?'':p3}</html>`}
  function planPrint(p,pl){const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
   f.onload=()=>setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),4000)},350);f.srcdoc=planDoc(p,pl)}
  window.PLN={doc:planDoc};
