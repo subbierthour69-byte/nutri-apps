@@ -1313,7 +1313,9 @@ const DIG=[['nau','Náuseas'],['vom','Vómitos'],['dia','Diarrea'],['est','Estre
 const BEB=[['cafe','Café'],['te','Té'],['jug','Jugos'],['ref','Refrescos'],['ene','Energéticos'],['otro','Otro']];
 const INTOL=[['nin','Ninguna'],['lac','Lactosa'],['glu','Gluten'],['otro','Otro']];
 /* Recordatorio de 24 h: [clave, nombre, ¿es colación? (se puede quitar)] */
-const REC=[['des','Desayuno',0],['alm','Almuerzo',0],['cen','Cena',0],['cm','Colación matutina',1],['cv','Colación vespertina',1]];
+const REC=[['des','Desayuno',0],['alm','Almuerzo',0],['cen','Cena',0],['cm','Colación matutina',1],['cv','Colación vespertina',1],['c3','Colación 3',2],['c4','Colación 4',2],['c5','Colación 5',2]];
+/* Las colaciones extra (tipo 2) están ocultas por defecto y se activan con I['on.k']; las demás se ocultan con I['off.k'] */
+const rcOff=(I,k)=>{const r=REC.find(x=>x[0]===k);return r&&r[2]===2?!I['on.'+k]:!!I['off.'+k]};
 /* Bioquímicos: [clave, nombre, texto de referencia, mín, máx, máx exclusivo?]  (hemoglobina según sexo) */
 const BQ=[['glu','Glucosa ayuno','70-100 mg/dL',70,100],['cre','Creatinina','0.6-1.2 mg/dL',.6,1.2],['hba','HbA1c','<5.7 %',null,5.7,1],
  ['hb','Hemoglobina','♀: 12–15 · ♂: 13–17 g/dL',null,null],['alt','ALT (TGP)','10-40 U/L',10,40],['tg','Triglicéridos','<150 mg/dL',null,150,1],
@@ -1383,12 +1385,13 @@ const SL=(k,l,o,w)=>{const cv=k==='ec'&&ECL[I[k]]?ECL[I[k]]:I[k],oo=cv&&!o.inclu
   ${BQ.map(([id,n,ref])=>`<tr><td><b>${n}</b><td>${ref}${[0,1,2].map(i=>{const k=`bq.${id}.${i}`;return `<td><input data-i="${k}" type="number" step="any" value="${esc(I[k])}"${bqOut(id,I[k],p)?' class="out"':''}>`}).join('')}`).join('')}</table></div>
   <p class="note">Los valores fuera de rango se marcan en rojo.</p>`;
  /* --- Recordatorio de 24 h: tabla formal; las colaciones se pueden quitar --- */
- const rcRow=([k,n,col])=>I['off.'+k]?'':`<tr><td style="width:200px"><b>${n}</b><div class="gap" style="margin-top:4px;gap:6px"><span class="note" style="margin:0">Hrs:</span><input type="text" inputmode="numeric" placeholder="hh:mm" data-i="rc.${k}.hr" value="${esc(I['rc.'+k+'.hr'])}" style="width:115px" aria-label="Hora ${n}"></div>
+ const rcRow=([k,n,col])=>rcOff(I,k)?'':`<tr><td style="width:200px"><b>${n}</b><div class="gap" style="margin-top:4px;gap:6px"><span class="note" style="margin:0">Hrs:</span><input type="text" inputmode="numeric" placeholder="hh:mm" data-i="rc.${k}.hr" value="${esc(I['rc.'+k+'.hr'])}" style="width:115px" aria-label="Hora ${n}"></div>
   ${col?`<button class="s g noprint" data-x="rm" data-k="${k}" style="margin-top:6px">Quitar colación</button>`:''}
   <td><textarea data-i="rc.${k}.ali" aria-label="Alimentos, cantidad y preparación ${n}" placeholder="Alimentos, cantidad y preparación">${esc(rcMerge(I,k))}</textarea>`;
- const back=REC.filter(r=>r[2]&&I['off.'+r[0]]);
+ const back=REC.filter(r=>r[2]===1&&rcOff(I,r[0])),nextX=REC.find(r=>r[2]===2&&rcOff(I,r[0]));
  const rec=`<div class="ftw rec"><table class="ft rec"><tr><th>Tiempo de alimentos<th>Alimentos, cantidad y preparación</tr>${REC.map(rcRow).join('')}</table></div>
-  ${back.length?`<div class="gap noprint" style="margin-top:8px"><span class="note" style="margin:0">El paciente no consume:</span>${back.map(r=>`<button class="s g" data-x="add" data-k="${r[0]}">＋ ${r[1]}</button>`).join('')}</div>`:''}`;
+  ${back.length?`<div class="gap noprint" style="margin-top:8px"><span class="note" style="margin:0">El paciente no consume:</span>${back.map(r=>`<button class="s g" data-x="add" data-k="${r[0]}">＋ ${r[1]}</button>`).join('')}</div>`:''}
+  ${nextX?`<div class="gap noprint" style="margin-top:8px"><button class="s g" data-x="add" data-k="${nextX[0]}">＋ Agregar otra colación</button></div>`:''}`;
  const hasCol=!(I['off.cm']&&I['off.cv']);
  const hf=`<div class="ftw"><table class="ft"><tr><th>Familiar${HF_COLS.map(c=>`<th style="text-align:center">${c[1]}`).join('')}<th>Otros</tr>
   ${FAMS.map((f,i)=>`<tr><td>${f}${HF_COLS.map(([k])=>`<td style="text-align:center"><input type="checkbox" data-ic="hf.${i}.${k}"${I[`hf.${i}.${k}`]?' checked':''} style="width:auto" aria-label="${f} ${k}">`).join('')}<td><input data-i="hf.${i}.otros" value="${esc(I[`hf.${i}.otros`])}" aria-label="Otros ${f}">`).join('')}</table></div>`;
@@ -1445,14 +1448,14 @@ function instI(){const p=hcPat();if(!p)return;const I=p.hci=p.hci||{},v=$('#view
   if(x==='lgdel'){DB.logos=DB.logos||{};DB.logos[k]='';save();render();return}
   if(x==='nc'){const n=newCons(p);p.cons.push(n);HS.pg=Math.floor((csort(p).length-1)/4)}
   else if(x==='pgp')HS.pg=Math.max(0,(HS.pg||0)-1);else if(x==='pgn')HS.pg=(HS.pg||0)+1;
-  else if(x==='rm'){if(!confirm('¿Quitar esta colación del recordatorio? Podrás agregarla de nuevo.'))return;I['off.'+k]=true}
-  else if(x==='add')delete I['off.'+k];
+  else if(x==='rm'){if(!confirm('¿Quitar esta colación del recordatorio? Podrás agregarla de nuevo.'))return;if(/^c\d$/.test(k))delete I['on.'+k];else I['off.'+k]=true}
+  else if(x==='add'){if(/^c\d$/.test(k))I['on.'+k]=true;else delete I['off.'+k]}
   save();render()}}
 /* ---------- Notas de pacientes subsecuentes (por paciente, la más reciente primero) ---------- */
 MODS.notas={t:'Notas de pacientes subsecuentes',print:1,newp:1,nohead:1,
  f:[['date','Fecha','date'],['hora','Hora','time'],['edad','Edad (automática)','ro'],['ev','Evolución nutricional actual (síntomas y signos)','area'],
-  ['des','R24 hrs · Desayuno','area','','hdes'],['com','R24 hrs · Comida','area','','hcom'],['cen','R24 hrs · Cena','area','','hcen'],['col','R24 hrs · Colación','area','','hcol'],
-  ['hdes','Horario desayuno','time','hid'],['hcom','Horario comida','time','hid'],['hcen','Horario cena','time','hid'],['hcol','Horario colación','time','hid'],
+  ['des','R24 hrs · Desayuno','area','','hdes'],['com','R24 hrs · Comida','area','','hcom'],['cen','R24 hrs · Cena','area','','hcen'],['col','R24 hrs · Colación','area','','hcol'],['col2','R24 hrs · Colación 2 (opcional)','area','','hcol2'],['col3','R24 hrs · Colación 3 (opcional)','area','','hcol3'],
+  ['hdes','Horario desayuno','time','hid'],['hcom','Horario comida','time','hid'],['hcen','Horario cena','time','hid'],['hcol','Horario colación','time','hid'],['hcol2','Horario colación 2','time','hid'],['hcol3','Horario colación 3','time','hid'],
   ['peso','Peso actual (kg)','num'],['talla','Talla actual (cm)','num'],['pideal','Peso ideal (kg)','num'],['imc','IMC (automático)','ro'],['pct','Percentil (menores, automático)','ro'],['dxi','Diagnóstico por IMC (automático)','ro'],['cin','C. cintura (cm)','num'],['abd','C. abdominal (cm)','num'],['pgr','% de grasa','num'],['pmu','% de músculo','num'],['gvis','Grasa visceral (nivel)','num'],
   ['bfecha','Fecha de los bioquímicos','date'],['glu','Glucosa sérica (mg/dL)','num'],['hb','Hemoglobina (g/dL)','num'],['colt','Colesterol total (mg/dL)','num'],['hdl','HDL (mg/dL)','num'],['ldl','LDL (mg/dL)','num'],['tg','Triglicéridos (mg/dL)','num'],['urea','Urea (mg/dL)','num'],['cre','Creatinina (mg/dL)','num'],
   ['dx','Diagnóstico nutricional PES','area'],['pl','Plan / recomendaciones','area'],['pend','Pendientes','area'],['prox','Próxima cita','date'],
@@ -1497,6 +1500,7 @@ function notaHTML(p){
  u=v=>v!==undefined&&v!==null&&String(v).trim()!==''?`<span class="uv">${e(v)}</span>`:'<span class="ub" style="width:7ch"></span>',
  n=v=>v===undefined||v===null||v===''?'':e(v),
  ok=v=>v!==undefined&&v!==null&&String(v).trim()!=='',
+ CL=[[r.hcol,r.col],[r.hcol2,r.col2],[r.hcol3,r.col3]].filter((c,i)=>i===0||ok(c[0])||ok(c[1])),
  dm=iso=>iso?iso.split('-').reverse().join(' / '):'&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;',
  H=p.hci||{},exp=H.exp||p.exp||'',
  pes=num(r.peso),tal=num(r.talla),imc=pes&&tal?Math.round(pes/((tal/100)**2)*10)/10:'',
@@ -1506,7 +1510,7 @@ function notaHTML(p){
  al=(l,v,un)=>`<div class="al"><span>${l}</span><b>${n(v)}</b><i>${un}</i></div>`,
  BQ=[['GLUCOSA SERICA:','glu','70/100mg/dL'],['HEMOGLOBINA:','hb','♀:12–15 ♂:13–17g/dL'],['COLESTEROL TOTAL:','colt','&lt;200mg/dL'],['HDL (BUENO):','hdl','♀:50mg/dL ♂:40mg/dL'],['LDL (MALO):','ldl','&lt;100mg/dL'],['TRIGLICERIDOS:','tg','&lt;150mg/dL'],['UREA:','urea','15-40 mg/dL'],['CREATININA:','cre','♀:0.6-1.1mg/dL ♂:3.4- 7.0 mg/dL']],
  tx=(l,v,g,cls,mh)=>`<div class="r g ${cls||''}" style="flex:${g} 0 auto;min-height:${mh}in"><div class="lb">${l}</div><div class="tx">${n(v).replace(/\*\*(.+?)\*\*/gs,'<b>$1</b>')}</div></div>`;
- const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26))+([r.pgr,r.pmu,r.gvis].some(ok)?2:0),sz=load>36?' s2':load>23?' s1':'';
+ const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26),ln(r.col2,30),ln(r.col3,30))+([r.pgr,r.pmu,r.gvis].some(ok)?2:0),sz=load>36?' s2':load>23?' s1':'';
  return `<section class="pgp npg${sz}">
  <div class="nph"><div class="npl"><div class="nplg"><img src="${NP_LOGO.a}" alt="" decoding="sync"><img class="lb2" src="${NP_LOGO.b}" alt="" decoding="sync"></div><div class="npt1">NOTAS DE</div><div class="npt2">EVOLUCIÓN  Y TRATAMIENTO NUTRICIONAL</div></div>
   <div class="npb"><div class="npnm"><span>NOMBRE: ${u(pn(p))}</span></div><div class="nprow"><span>EDAD: ${u(o.e?edShort(o.e):'')}</span><span>FECHA DE N: ${u(p.nac?p.nac.split('-').reverse().join('/'):'')}</span></div><div class="nprow"><span>EXPEDIENTE: ${u(exp)}</span></div><div class="npdx">DIAGNOSTICO NUTRICIONAL: ${u(o.dx)}</div></div></div>
@@ -1514,8 +1518,8 @@ function notaHTML(p){
   <div class="r r1"><div class="c1">FECHA / HORA: <b>${n(fh)}</b></div><div class="c2">NOTAS DE EVOLUCIÓN NUTRICIONAL Y TRATAMIENTO NUTRICIONAL</div></div>
   ${tx('EVOLUCIÓN NUTRICIONAL ACTUAL (SINTOMAS Y SIGNOS):',r.ev,2.4,'bd',.8)}
   <div class="r"><div class="ct">EVALUACIÓN DIETETICA R24 HRS</div></div>
-  <div class="r r4"><div>DESAYUNO: ${hr(r.hdes)}</div><div>COMIDA: ${hr(r.hcom)}</div><div>CENA: ${hr(r.hcen)}</div><div>COLACIÓN: ${hr(r.hcol)}</div></div>
-  <div class="r r4 g4" style="flex:2.2 0 auto;min-height:.8in"><div class="tx">${n(r.des)}</div><div class="tx">${n(r.com)}</div><div class="tx">${n(r.cen)}</div><div class="tx">${n(r.col)}</div></div>
+  <div class="r r4"><div>DESAYUNO: ${hr(r.hdes)}</div><div>COMIDA: ${hr(r.hcom)}</div><div>CENA: ${hr(r.hcen)}</div>${CL.map((c,i)=>`<div>COLACIÓN${CL.length>1?' '+(i+1):''}: ${hr(c[0])}</div>`).join('')}</div>
+  <div class="r r4 g4" style="flex:2.2 0 auto;min-height:.8in"><div class="tx">${n(r.des)}</div><div class="tx">${n(r.com)}</div><div class="tx">${n(r.cen)}</div>${CL.map(c=>`<div class="tx">${n(c[1])}</div>`).join('')}</div>
   <div class="r"><div class="ct">EVOLUCIÓN ACTUAL</div></div>
   <div class="r eg eh"><div>ANTROPOMETRIA</div><div>BIOQUIMICO <span class="bfe">Fecha: ${dm(r.bfecha)}</span></div></div>
   <div class="r eg eb"><div class="ea">${al('PESO ACTUAL:',r.peso,'Kg')}${al('TALLA ACTUAL:',r.talla,'Cm')}${al('PESO IDEAL:',r.pideal,'Kg')}${al('IMC:',imc,'Kg/m2')}${o.minor&&o.pv?al('PERCENTIL:',o.pv,o.pu):''}${al('C. CINTURA:',r.cin,'Cm')}${al('C. ABDOMINAL:',r.abd,'Cm')}${ok(r.pgr)?al('% DE GRASA:',r.pgr,'%'):''}${ok(r.pmu)?al('% DE MÚSCULO:',r.pmu,'%'):''}${ok(r.gvis)?al('GRASA VISCERAL:',r.gvis,''):''}</div>
@@ -1720,8 +1724,8 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 3 ===== */
  HD();
  H('Recordatorio de 24 horas');
- const RL={des:'Desayuno',alm:'Almuerzo',cen:'Cena',cm:'Colación mat.',cv:'Colación Vesp.'};
- B.push({t:'r24',rows:REC.filter(r=>!I['off.'+r[0]]).map(([k,n])=>[RL[k]||n,S_(I[`rc.${k}.hr`]),[S_(I[`rc.${k}.ali`]),S_(I[`rc.${k}.cant`])].filter(Boolean).join('\n')])});
+ const RL={des:'Desayuno',alm:'Almuerzo',cen:'Cena',cm:'Colación mat.',cv:'Colación Vesp.',c3:'Colación 3',c4:'Colación 4',c5:'Colación 5'};
+ B.push({t:'r24',rows:REC.filter(r=>!rcOff(I,r[0])).map(([k,n])=>[RL[k]||n,S_(I[`rc.${k}.hr`]),[S_(I[`rc.${k}.ali`]),S_(I[`rc.${k}.cant`])].filter(Boolean).join('\n')])});
  H('NOTA DE PRIMERA VEZ:');B.push({t:'lines',text:I.nota1,n:4});
  H('DIAGNÓSTICO PES:');B.push({t:'lines',text:I.nota,n:3});
  H('PLAN NUTRICIONAL DE TRABAJO:');B.push({t:'lines',text:I.plan,n:4});
@@ -1944,7 +1948,7 @@ function qSync(p,k,val){const cs=csort(p);let c=cs[cs.length-1];
 function pedNow(p){const e0=edad(p.nac);if(!e0||e0.a>=18)return null;const out={age:edTxt(e0),c:null,rows:[]},m=lastMeas(p);if(!m)return out;
  const r=pedRows(p,m.w,m.t,m.fecha);if(!r)return out;out.c={fecha:m.fecha,peso:m.w,est:m.t,src:m.src};out.ageC=r.ageC;out.rows=r.rows;return out}
 /* ---------- 2) Análisis rápido del R24 ---------- */
-function r24(p){const I=p.hci||{},rows=REC.filter(r=>!I['off.'+r[0]]).map(([k,n])=>({k,n,raw:String(I['rc.'+k+'.ali']||'').trim(),t:nz((I['rc.'+k+'.ali']||'')+' '+(I['rc.'+k+'.cant']||'')),hr:I['rc.'+k+'.hr']||''}));
+function r24(p){const I=p.hci||{},rows=REC.filter(r=>!rcOff(I,r[0])).map(([k,n])=>({k,n,raw:String(I['rc.'+k+'.ali']||'').trim(),t:nz((I['rc.'+k+'.ali']||'')+' '+(I['rc.'+k+'.cant']||'')),hr:I['rc.'+k+'.hr']||''}));
  const fil=rows.filter(r=>r.raw);if(!fil.length)return null;
  const gm={};fil.forEach(r=>{const t=r.t.replace(/cafe[^,.;]*azucar/g,' cafe azucar ');for(const g in KW)if(KW[g].some(w=>has(t,w)))(gm[g]=gm[g]||[]).push(r.n)});
  if(fil.some(r=>/cafe[^,.;]*azucar/.test(r.t)))(gm.dul=gm.dul||[]).push('café con azúcar');
@@ -2544,7 +2548,7 @@ function refOf(p,date,editId){const all=pNotes(p);let prior;
  if(editId){const i=all.findIndex(r=>r.id===editId);prior=i>=0?all.slice(0,i):all}else prior=all.filter(r=>!date||(r.date||'')<=date);
  const f=firstVisit(p);
  if(prior.length){const r=prior[prior.length-1],v={};CMPK.forEach(k=>v[k]=num(r[k]));
-  const r24=[['Desayuno',r.des],['Comida',r.com],['Cena',r.cen],['Colación',r.col]].filter(x=>x[1]&&String(x[1]).trim()).map(x=>x[0]+': '+cut(x[1],80));
+  const r24=[['Desayuno',r.des],['Comida',r.com],['Cena',r.cen],['Colación',r.col],['Colación 2',r.col2],['Colación 3',r.col3]].filter(x=>x[1]&&String(x[1]).trim()).map(x=>x[0]+': '+cut(x[1],80));
   return{kind:'nota',fecha:r.date,v,bfecha:r.bfecha,dx:r.dx,pl:r.pl,pend:r.pend,prox:r.prox,ev:r.ev,r24,nprev:prior.length+(f?1:0),label:'nota subsecuente'}}
  if(f)return{kind:'primera',fecha:f.fecha,v:f.v,dx:f.dx,pl:f.pl,ev:f.mot,r24:f.r24,nprev:1,vacia:f.vacia,label:'primera consulta (historia clínica)'};
  return null}
@@ -3388,7 +3392,7 @@ function notaHC(x,r){const I=x.I,p=x.p,c=r.c,sexM=r.sexM,P=[],pat=patS(p),oc=sv(
  if(I.alc)vd.push(no(I.alc)?'niega consumo de alcohol':`consume alcohol (${low(I.alc)}${sv(I,'alc.f')?', '+low(sv(I,'alc.f')):''}${sv(I,'alc.c')?', '+low(sv(I,'alc.c')):''})`);
  if(yes(I.sus))vd.push('refiere consumo de otras sustancias'+(sv(I,'sus.c')?' ('+low(sv(I,'sus.c'))+')':''));
  if(vd.length)P.push(`En cuanto a su estilo de vida, ${J(vd,'; ',' y ')}.`);
- const tm=REC.map(([k,n])=>{if(I['off.'+k])return'';const a=String(rcMerge(I,k)||'').trim().replace(/\s*\n+\s*/g,', '),hr=sv(I,'rc.'+k+'.hr');return a?`${low(n)}${hr?' ('+hr+' h)':''}: ${low(a)}`:''}).filter(Boolean);
+ const tm=REC.map(([k,n])=>{if(rcOff(I,k))return'';const a=String(rcMerge(I,k)||'').trim().replace(/\s*\n+\s*/g,', '),hr=sv(I,'rc.'+k+'.hr');return a?`${low(n)}${hr?' ('+hr+' h)':''}: ${low(a)}`:''}).filter(Boolean);
  let d1=tm.length?`En el R24H refiere ${tm.join('; ')}.`:'';
  const hab=[];if(!tm.length){const hh=[['des','desayuno'],['alm','almuerzo'],['cen','cena'],['col','colaciones']].filter(([k])=>sv(I,'h.'+k)).map(([k,n])=>`${n} a las ${sv(I,'h.'+k)}`);if(hh.length)hab.push('sus horarios habituales son '+J(hh))}
  if(sv(I,'ncom'))hab.push(`realiza ${sv(I,'ncom')} comidas al día${/^(no|ning|0+$)/i.test(sv(I,'ncol'))?' sin colaciones':/^\d+$/.test(sv(I,'ncol'))?' y '+sv(I,'ncol')+' colaciones':''}`);
@@ -3505,7 +3509,7 @@ const gv=k=>{const e=document.getElementById('mf-'+k);return e?String(e.value||'
 function ctxNote(p){const np=!p,tod=new Date().toISOString().slice(0,10),fecha=gv('date')||tod,hc=(p&&p.hci)||{},
   tmp={id:'live',nac:np?gv('pnac'):p.nac,sexo:np?(gv('ps')==='Hombre'?'M':'F'):p.sexo,pat:np?[]:p.pat,antec:np?'':p.antec,hist:np?'':p.hist,est:np?'':p.est,
   cons:[{id:'live',fecha,peso:gv('peso'),est:gv('talla')||(p&&p.est)||'',cin:gv('cin'),abd:gv('abd')}],
-  hci:Object.assign({},hc,{'rc.des.ali':gv('des'),'rc.des.hr':gv('hdes'),'rc.alm.ali':gv('com'),'rc.alm.hr':gv('hcom'),'rc.cen.ali':gv('cen'),'rc.cen.hr':gv('hcen'),'rc.cm.ali':gv('col'),'rc.cm.hr':gv('hcol'),'off.cm':gv('col')?'':1,'off.cv':1})};
+  hci:Object.assign({},hc,{'rc.des.ali':gv('des'),'rc.des.hr':gv('hdes'),'rc.alm.ali':gv('com'),'rc.alm.hr':gv('hcom'),'rc.cen.ali':gv('cen'),'rc.cen.hr':gv('hcen'),'rc.cm.ali':gv('col'),'rc.cm.hr':gv('hcol'),'off.cm':gv('col')?'':1,'rc.cv.ali':gv('col2'),'rc.cv.hr':gv('hcol2'),'off.cv':gv('col2')?'':1,'rc.c3.ali':gv('col3'),'rc.c3.hr':gv('hcol3'),'on.c3':gv('col3')?true:''})};
  const all=[];if(p){csort(p).forEach(c=>{if(num(c.peso))all.push({d:c.fecha,w:num(c.peso)})});((p.mod&&p.mod.notas)||[]).forEach(n=>{if(num(n.peso)&&n.date&&(!MF||n.id!==MF.id))all.push({d:n.date,w:num(n.peso)})})}
  const prev=all.filter(a=>a.d<fecha).sort((a,b)=>a.d.localeCompare(b.d)).pop()||null,an=N.r24(tmp),ped=N.pedNow(tmp),bq={};
  [['glu','glu'],['hb','hb'],['colt','col'],['ldl','ldl'],['tg','tg'],['cre','cre']].forEach(([a,b])=>{const v=num(gv(a));if(v!=null)bq[b]=v});
