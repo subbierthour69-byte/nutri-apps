@@ -698,7 +698,7 @@ V.cons={t:'Calculadora rápida',h(){const p=cur();if(!p)return noP;ensureC(p);co
  <div><label>Objetivo de peso</label><select data-f="obj"><option value=""${!c.obj?' selected':''}>Mantenimiento (sin ajuste)</option><option value="def"${c.obj==='def'?' selected':''}>Pérdida de peso · restar kcal</option><option value="sup"${c.obj==='sup'?' selected':''}>Ganancia de músculo o peso · superávit</option></select></div>
  <div id="objkw" style="${c.obj?'':'display:none'}"><label id="objkl">${c.obj==='sup'?'Superávit (kcal a sumar)':'Déficit (kcal a restar)'}</label><input data-f="objk" type="number" step="10" min="0" value="${esc(c.objk)}" placeholder="${c.obj==='sup'?'300':'500'}"></div></div><div id="o1" style="margin-top:14px"></div></div>
  <div class="card" id="cped"><h2>Pediatría CDC · método LMS</h2><div id="o2"></div></div>
- <div class="card"><h2>Antropometría y composición corporal</h2><div class="grid">${d('graso','% de grasa','%')}<div><label>Grasa corporal (kg)</label><input data-cx="gkg" type="number" step="0.1" placeholder="kg"></div>${d('musc','Masa muscular','kg')}<div><label>Masa muscular (% del peso)</label><input data-cx="mpc" type="number" step="0.1" placeholder="%"></div>
+ <div class="card"><h2>Antropometría y composición corporal</h2><div class="grid">${d('graso','% de grasa','%')}${d('pmus','% de músculo','%')}${d('gvis','Grasa visceral','nivel')}<div><label>Grasa corporal (kg)</label><input data-cx="gkg" type="number" step="0.1" placeholder="kg"></div>${d('musc','Masa muscular','kg')}<div><label>Masa muscular (% del peso)</label><input data-cx="mpc" type="number" step="0.1" placeholder="%"></div>
  ${d('cin','Perímetro cintura','cm')}${d('abd','Perímetro abdominal','cm')}${d('cad','Perímetro cadera','cm')}${d('bra','Perímetro brazo','cm')}${d('mus','Perímetro muslo','cm')}</div><div id="o3" style="margin-top:14px"></div></div>
  <div class="card" id="eqplan"><h2>Plan de equivalentes y distribución por tiempo de comida</h2>
  <div class="eqwrap"><div class="wrap" id="eqtab"></div><div class="eqside" id="eqside"></div></div>
@@ -1355,7 +1355,7 @@ const pcHTML=(c,p)=>{const r=window.NCA&&NCA.pcOf?NCA.pcOf(c,p):null;return r?es
 function antroBlock(p){
  const e0=edad(p.nac),minor=!!(e0&&e0.a<18);
  const cs=csort(p),pg=Math.min(HS.pg||0,Math.max(0,Math.ceil(cs.length/4)-1)),cols=[0,1,2,3].map(i=>cs[pg*4+i]||null);
- const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minor?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+ const AR=[['Fecha','fecha','date'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minor?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso'],['% Músculo','pmus'],['Grasa visceral','gvis']];
 return `<div class="ftw sm"><table class="ft sm an"><tr><th>Parámetro${cols.map((c,i)=>`<th>Consulta ${pg*4+i+1}°`).join('')}</tr>
   ${AR.map(([l,k,ty])=>`<tr><td style="font-style:italic;color:var(--mut)">${l}${cols.map((c,i)=>!c?(i===cols.indexOf(null)&&k!=='_imc'&&k!=='_cl'&&k!=='_pc'?`<td><input data-nx="${k}" type="${ty||'number'}" step="0.1" placeholder="${k==='peso'?'Anotar peso':''}" aria-label="${l} (nueva consulta)">`:'<td>'):k==='_imc'?`<td data-imc="${c.id}">${imcOf(c)==null?'':fx(imcOf(c))}`:k==='_pc'?`<td data-pc="${c.id}">${pcHTML(c,p)}`:k==='_cl'?`<td data-cl="${c.id}">${esc(clasifIMC(c,p))}`:
    `<td><input data-c="${c.id}|${k}" type="${ty||'number'}" step="0.1" value="${esc(c[k])}">`).join('')}`).join('')}</table></div>
@@ -1453,7 +1453,7 @@ MODS.notas={t:'Notas de pacientes subsecuentes',print:1,newp:1,nohead:1,
  f:[['date','Fecha','date'],['hora','Hora','time'],['edad','Edad (automática)','ro'],['ev','Evolución nutricional actual (síntomas y signos)','area'],
   ['des','R24 hrs · Desayuno','area','','hdes'],['com','R24 hrs · Comida','area','','hcom'],['cen','R24 hrs · Cena','area','','hcen'],['col','R24 hrs · Colación','area','','hcol'],
   ['hdes','Horario desayuno','time','hid'],['hcom','Horario comida','time','hid'],['hcen','Horario cena','time','hid'],['hcol','Horario colación','time','hid'],
-  ['peso','Peso actual (kg)','num'],['talla','Talla actual (cm)','num'],['pideal','Peso ideal (kg)','num'],['imc','IMC (automático)','ro'],['pct','Percentil (menores, automático)','ro'],['dxi','Diagnóstico por IMC (automático)','ro'],['cin','C. cintura (cm)','num'],['abd','C. abdominal (cm)','num'],
+  ['peso','Peso actual (kg)','num'],['talla','Talla actual (cm)','num'],['pideal','Peso ideal (kg)','num'],['imc','IMC (automático)','ro'],['pct','Percentil (menores, automático)','ro'],['dxi','Diagnóstico por IMC (automático)','ro'],['cin','C. cintura (cm)','num'],['abd','C. abdominal (cm)','num'],['pgr','% de grasa','num'],['pmu','% de músculo','num'],['gvis','Grasa visceral (nivel)','num'],
   ['bfecha','Fecha de los bioquímicos','date'],['glu','Glucosa sérica (mg/dL)','num'],['hb','Hemoglobina (g/dL)','num'],['colt','Colesterol total (mg/dL)','num'],['hdl','HDL (mg/dL)','num'],['ldl','LDL (mg/dL)','num'],['tg','Triglicéridos (mg/dL)','num'],['urea','Urea (mg/dL)','num'],['cre','Creatinina (mg/dL)','num'],
   ['dx','Diagnóstico nutricional PES','area'],['pl','Plan / recomendaciones','area'],['pend','Pendientes','area'],['prox','Próxima cita','date'],
   ['nut','Nombre de la nutrióloga','text'],['cp','Cédula profesional (CP)','text']],
@@ -1496,6 +1496,7 @@ function notaHTML(p){
  e=v=>esc(v==null?'':String(v)),
  u=v=>v!==undefined&&v!==null&&String(v).trim()!==''?`<span class="uv">${e(v)}</span>`:'<span class="ub" style="width:7ch"></span>',
  n=v=>v===undefined||v===null||v===''?'':e(v),
+ ok=v=>v!==undefined&&v!==null&&String(v).trim()!=='',
  dm=iso=>iso?iso.split('-').reverse().join(' / '):'&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;',
  H=p.hci||{},exp=H.exp||p.exp||'',
  pes=num(r.peso),tal=num(r.talla),imc=pes&&tal?Math.round(pes/((tal/100)**2)*10)/10:'',
@@ -1505,7 +1506,7 @@ function notaHTML(p){
  al=(l,v,un)=>`<div class="al"><span>${l}</span><b>${n(v)}</b><i>${un}</i></div>`,
  BQ=[['GLUCOSA SERICA:','glu','70/100mg/dL'],['HEMOGLOBINA:','hb','♀:12–15 ♂:13–17g/dL'],['COLESTEROL TOTAL:','colt','&lt;200mg/dL'],['HDL (BUENO):','hdl','♀:50mg/dL ♂:40mg/dL'],['LDL (MALO):','ldl','&lt;100mg/dL'],['TRIGLICERIDOS:','tg','&lt;150mg/dL'],['UREA:','urea','15-40 mg/dL'],['CREATININA:','cre','♀:0.6-1.1mg/dL ♂:3.4- 7.0 mg/dL']],
  tx=(l,v,g,cls,mh)=>`<div class="r g ${cls||''}" style="flex:${g} 0 auto;min-height:${mh}in"><div class="lb">${l}</div><div class="tx">${n(v).replace(/\*\*(.+?)\*\*/gs,'<b>$1</b>')}</div></div>`;
- const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26)),sz=load>36?' s2':load>23?' s1':'';
+ const ln=(v,c)=>Math.ceil(String(v||'').length/c),load=ln(r.ev,95)+ln(r.dx,95)+ln(r.pl,95)+ln(r.pend,95)+Math.max(ln(r.des,26),ln(r.com,26),ln(r.cen,26),ln(r.col,26))+([r.pgr,r.pmu,r.gvis].some(ok)?2:0),sz=load>36?' s2':load>23?' s1':'';
  return `<section class="pgp npg${sz}">
  <div class="nph"><div class="npl"><div class="nplg"><img src="${NP_LOGO.a}" alt="" decoding="sync"><img class="lb2" src="${NP_LOGO.b}" alt="" decoding="sync"></div><div class="npt1">NOTAS DE</div><div class="npt2">EVOLUCIÓN  Y TRATAMIENTO NUTRICIONAL</div></div>
   <div class="npb"><div class="npnm"><span>NOMBRE: ${u(pn(p))}</span></div><div class="nprow"><span>EDAD: ${u(o.e?edShort(o.e):'')}</span><span>FECHA DE N: ${u(p.nac?p.nac.split('-').reverse().join('/'):'')}</span></div><div class="nprow"><span>EXPEDIENTE: ${u(exp)}</span></div><div class="npdx">DIAGNOSTICO NUTRICIONAL: ${u(o.dx)}</div></div></div>
@@ -1517,7 +1518,7 @@ function notaHTML(p){
   <div class="r r4 g4" style="flex:2.2 0 auto;min-height:.8in"><div class="tx">${n(r.des)}</div><div class="tx">${n(r.com)}</div><div class="tx">${n(r.cen)}</div><div class="tx">${n(r.col)}</div></div>
   <div class="r"><div class="ct">EVOLUCIÓN ACTUAL</div></div>
   <div class="r eg eh"><div>ANTROPOMETRIA</div><div>BIOQUIMICO <span class="bfe">Fecha: ${dm(r.bfecha)}</span></div></div>
-  <div class="r eg eb"><div class="ea">${al('PESO ACTUAL:',r.peso,'Kg')}${al('TALLA ACTUAL:',r.talla,'Cm')}${al('PESO IDEAL:',r.pideal,'Kg')}${al('IMC:',imc,'Kg/m2')}${o.minor&&o.pv?al('PERCENTIL:',o.pv,o.pu):''}${al('C. CINTURA:',r.cin,'Cm')}${al('C. ABDOMINAL:',r.abd,'Cm')}</div>
+  <div class="r eg eb"><div class="ea">${al('PESO ACTUAL:',r.peso,'Kg')}${al('TALLA ACTUAL:',r.talla,'Cm')}${al('PESO IDEAL:',r.pideal,'Kg')}${al('IMC:',imc,'Kg/m2')}${o.minor&&o.pv?al('PERCENTIL:',o.pv,o.pu):''}${al('C. CINTURA:',r.cin,'Cm')}${al('C. ABDOMINAL:',r.abd,'Cm')}${ok(r.pgr)?al('% DE GRASA:',r.pgr,'%'):''}${ok(r.pmu)?al('% DE MÚSCULO:',r.pmu,'%'):''}${ok(r.gvis)?al('GRASA VISCERAL:',r.gvis,''):''}</div>
    <div class="eq">${BQ.map(([l,k,ref])=>`<div class="bq"><span>${l} <b>${n(r[k])}</b></span><span class="ref">${ref}</span></div>`).join('')}</div>
 </div>
   ${tx('DIAGNOSTICO NUTRICIONAL PES:',r.dx,1,'bd',.4)}
@@ -1693,7 +1694,7 @@ function paperModel(p){const I=p.hci||{},cs=csort(p),B=[];
  /* ===== HOJA 2 ===== */
  HD();
  H('Valoración antropométrica');
- const e0=edad(p.nac),minorP=!!(e0&&e0.a<18),AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minorP?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. Cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso']];
+ const e0=edad(p.nac),minorP=!!(e0&&e0.a<18),AR=[['Fecha','fecha'],['Peso (kg)','peso'],['Talla (cm)','est'],['IMC (kg/m²)','_imc'],...(minorP?[['Percentil','_pc']]:[]),['Clasif. IMC','_cl'],['C. Cintura','cin'],['C. abdominal','abd'],['C. brazo','bra'],['% Grasa (S/A)','graso'],['% Músculo','pmus'],['Grasa visceral','gvis']].filter(([l,k])=>!['graso','pmus','gvis'].includes(k)||cs.some(c=>c&&S_(c[k])!==''));
  const cv=(c,k)=>c?(k==='fecha'?fd(c.fecha):k==='_imc'?(imcOf(c)?fx(imcOf(c)):''):k==='_cl'?(imcOf(c)?(clasifIMC(c,p)||''):''):k==='_pc'?(window.NCA&&NCA.pcOf?((NCA.pcOf(c,p)||{}).t||''):''):S_(c[k])):'';
  const tabs=[];for(let pg=0;pg===0||pg*4<cs.length;pg++){const col=[0,1,2,3].map(i=>cs[pg*4+i]);tabs.push({head:['Parámetro',...col.map((_,i)=>'Consulta '+(pg*4+i+1)+'º')],rows:AR.map(([l,k])=>[l,...col.map(c=>cv(c,k))])})}
  B.push({t:'antro',tabs});
@@ -2952,6 +2953,10 @@ const HDC=[['exp','Exp.',64],['nombre','Nombre del paciente',200],['nac','Fecha 
  ['cie','Otras enfermedades CIE 10',54],['abs','Abstinencia',28],['imc','IMC',28],['deriv','Derivación',28],['cli','Consulta integrada línea de vida',28],['cart','Presenta cartilla',28],['pv','Primera vez',28],['sb','Subsecuente',28],['rec','Recetas otorgadas',28],['luz','Luz de vida',28],['tai','TAI',28],['obs','Observaciones',130]];
 const HD_ID=['exp','nombre','nac','sexo'];
 const hcDateOf=p=>{try{return((firstData(p)||{}).fecha)||(p.hci&&p.hci.fecha)||''}catch(e){return(p.hci&&p.hci.fecha)||''}};
+/* Fechas en que el paciente tiene historia clínica (primera vez): la fecha propia de la historia clínica y la de su primera consulta. Antes solo contaba la de la primera consulta y la hoja diaria perdía pacientes de primera vez. */
+const hcIs=(p,D)=>{const I=p.hci||{};try{const f=firstData(p);if(f&&f.fecha===D)return true}catch(e){}
+ if(I.fecha===D&&Object.keys(I).some(k=>k!=='fecha'&&k!=='exp'&&I[k]!=null&&String(I[k]).trim()!==''))return true;
+ return(p.cons||[]).some(c=>c&&c.fecha===D)&&!pNotes(p).length&&!(p.cons||[]).some(c=>c&&c.fecha&&c.fecha<D)};
 const hdG=D=>Object.assign({rows:{},man:[],hide:{}},(DB.hd&&DB.hd[D])||{});
 const hdDay=D=>{DB.hd=DB.hd||{};const g=DB.hd[D]=DB.hd[D]||{};g.rows=g.rows||{};g.man=g.man||[];g.hide=g.hide||{};return g};
 const hdHead=()=>Object.assign({clues:'000010',unidad:'SANNAFARM VIDA NUEVA',curp:'',prestador:NUT_D().nut,tipoP:'',cedula:NUT_D().cp,servicio:'',programa:'',turno:''},DB.hdh||{});
@@ -2959,12 +2964,12 @@ const hdPid=(D,rk)=>rk.startsWith('m:')?((hdG(D).man.find(m=>m.id===rk.slice(2))
 const hdImcCode=t=>{t=_nz(t);return/obes/.test(t)?'1':/sobrepeso/.test(t)?'2':/normo|normal/.test(t)?'3':/bajo/.test(t)?'4':''};
 function hdKeys(D){const g=hdG(D),manP=new Set(g.man.map(m=>m.pid).filter(Boolean)),hr=new Map();
  const add=(pid,h)=>{if(!pid||manP.has(pid)||g.hide[pid]||!DB.p.some(x=>x.id===pid))return;if(!hr.has(pid))hr.set(pid,h||'');else if(h&&!hr.get(pid))hr.set(pid,h)};
- DB.p.forEach(p=>{pNotes(p).forEach(r=>{if(r.date===D)add(p.id,r.hora)});if(hcDateOf(p)===D)add(p.id,(p.hci&&p.hci.hora)||'')});
+ DB.p.forEach(p=>{pNotes(p).forEach(r=>{if(r.date===D)add(p.id,r.hora)});if(hcIs(p,D))add(p.id,(p.hci&&p.hci.hora)||'')});
  agList().forEach(a=>{if(a.date===D&&a.pid&&a.estado==='Asistió')add(a.pid,a.hora)});
  const nm=id=>pn(DB.p.find(x=>x.id===id));
  const auto=[...hr.entries()].sort((a,b)=>(a[1]||'99:99').localeCompare(b[1]||'99:99')||nm(a[0]).localeCompare(nm(b[0]))).map(x=>x[0]);
  return auto.concat(g.man.map(m=>'m:'+m.id))}
-function hdAuto(p,D){const N=pNotes(p).filter(r=>r.date===D),r=N[N.length-1],isHC=hcDateOf(p)===D,ag=agList().find(a=>a.pid===p.id&&a.date===D&&a.estado==='Asistió');
+function hdAuto(p,D){const N=pNotes(p).filter(r=>r.date===D),r=N[N.length-1],isHC=hcIs(p,D),ag=agList().find(a=>a.pid===p.id&&a.date===D&&a.estado==='Asistió');
  let peso='',talla='';
  if(r){peso=r.peso==null?'':r.peso;talla=r.talla==null?'':r.talla}
  else if(isHC){try{const f=firstData(p);if(f&&f.v){peso=f.v.peso==null?'':f.v.peso;talla=f.v.talla==null?'':f.v.talla}}catch(e){}}
@@ -2981,7 +2986,7 @@ function hdVals(D,rk){const g=hdG(D),ov=g.rows[rk]||{},pid=hdPid(D,rk),p=pid&&DB
 /* Cita "Asistió" para que la consulta cuente en el formato mensual y en la agenda */
 function hdAg(p,D,rt){const L=agList();agLink(p);
  if(L.some(a=>a.pid===p.id&&a.date===D&&a.estado==='Asistió'))return;
- if(pNotes(p).some(r=>r.date===D)||hcDateOf(p)===D)return;
+ if(pNotes(p).some(r=>r.date===D)||hcIs(p,D))return;
  let had=L.some(a=>a.pid===p.id&&a.tipo==='Primera vez'&&a.estado==='Asistió')||pNotes(p).length>0;try{had=had||!!firstData(p)}catch(e){}
  L.push({id:uid(),pid:p.id,date:D,hora:'',tipo:(rt||(had?'2':'1'))==='1'?'Primera vez':'Subsecuente',estado:'Asistió',auto:1,hd:1})}
 function hdLink(D,rk){const g=hdDay(D),mid=rk.slice(2),m=g.man.find(x=>x.id===mid),ov=g.rows[rk]||{},nom=String(ov.nombre||'').trim();if(!m||m.pid||!nom)return false;
